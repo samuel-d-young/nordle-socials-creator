@@ -18,6 +18,8 @@ What makes it different from a template tool:
 
 Early release (v0.1): it works, it is tested, and it is still changing. See the guides in `docs/` and `SECURITY.md`.
 
+Want to see the whole workflow work before you trust it? Paste the prompt in [docs/SELF-TEST.md](docs/SELF-TEST.md): Claude uses the Studio on three brands and reports what worked and what broke.
+
 ## Install (two minutes)
 
 Needs Node.js 20 or newer. ffmpeg is needed for video posts only.

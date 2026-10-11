@@ -46,3 +46,8 @@ The licence text for each is beside the font (`fonts/fraunces/OFL.txt`, `fonts/i
 
 Music from Epidemic Sound or any licensed library, client photos or logos, anything under `packs/`, and any code
 copied from tools whose licence does not allow it (for example members-only or non-commercial tools).
+
+## Credits
+
+The shape of the self-test prompt in `docs/SELF-TEST.md` (Ask, Goal, Examples, Negations, Tools) follows the CRAFT build guide by
+RoboNuggets (https://robonuggets.com, CC BY 4.0). No code or text was copied; the wording is our own.

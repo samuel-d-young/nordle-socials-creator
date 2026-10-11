@@ -88,6 +88,10 @@ export function checkCopy(doc, { surfaces = textSurfaces(doc) } = {}) {
   const noSpace = /[a-z]{3}[.!?][A-Z][a-z]{2}/.exec(caption);
   if (noSpace) findings.push(warn('missing-space', `There is no space after the full stop in "${noSpace[0]}".`, { ...where, fix: 'Add a space after the full stop.' }));
   if (/ {2,}/.test(caption)) findings.push(info('double-space', 'The caption has double spaces.', { ...where, fix: 'Use single spaces.' }));
+  // a long dash used as a pause is the most common sign that an AI wrote the words (a range such as 9–5 is fine)
+  const dashed = [caption, ...Object.values(copy.platforms ?? {}).map((o) => o.caption ?? ''), ...surfaces.filter((s) => s.scope === 'layers.text').map((s) => s.text)]
+    .flatMap((t) => t.match(/[^\n]{0,30}(?:—|\s–\s)[^\n]{0,30}/g) ?? []);
+  if (dashed.length) findings.push(warn('long-dash', `The words use a long dash as a pause ${dashed.length === 1 ? 'once' : `${dashed.length} times`} ("${clip(dashed[0].trim(), 70)}"), which reads as written by an AI.`, { ...where, fix: 'Use a full stop, a comma or a colon instead. Keep it only if this brand really writes that way.' }));
 
   // hashtags
   const tags = new Set([...(copy.hashtags ?? []), ...(caption.match(/#[\p{L}\p{N}_]+/gu) ?? [])].map((h) => String(h).replace(/^#/, '').toLowerCase()));

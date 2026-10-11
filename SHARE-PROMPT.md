@@ -80,6 +80,10 @@ Nordle shows me. Tell me when you are guessing.
 ## Other first messages to try
 
 ````text
+Run the self-test in docs/SELF-TEST.md: use the Studio on three brands, in a real browser, and write me the report.
+````
+
+````text
 Make a 6-slide carousel about [topic] in my brand. Look at every page yourself, run the critique and the checks, and tell me
 what you were unsure about.
 ````

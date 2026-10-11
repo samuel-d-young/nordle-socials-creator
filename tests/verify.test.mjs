@@ -650,6 +650,14 @@ test('uniqueness: when the month of a post is not known it is compared anyway, a
 
 const cp = (copy, extra = {}) => checkCopy(doc0({ alt: { p1: 'A cup of coffee on the counter' }, hashtags: ['#a', '#b', '#c'], ...copy }, extra)).findings;
 
+test('copy: a long dash used as a pause is flagged; a range and a plain hyphen are not', () => {
+  const ok = 'Open 9–5 daily. Our pour-over is slow-brewed. Book a table today.';
+  assert.equal(levelOf(cp({ caption: ok }), 'long-dash'), undefined);
+  assert.equal(levelOf(cp({ caption: 'Spring menu is here — three new pours. Book a table today.' }), 'long-dash'), 'warn');
+  assert.equal(levelOf(cp({ caption: 'Spring menu is here – three new pours. Book a table today.' }), 'long-dash'), 'warn');
+  assert.match(cp({ caption: 'Spring menu is here — three new pours. Book a table today.' }).find((f) => f.rule === 'long-dash').message, /long dash.*once/);
+});
+
 test('copy: caption hook, one call to action, cut-off endings, hashtags and alt text', () => {
   assert.deepEqual(cp({ caption: 'Spring menu is here. Three new pours. Book a table today.' }).filter((f) => f.level !== 'info'), []);
   assert.equal(levelOf(cp({ caption: '' }), 'no-caption'), 'error');
