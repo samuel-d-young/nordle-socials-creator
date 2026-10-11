@@ -1,0 +1,7 @@
+{
+  "note": "Fonts bundled with Nordle so renders look the same on every computer. All are SIL Open Font License 1.1; the licence text sits beside each font. Variable fonts, weights 100-900, normal and italic.",
+  "fonts": {
+    "Fraunces": { "css": "fraunces/wght.css", "family": "Fraunces Variable", "fallback": "Georgia, 'Times New Roman', serif", "licence": "OFL-1.1" },
+    "Inter": { "css": "inter/wght.css", "family": "Inter Variable", "fallback": "system-ui, 'Segoe UI', Arial, sans-serif", "licence": "OFL-1.1" }
+  }
+}

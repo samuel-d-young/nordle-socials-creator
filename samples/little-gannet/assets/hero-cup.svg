@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="A steaming cup of coffee on a saucer">
+  <ellipse cx="300" cy="506" rx="236" ry="40" fill="#3F6C7A"/>
+  <ellipse cx="300" cy="494" rx="196" ry="29" fill="#4F8191"/>
+  <path d="M452 276 H492 Q542 276 542 326 Q542 388 478 392 H438" fill="none" stroke="#1F2A2E" stroke-width="12" stroke-linecap="round"/>
+  <path d="M148 234 H452 V334 Q452 476 300 476 Q148 476 148 334 Z" fill="#F5EEE3" stroke="#1F2A2E" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M176 300 Q176 410 262 438" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.7"/>
+  <ellipse cx="300" cy="234" rx="152" ry="28" fill="#6B3E26" stroke="#1F2A2E" stroke-width="12"/>
+  <ellipse cx="300" cy="231" rx="104" ry="14" fill="#9A6038"/>
+  <path d="M248 184 Q226 144 254 108 Q278 78 256 42" fill="none" stroke="#6F7F83" stroke-width="10" stroke-linecap="round" opacity="0.75"/>
+  <path d="M308 178 Q286 136 314 102 Q338 72 316 36" fill="none" stroke="#6F7F83" stroke-width="10" stroke-linecap="round" opacity="0.6"/>
+  <path d="M366 186 Q346 150 370 120 Q390 94 372 62" fill="none" stroke="#6F7F83" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+</svg>

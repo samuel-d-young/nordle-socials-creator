@@ -1,0 +1,50 @@
+{
+  "$schema": "../schemas/calendar.schema.json",
+  "schema": "nordle.calendar/0.1",
+  "brand": "little-gannet",
+  "timezone": "Australia/Melbourne",
+  "settings": {
+    "leadDays": 7,
+    "perMonth": { "reel": 2, "carousel": 1, "post": 1 },
+    "autoBuild": false,
+    "autoPropose": false,
+    "horizonMonths": 3,
+    "postTimes": ["07:30", "12:00"],
+    "regions": ["VIC"],
+    "ideaApproval": "owner",
+    "pillars": [
+      { "id": "drinks", "name": "The drinks", "about": "One drink, one real detail", "share": 0.5 },
+      { "id": "harbour", "name": "The harbour", "about": "The town and the people in it", "share": 0.5 }
+    ]
+  },
+  "items": [
+    {
+      "id": "2026-11-03-cup-day-hours",
+      "date": "2026-11-03",
+      "time": "07:30",
+      "format": "post",
+      "title": "Open as usual on Cup Day",
+      "pillar": "harbour",
+      "idea": "A short, friendly note that the shop is open on the Melbourne Cup public holiday, with the trading hours exactly as the shop gives them.",
+      "hook": "Cup Day coffee: we are open.",
+      "occasion": "Melbourne Cup Day",
+      "mediaPlan": "The front window photo from the library.",
+      "status": "idea",
+      "origin": "claude"
+    },
+    {
+      "id": "2026-11-10-flat-white-reel",
+      "date": "2026-11-10",
+      "time": "12:00",
+      "format": "reel",
+      "title": "The flat white, start to finish",
+      "pillar": "drinks",
+      "idea": "Thirty seconds of one flat white being made at the machine, with the barista saying what they look for in the pour.",
+      "hook": "Watch the pour.",
+      "mediaPlan": "Footage from the behind-the-roast clip.",
+      "status": "approved",
+      "origin": "claude",
+      "ideaApproval": "owner"
+    }
+  ]
+}

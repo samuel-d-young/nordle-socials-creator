@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:brand:0.1",
+  "title": "Nordle brand kit",
+  "description": "Colours, fonts, logos, voice and motion personality for one brand. Documents reference these as $brand.<group>.<name>.",
+  "type": "object",
+  "required": ["schema", "id", "name", "colors", "fonts"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.brand/0.1" },
+    "id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1 },
+    "note": { "type": "string" },
+    "colors": {
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/hex" }
+    },
+    "fonts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/font" }
+    },
+    "logos": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/relPath" }
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audience": { "type": "string" },
+        "tone": { "type": "array", "items": { "type": "string" } },
+        "do": { "type": "array", "items": { "type": "string" } },
+        "dont": { "type": "array", "items": { "type": "string" } },
+        "bannedPhrases": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "personality": { "enum": ["calm", "snappy", "editorial", "playful"] },
+        "ease": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+      }
+    },
+    "captionStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "font": { "type": "string" },
+        "size": { "type": "number", "exclusiveMinimum": 0 },
+        "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+        "color": { "type": "string" },
+        "highlightColor": { "type": "string" },
+        "uppercase": { "type": "boolean" }
+      }
+    },
+    "colourways": {
+      "description": "Named colour swaps, e.g. a dark version. Only the listed colours change.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["colors"],
+        "additionalProperties": false,
+        "properties": {
+          "colors": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "$ref": "#/$defs/key" },
+            "additionalProperties": { "$ref": "#/$defs/hex" }
+          }
+        }
+      }
+    },
+    "posts": {
+      "description": "The brand's house style for posts. Layout patterns read it so a page looks like this brand's own posts. Every field is optional.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "align": { "enum": ["left", "center"], "description": "Text alignment of the main text block on pages that have no picture beside it." },
+        "headline": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": { "type": "string", "description": "A key of brand.fonts." },
+            "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+            "case": { "enum": ["none", "upper"] },
+            "tracking": { "type": "number", "minimum": -0.2, "maximum": 1 },
+            "lineHeight": { "type": "number", "minimum": 0.7, "maximum": 2 },
+            "accent": { "enum": ["italic-colour", "italic", "colour", "script", "none"], "description": "How the emphasised phrase is set: italic in the accent colour, italic only, accent colour only, in the brand's script font, or not at all." },
+            "accentScale": { "type": "number", "minimum": 0.6, "maximum": 2.5, "description": "Script accent size relative to the headline." },
+            "sizeScale": { "type": "number", "minimum": 0.5, "maximum": 1.6 },
+            "sizes": { "type": "object", "additionalProperties": false, "properties": { "cover": { "type": "number" }, "page": { "type": "number" }, "end": { "type": "number" } }, "description": "Base headline size in px (1080 wide) by role: first page, other pages, closing page. Replaces the pattern's own sizes; long headlines still step down." },
+            "shadow": { "type": "object", "required": ["color", "blur"], "additionalProperties": false, "properties": { "color": { "type": "string" }, "blur": { "type": "number", "minimum": 0 }, "x": { "type": "number" }, "y": { "type": "number" } } }
+          }
+        },
+        "textZone": { "enum": ["auto", "lower", "centre"], "description": "Where the main text sits on pages without a picture beside them." },
+        "kicker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": { "type": "string" },
+            "style": { "enum": ["label", "script"], "description": "label = small tracked caps; script = a line in the script font above the headline." },
+            "size": { "type": "number", "minimum": 16, "maximum": 80 },
+            "scriptSize": { "type": "number", "minimum": 40, "maximum": 200 },
+            "color": { "enum": ["paper", "ink", "accent", "text", "sub"], "description": "Which brand role colours the label (default: the accent colour that is readable on the page)." },
+            "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+            "case": { "enum": ["none", "upper"] },
+            "tracking": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "body": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "font": { "type": "string" }, "weight": { "type": "integer", "minimum": 100, "maximum": 900 }, "sizeScale": { "type": "number", "minimum": 0.6, "maximum": 1.6 } }
+        },
+        "background": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["flat", "gradient"] },
+            "gradients": {
+              "description": "By tone (light, dark, accent, alt): a gradient fill in the same form documents use.",
+              "type": "object",
+              "propertyNames": { "enum": ["light", "dark", "accent", "alt"] },
+              "additionalProperties": { "type": "object" }
+            }
+          }
+        },
+        "footer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string" },
+            "show": { "enum": ["none", "first", "last", "all"] },
+            "size": { "type": "number", "minimum": 14, "maximum": 60 },
+            "tracking": { "type": "number", "minimum": 0, "maximum": 1 },
+            "case": { "enum": ["none", "upper"] },
+            "font": { "type": "string" }
+          }
+        },
+        "logo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "key": { "type": "string", "description": "A key of brand.logos." },
+            "keyLight": { "type": "string", "description": "A key of brand.logos used on pages with a light background (e.g. the dark version of a white logo)." },
+            "show": { "enum": ["none", "first", "last", "all"] },
+            "placement": { "enum": ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"] },
+            "w": { "type": "number", "minimum": 4, "maximum": 60, "description": "Width as a percentage of the page." },
+            "h": { "type": "number", "minimum": 2, "maximum": 30, "description": "Height to keep clear, percent of page height." }
+          }
+        },
+        "button": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string" }, "style": { "enum": ["outline", "fill"] }, "show": { "enum": ["none", "first", "last", "all"] }, "position": { "enum": ["bottom-center", "bottom-left", "bottom-right"] }, "chevrons": { "type": "integer", "minimum": 0, "maximum": 5 } }
+        },
+        "photo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "radius": { "type": "number", "minimum": 0, "maximum": 600 },
+            "fade": { "type": "object", "additionalProperties": false, "properties": { "colour": { "type": "string", "description": "A key of brand.colors, or a hex." }, "from": { "type": "number", "minimum": 0, "maximum": 1 }, "strength": { "type": "number", "minimum": 0, "maximum": 1 }, "height": { "type": "number", "minimum": 20, "maximum": 100 } } },
+            "textShadow": { "type": "object", "required": ["color", "blur"], "additionalProperties": false, "properties": { "color": { "type": "string" }, "blur": { "type": "number", "minimum": 0 }, "x": { "type": "number" }, "y": { "type": "number" } } },
+            "logoAvoid": { "enum": ["focal"], "description": "Keep the logo clear of the face (page's focal point) on photo pages." }
+          }
+        },
+        "end": { "type": "object", "additionalProperties": false, "properties": { "leadStyle": { "enum": ["italic", "plain"] }, "phoneSize": { "type": "number", "minimum": 30, "maximum": 300 }, "underlineUrl": { "type": "boolean" }, "disclaimerSize": { "type": "number", "minimum": 14, "maximum": 60 }, "logoW": { "type": "number", "minimum": 5, "maximum": 80 } } },
+        "list": { "type": "object", "additionalProperties": false, "properties": { "align": { "enum": ["left", "center"] }, "numbered": { "type": "boolean" } } },
+        "person": { "type": "object", "additionalProperties": false, "properties": { "nameSize": { "type": "number", "minimum": 40, "maximum": 300 }, "rule": { "type": "boolean" }, "roleCase": { "enum": ["none", "upper"] } } }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "handle": { "type": "string" },
+        "website": { "type": "string", "format": "uri" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 64 },
+    "key": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 40 },
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$" },
+    "relPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 260,
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*\\.\\.)(?!.*\\\\)[^\\u0000]+$"
+    },
+    "font": {
+      "type": "object",
+      "required": ["family", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "family": { "type": "string", "minLength": 1 },
+        "weights": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 100, "maximum": 900 } },
+        "source": { "enum": ["google", "file", "system"] },
+        "files": {
+          "description": "For source=file: weight -> path to a font file you have the right to use.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/relPath" }
+        }
+      },
+      "if": { "properties": { "source": { "const": "file" } }, "required": ["source"] },
+      "then": { "required": ["files"] }
+    }
+  }
+}

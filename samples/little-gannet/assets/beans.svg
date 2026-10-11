@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Scattered roasted coffee beans">
+  <g stroke="#1F2A2E" stroke-width="8" stroke-linecap="round">
+    <g transform="translate(130 150) rotate(-24)"><ellipse rx="86" ry="56" fill="#6B3E26"/><path d="M-70 4 Q-24 -26 8 4 T70 -6" fill="none"/></g>
+    <g transform="translate(360 110) rotate(18)"><ellipse rx="82" ry="54" fill="#8A5230"/><path d="M-66 0 Q-22 -28 8 2 T66 -4" fill="none"/></g>
+    <g transform="translate(470 290) rotate(-60)"><ellipse rx="84" ry="55" fill="#6B3E26"/><path d="M-68 2 Q-22 -26 8 4 T68 -4" fill="none"/></g>
+    <g transform="translate(250 330) rotate(36)"><ellipse rx="90" ry="58" fill="#9A6038"/><path d="M-72 2 Q-26 -28 8 4 T72 -6" fill="none"/></g>
+    <g transform="translate(110 440) rotate(-8)"><ellipse rx="80" ry="52" fill="#8A5230"/><path d="M-64 4 Q-20 -24 8 4 T64 -4" fill="none"/></g>
+    <g transform="translate(420 490) rotate(52)"><ellipse rx="84" ry="55" fill="#6B3E26"/><path d="M-68 2 Q-22 -26 8 4 T68 -4" fill="none"/></g>
+  </g>
+</svg>

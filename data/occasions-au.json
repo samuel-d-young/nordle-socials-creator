@@ -1,0 +1,339 @@
+{
+  "format": "nordle-occasions/1",
+  "note": "A small, deliberately honest library of Australian dates for small-business health, dental and marketing posts, built for planning October 2026 to December 2027 (the rules also work for other years). It is a planning aid, not an authority: anything marked verify:true must be confirmed from its source before a post states the date. Awareness days are only listed when the day and its organiser are well established; if in doubt an entry was left out rather than guessed. Rule types: fixed {month,day,span?}, nth-weekday {month,weekday 0=Sun..6=Sat,nth 1..5 or -1 for last,plus?,span?}, easter {offset,span?}, month {month}, dates {dates:[{date,end?,name?,verify?}]}. span is the number of days the occasion lasts (default 1). runUpDays is how many days ahead posts about it make sense. regions: AU = national, otherwise state codes. relevance is to a dental or health practice audience. advice: closed = most practices are shut; respectful = no promotion, quiet tone; avoid-promo = do not hang offers on it; post-ok.",
+  "regions": ["AU", "VIC", "WA"],
+  "occasions": [
+    {
+      "id": "new-years-day", "name": "New Year's Day", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 1, "day": 1 },
+      "tags": ["holiday", "seasonal"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 7,
+      "source": "Fair Work Ombudsman public holidays"
+    },
+    {
+      "id": "australia-day", "name": "Australia Day", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 1, "day": 26 },
+      "tags": ["holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 3,
+      "caution": "The date is contested and views differ; decide the brand's stance deliberately. Skipping a post is a legitimate choice.",
+      "source": "Fair Work Ombudsman public holidays"
+    },
+    {
+      "id": "valentines-day", "name": "Valentine's Day", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 2, "day": 14 },
+      "tags": ["commercial", "smile", "seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "note": "Light, smile-and-confidence angles only; no appearance pressure."
+    },
+    {
+      "id": "lunar-new-year", "name": "Lunar New Year", "aliases": ["Chinese New Year"], "kind": "cultural", "regions": ["AU"],
+      "rule": { "type": "dates", "dates": [{ "date": "2027-02-06" }] },
+      "tags": ["cultural", "community"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "caution": "Greet respectfully and only if it fits the practice's community; no stereotyped imagery.",
+      "source": "Published lunar calendars; 2026 was 17 Feb"
+    },
+    {
+      "id": "labour-day-vic", "name": "Labour Day (Victoria)", "kind": "public-holiday", "regions": ["VIC"],
+      "rule": { "type": "nth-weekday", "month": 3, "weekday": 1, "nth": 2 },
+      "tags": ["holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 3,
+      "note": "Second Monday of March.", "source": "Victorian Government public holidays"
+    },
+    {
+      "id": "labour-day-wa", "name": "Labour Day (Western Australia)", "kind": "public-holiday", "regions": ["WA"],
+      "rule": { "type": "nth-weekday", "month": 3, "weekday": 1, "nth": 1 },
+      "tags": ["holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 3,
+      "note": "First Monday of March.", "source": "WA Government public holidays"
+    },
+    {
+      "id": "world-oral-health-day", "name": "World Oral Health Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 3, "day": 20 },
+      "tags": ["dental", "health", "awareness"], "relevance": "high", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 10,
+      "note": "20 March, run by the FDI World Dental Federation.", "source": "FDI World Dental Federation"
+    },
+    {
+      "id": "good-friday", "name": "Good Friday", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "easter", "offset": -2 },
+      "tags": ["holiday", "easter"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 14,
+      "note": "Practices are closed over the Easter long weekend; posts about opening hours must come from the practice's own notice."
+    },
+    {
+      "id": "easter-saturday", "name": "Easter Saturday", "kind": "public-holiday", "regions": ["VIC"],
+      "rule": { "type": "easter", "offset": -1 },
+      "tags": ["holiday", "easter"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 14
+    },
+    {
+      "id": "easter-sunday", "name": "Easter Sunday", "kind": "observance", "regions": ["AU"],
+      "rule": { "type": "easter", "offset": 0 },
+      "tags": ["holiday", "easter", "sugar"], "relevance": "high", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 14,
+      "note": "Chocolate and sugar angles are the classic dental topic (tips, not scare tactics)."
+    },
+    {
+      "id": "easter-monday", "name": "Easter Monday", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "easter", "offset": 1 },
+      "tags": ["holiday", "easter"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 14
+    },
+    {
+      "id": "anzac-day", "name": "Anzac Day", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 4, "day": 25 },
+      "tags": ["holiday", "remembrance"], "relevance": "low", "confidence": "high", "verify": false, "advice": "respectful", "runUpDays": 3,
+      "caution": "A day of remembrance: no promotion, no jokes, no sales tie-ins. A quiet acknowledgement or no post at all."
+    },
+    {
+      "id": "anzac-day-wa-monday", "name": "Anzac Day (additional day, Western Australia)", "kind": "public-holiday", "regions": ["WA"],
+      "rule": { "type": "dates", "dates": [{ "date": "2027-04-26" }] },
+      "tags": ["holiday", "remembrance"], "relevance": "low", "confidence": "medium", "verify": true, "advice": "closed", "runUpDays": 3,
+      "note": "Anzac Day 2027 falls on a Sunday; Western Australia has given the Monday off in such years. Confirm the 2027 list.", "source": "WA Government public holidays"
+    },
+    {
+      "id": "mothers-day", "name": "Mother's Day", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 5, "weekday": 0, "nth": 2 },
+      "tags": ["commercial", "families", "seasonal"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 14,
+      "note": "Second Sunday of May. Gift-card or voucher posts count as offers: they need full conditions."
+    },
+    {
+      "id": "world-no-tobacco-day", "name": "World No Tobacco Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 5, "day": 31 },
+      "tags": ["health", "dental", "awareness"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "note": "31 May, run by the World Health Organization. Keep to established oral-health facts.", "source": "World Health Organization"
+    },
+    {
+      "id": "reconciliation-week", "name": "National Reconciliation Week", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 5, "day": 27, "span": 8 },
+      "tags": ["community", "awareness"], "relevance": "low", "confidence": "high", "verify": false, "advice": "respectful", "runUpDays": 3,
+      "caution": "27 May to 3 June. Post only if the practice has a genuine, considered position; never as decoration.",
+      "source": "Reconciliation Australia"
+    },
+    {
+      "id": "wa-day", "name": "Western Australia Day", "kind": "public-holiday", "regions": ["WA"],
+      "rule": { "type": "nth-weekday", "month": 6, "weekday": 1, "nth": 1 },
+      "tags": ["holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 3,
+      "note": "First Monday of June.", "source": "WA Government public holidays"
+    },
+    {
+      "id": "kings-birthday-vic", "name": "King's Birthday (Victoria)", "kind": "public-holiday", "regions": ["VIC"],
+      "rule": { "type": "nth-weekday", "month": 6, "weekday": 1, "nth": 2 },
+      "tags": ["holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 3,
+      "note": "Second Monday of June.", "source": "Victorian Government public holidays"
+    },
+    {
+      "id": "eofy", "name": "End of financial year (EOFY)", "aliases": ["EOFY", "end of financial year"], "kind": "finance", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 6, "day": 30 },
+      "tags": ["finance", "commercial", "workplace"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "avoid-promo", "runUpDays": 21,
+      "caution": "Do not make tax or deductibility claims about treatment. EOFY sale framing is an offer and needs its full conditions; a helpful 'how to book around a busy time' post is safer."
+    },
+    {
+      "id": "naidoc-week", "name": "NAIDOC Week", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 7, "weekday": 0, "nth": 1, "span": 8 },
+      "tags": ["community", "awareness"], "relevance": "low", "confidence": "medium", "verify": true, "advice": "respectful", "runUpDays": 3,
+      "caution": "Usually the first full week of July (Sunday to Sunday); the committee announces the week and theme. Post only with a genuine position.",
+      "source": "naidoc.org.au"
+    },
+    {
+      "id": "dental-health-week", "name": "Dental Health Week", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 8, "weekday": 1, "nth": 1, "span": 7 },
+      "tags": ["dental", "health", "awareness", "families"], "relevance": "high", "confidence": "medium", "verify": true, "advice": "post-ok", "runUpDays": 14,
+      "note": "The Australian Dental Association's annual week, in early August (Monday to Sunday). Confirm the week and theme before naming dates.",
+      "source": "Australian Dental Association (ada.org.au)"
+    },
+    {
+      "id": "fathers-day", "name": "Father's Day", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 9, "weekday": 0, "nth": 1 },
+      "tags": ["commercial", "families", "seasonal"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 14,
+      "note": "First Sunday of September in Australia."
+    },
+    {
+      "id": "r-u-ok-day", "name": "R U OK? Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 9, "weekday": 4, "nth": 2 },
+      "tags": ["wellbeing", "awareness", "workplace"], "relevance": "low", "confidence": "medium", "verify": true, "advice": "respectful", "runUpDays": 5,
+      "caution": "Second Thursday of September; the organisation confirms each year. A genuine check-in message, never a sales hook.",
+      "source": "ruok.org.au"
+    },
+    {
+      "id": "afl-grand-final-friday", "name": "AFL Grand Final Friday (Victoria)", "kind": "public-holiday", "regions": ["VIC"],
+      "rule": { "type": "dates", "dates": [{ "date": "2027-09-24" }] },
+      "tags": ["holiday", "sport"], "relevance": "low", "confidence": "low", "verify": true, "advice": "closed", "runUpDays": 5,
+      "note": "The Friday before the AFL Grand Final. The league sets the Grand Final date; confirm the 2027 date and the gazetted holiday.", "source": "Victorian Government public holidays; afl.com.au"
+    },
+    {
+      "id": "kings-birthday-wa", "name": "King's Birthday (Western Australia)", "kind": "public-holiday", "regions": ["WA"],
+      "rule": { "type": "dates", "dates": [{ "date": "2026-09-28" }, { "date": "2027-09-27" }] },
+      "tags": ["holiday"], "relevance": "low", "confidence": "low", "verify": true, "advice": "closed", "runUpDays": 3,
+      "note": "Western Australia sets this by proclamation (late September or early October). These are the usual last-Monday dates, not confirmed.", "source": "WA Government public holidays"
+    },
+    {
+      "id": "world-smile-day", "name": "World Smile Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 10, "weekday": 5, "nth": 1 },
+      "tags": ["dental", "smile", "awareness"], "relevance": "high", "confidence": "medium", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "note": "First Friday of October. A light, feel-good day; keep the focus on people smiling, not on treatments."
+    },
+    {
+      "id": "world-mental-health-day", "name": "World Mental Health Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 10, "day": 10 },
+      "tags": ["wellbeing", "health", "awareness"], "relevance": "low", "confidence": "high", "verify": false, "advice": "respectful", "runUpDays": 3,
+      "source": "World Health Organization / World Federation for Mental Health"
+    },
+    {
+      "id": "halloween", "name": "Halloween", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 10, "day": 31 },
+      "tags": ["commercial", "sugar", "dental", "families", "seasonal"], "relevance": "high", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 10,
+      "caution": "The classic lolly-tips post. No children's faces; no scare or shame tactics about sugar; no lolly giveaways framed as an offer."
+    },
+    {
+      "id": "melbourne-cup-day", "name": "Melbourne Cup Day", "aliases": ["Cup Day", "Melbourne Cup"], "kind": "public-holiday", "regions": ["VIC"],
+      "rule": { "type": "nth-weekday", "month": 11, "weekday": 2, "nth": 1 },
+      "tags": ["holiday", "sport", "seasonal"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 7,
+      "note": "First Tuesday of November. A public holiday in the Melbourne metropolitan area and some other parts of Victoria, not the whole state, and not Western Australia.",
+      "source": "Victorian Government public holidays"
+    },
+    {
+      "id": "movember", "name": "Movember", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "month", "month": 11 },
+      "tags": ["health", "men", "awareness"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "note": "All of November. A good prompt for 'men skip check-ups' angles without scare tactics.", "source": "Movember Foundation"
+    },
+    {
+      "id": "remembrance-day", "name": "Remembrance Day", "kind": "observance", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 11, "day": 11 },
+      "tags": ["remembrance"], "relevance": "low", "confidence": "high", "verify": false, "advice": "respectful", "runUpDays": 1,
+      "caution": "No promotion. A quiet acknowledgement, or nothing."
+    },
+    {
+      "id": "world-diabetes-day", "name": "World Diabetes Day", "kind": "awareness", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 11, "day": 14 },
+      "tags": ["health", "dental", "awareness"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 5,
+      "caution": "Gum health and diabetes are linked in the literature, but say only what the practice's dentist is prepared to stand behind; no medical claims.",
+      "source": "International Diabetes Federation"
+    },
+    {
+      "id": "diwali", "name": "Diwali", "kind": "cultural", "regions": ["AU"],
+      "rule": { "type": "dates", "dates": [{ "date": "2026-11-08" }, { "date": "2027-10-29" }] },
+      "tags": ["cultural", "community"], "relevance": "low", "confidence": "medium", "verify": true, "advice": "post-ok", "runUpDays": 5,
+      "caution": "The main day moves with the lunar calendar and varies by tradition; confirm before naming it. Greet respectfully, no stereotyped imagery.",
+      "source": "Published Hindu festival calendars"
+    },
+    {
+      "id": "black-friday", "name": "Black Friday", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 11, "weekday": 4, "nth": 4, "plus": 1 },
+      "tags": ["commercial", "retail"], "relevance": "low", "confidence": "high", "verify": false, "advice": "avoid-promo", "runUpDays": 3,
+      "caution": "The day after US Thanksgiving. Discount framing is an offer and needs its full conditions in health advertising; do not hang a dental offer on it."
+    },
+    {
+      "id": "cyber-monday", "name": "Cyber Monday", "kind": "commercial", "regions": ["AU"],
+      "rule": { "type": "nth-weekday", "month": 11, "weekday": 4, "nth": 4, "plus": 4 },
+      "tags": ["commercial", "retail"], "relevance": "low", "confidence": "high", "verify": false, "advice": "avoid-promo", "runUpDays": 3,
+      "caution": "The Monday after Black Friday. Same caution about offers."
+    },
+    {
+      "id": "season-summer", "name": "First day of summer (meteorological)", "kind": "season", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 1 },
+      "tags": ["seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 3,
+      "source": "Bureau of Meteorology (seasons start on the 1st of the month)"
+    },
+    {
+      "id": "season-autumn", "name": "First day of autumn (meteorological)", "kind": "season", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 3, "day": 1 },
+      "tags": ["seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 3,
+      "source": "Bureau of Meteorology"
+    },
+    {
+      "id": "season-winter", "name": "First day of winter (meteorological)", "kind": "season", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 6, "day": 1 },
+      "tags": ["seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 3,
+      "source": "Bureau of Meteorology"
+    },
+    {
+      "id": "season-spring", "name": "First day of spring (meteorological)", "kind": "season", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 9, "day": 1 },
+      "tags": ["seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 3,
+      "source": "Bureau of Meteorology"
+    },
+    {
+      "id": "christmas-eve", "name": "Christmas Eve", "kind": "observance", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 24 },
+      "tags": ["seasonal", "holiday"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 7,
+      "note": "Closing-hours posts must come from the practice's own notice."
+    },
+    {
+      "id": "christmas-day", "name": "Christmas Day", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 25 },
+      "tags": ["holiday", "seasonal"], "relevance": "medium", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 10,
+      "source": "Fair Work Ombudsman public holidays"
+    },
+    {
+      "id": "boxing-day", "name": "Boxing Day", "kind": "public-holiday", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 26 },
+      "tags": ["holiday", "seasonal"], "relevance": "low", "confidence": "high", "verify": false, "advice": "closed", "runUpDays": 5,
+      "source": "Fair Work Ombudsman public holidays"
+    },
+    {
+      "id": "christmas-observed", "name": "Christmas and Boxing Day (observed days off)", "kind": "public-holiday", "regions": ["VIC", "WA"],
+      "rule": { "type": "dates", "dates": [
+        { "date": "2026-12-28", "name": "Boxing Day (observed, Monday)" },
+        { "date": "2027-12-27", "name": "Christmas Day (observed, Monday)" },
+        { "date": "2027-12-28", "name": "Boxing Day (observed, Tuesday)" }
+      ] },
+      "tags": ["holiday", "seasonal"], "relevance": "low", "confidence": "medium", "verify": true, "advice": "closed", "runUpDays": 5,
+      "note": "When Christmas Day or Boxing Day falls on a weekend a weekday is given instead. These are the usual substitute days; confirm the gazetted lists.",
+      "source": "Victorian and WA Government public holiday lists"
+    },
+    {
+      "id": "health-fund-reset", "name": "Private health fund annual limits reset", "aliases": ["health fund reset", "benefit reset", "end of year health cover"], "kind": "finance", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 31 },
+      "tags": ["finance", "dental", "health", "commercial"], "relevance": "high", "confidence": "medium", "verify": true, "advice": "post-ok", "runUpDays": 28,
+      "note": "Most private health funds reset annual benefit limits on 1 January; some reset on 1 July or another date. Say 'check when your fund's year resets', never a date as fact.",
+      "caution": "No pressure and no 'use it or lose it' urgency: it can encourage treatment people do not need. Frame it as 'know your cover and book when you need care'.",
+      "source": "Each fund's own policy documents"
+    },
+    {
+      "id": "new-years-eve", "name": "New Year's Eve", "kind": "observance", "regions": ["AU"],
+      "rule": { "type": "fixed", "month": 12, "day": 31 },
+      "tags": ["seasonal", "holiday"], "relevance": "low", "confidence": "high", "verify": false, "advice": "post-ok", "runUpDays": 3
+    },
+    {
+      "id": "school-holidays-vic", "name": "Victorian school holidays", "kind": "school", "regions": ["VIC"],
+      "rule": { "type": "dates", "dates": [
+        { "date": "2026-12-19", "end": "2027-01-26", "name": "Victorian summer school holidays" },
+        { "date": "2027-04-02", "end": "2027-04-18", "name": "Victorian autumn school holidays" },
+        { "date": "2027-06-26", "end": "2027-07-11", "name": "Victorian winter school holidays" },
+        { "date": "2027-09-18", "end": "2027-10-03", "name": "Victorian spring school holidays" },
+        { "date": "2027-12-18", "name": "Victorian summer school holidays begin" }
+      ] },
+      "tags": ["school", "families"], "relevance": "medium", "confidence": "medium", "verify": true, "advice": "post-ok", "runUpDays": 14,
+      "note": "Dates are from the usual published pattern, not checked against the department's list. Confirm before a post states them.", "source": "education.vic.gov.au school term dates"
+    },
+    {
+      "id": "school-terms-vic", "name": "Victorian school term starts", "kind": "school", "regions": ["VIC"],
+      "rule": { "type": "dates", "dates": [
+        { "date": "2026-10-05", "name": "Victorian Term 4 starts" },
+        { "date": "2027-01-27", "name": "Victorian Term 1 starts (back to school)" },
+        { "date": "2027-04-19", "name": "Victorian Term 2 starts" },
+        { "date": "2027-07-12", "name": "Victorian Term 3 starts" },
+        { "date": "2027-10-04", "name": "Victorian Term 4 starts" }
+      ] },
+      "tags": ["school", "families"], "relevance": "medium", "confidence": "medium", "verify": true, "advice": "post-ok", "runUpDays": 10,
+      "note": "Back-to-school angles. Confirm before a post states a date.", "source": "education.vic.gov.au school term dates"
+    },
+    {
+      "id": "school-holidays-wa", "name": "Western Australian school holidays", "kind": "school", "regions": ["WA"],
+      "rule": { "type": "dates", "dates": [
+        { "date": "2026-09-26", "end": "2026-10-11", "name": "WA spring school holidays (approximate)" },
+        { "date": "2026-12-18", "end": "2027-01-31", "name": "WA summer school holidays (approximate)" },
+        { "date": "2027-04-03", "end": "2027-04-18", "name": "WA autumn school holidays (approximate)" },
+        { "date": "2027-07-03", "end": "2027-07-18", "name": "WA winter school holidays (approximate)" },
+        { "date": "2027-09-25", "end": "2027-10-10", "name": "WA spring school holidays (approximate)" },
+        { "date": "2027-12-17", "name": "WA summer school holidays begin (approximate)" }
+      ] },
+      "tags": ["school", "families"], "relevance": "medium", "confidence": "low", "verify": true, "advice": "post-ok", "runUpDays": 14,
+      "note": "Approximate: shaped from the usual two-week breaks, not from the department's list. Do not state these dates without confirming.", "source": "education.wa.edu.au term dates"
+    },
+    {
+      "id": "school-terms-wa", "name": "Western Australian school term starts", "kind": "school", "regions": ["WA"],
+      "rule": { "type": "dates", "dates": [
+        { "date": "2026-10-12", "name": "WA Term 4 starts (approximate)" },
+        { "date": "2027-02-01", "name": "WA Term 1 starts, back to school (approximate)" },
+        { "date": "2027-04-19", "name": "WA Term 2 starts (approximate)" },
+        { "date": "2027-07-19", "name": "WA Term 3 starts (approximate)" },
+        { "date": "2027-10-11", "name": "WA Term 4 starts (approximate)" }
+      ] },
+      "tags": ["school", "families"], "relevance": "medium", "confidence": "low", "verify": true, "advice": "post-ok", "runUpDays": 10,
+      "note": "Approximate. Confirm before a post states a date.", "source": "education.wa.edu.au term dates"
+    }
+  ]
+}

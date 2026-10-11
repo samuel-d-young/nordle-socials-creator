@@ -1,0 +1,92 @@
+{
+  "$schema": "../schemas/platforms.schema.json",
+  "schema": "nordle.platforms/0.1",
+  "note": "Sizes are the common pixel sizes. Safe zones and limits are APPROXIMATE starting points and every preset is marked verified:false. Phase 1 task: check each against the platform's current published guidance and flip verified to true with a source in notes.",
+  "presets": [
+    {
+      "id": "ig-feed-4x5", "platform": "instagram", "name": "Instagram feed, portrait 4:5",
+      "w": 1080, "h": 1350, "kinds": ["graphic", "carousel", "video"],
+      "safe": { "top": 0.04, "right": 0.06, "bottom": 0.04, "left": 0.06 },
+      "maxCaption": 2200, "verified": false
+    },
+    {
+      "id": "ig-feed-1x1", "platform": "instagram", "name": "Instagram feed, square 1:1",
+      "w": 1080, "h": 1080, "kinds": ["graphic", "carousel", "video"],
+      "safe": { "top": 0.05, "right": 0.06, "bottom": 0.05, "left": 0.06 },
+      "maxCaption": 2200, "verified": false
+    },
+    {
+      "id": "ig-story-9x16", "platform": "instagram", "name": "Instagram Story 9:16",
+      "w": 1080, "h": 1920, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.13, "right": 0.06, "bottom": 0.13, "left": 0.06 },
+      "verified": false, "notes": "Story UI covers the top and bottom bands."
+    },
+    {
+      "id": "ig-reel-9x16", "platform": "instagram", "name": "Instagram Reel 9:16",
+      "w": 1080, "h": 1920, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.13, "right": 0.12, "bottom": 0.2, "left": 0.06 },
+      "maxCaption": 2200, "maxDuration": 180, "verified": false,
+      "notes": "Caption and buttons sit low and to the right."
+    },
+    {
+      "id": "fb-feed-4x5", "platform": "facebook", "name": "Facebook feed, portrait 4:5",
+      "w": 1080, "h": 1350, "kinds": ["graphic", "carousel", "video"],
+      "safe": { "top": 0.04, "right": 0.06, "bottom": 0.04, "left": 0.06 }, "verified": false
+    },
+    {
+      "id": "fb-story-9x16", "platform": "facebook", "name": "Facebook Story 9:16",
+      "w": 1080, "h": 1920, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.13, "right": 0.06, "bottom": 0.13, "left": 0.06 }, "verified": false
+    },
+    {
+      "id": "fb-link-landscape", "platform": "facebook", "name": "Facebook link image 1.91:1",
+      "w": 1200, "h": 630, "kinds": ["graphic"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.05, "left": 0.05 }, "verified": false
+    },
+    {
+      "id": "tiktok-9x16", "platform": "tiktok", "name": "TikTok 9:16",
+      "w": 1080, "h": 1920, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.1, "right": 0.15, "bottom": 0.22, "left": 0.06 }, "verified": false
+    },
+    {
+      "id": "yt-shorts-9x16", "platform": "youtube", "name": "YouTube Shorts 9:16",
+      "w": 1080, "h": 1920, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.1, "right": 0.14, "bottom": 0.22, "left": 0.06 },
+      "maxDuration": 180, "verified": false
+    },
+    {
+      "id": "yt-thumb-16x9", "platform": "youtube", "name": "YouTube thumbnail 16:9",
+      "w": 1280, "h": 720, "kinds": ["graphic"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.12, "left": 0.05 }, "verified": false,
+      "notes": "The duration badge covers the bottom-right corner."
+    },
+    {
+      "id": "li-feed-4x5", "platform": "linkedin", "name": "LinkedIn feed, portrait 4:5",
+      "w": 1080, "h": 1350, "kinds": ["graphic", "carousel", "video"],
+      "safe": { "top": 0.04, "right": 0.06, "bottom": 0.04, "left": 0.06 },
+      "maxCaption": 3000, "verified": false
+    },
+    {
+      "id": "li-landscape", "platform": "linkedin", "name": "LinkedIn landscape 1.91:1",
+      "w": 1200, "h": 627, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.05, "left": 0.05 }, "verified": false
+    },
+    {
+      "id": "x-landscape-16x9", "platform": "x", "name": "X post image 16:9",
+      "w": 1600, "h": 900, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.05, "left": 0.05 },
+      "maxCaption": 280, "verified": false
+    },
+    {
+      "id": "pin-2x3", "platform": "pinterest", "name": "Pinterest pin 2:3",
+      "w": 1000, "h": 1500, "kinds": ["graphic", "video"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.1, "left": 0.05 },
+      "maxCaption": 500, "verified": false
+    },
+    {
+      "id": "threads-4x5", "platform": "threads", "name": "Threads image 4:5",
+      "w": 1080, "h": 1350, "kinds": ["graphic", "carousel"],
+      "safe": { "top": 0.04, "right": 0.06, "bottom": 0.04, "left": 0.06 }, "verified": false
+    }
+  ]
+}

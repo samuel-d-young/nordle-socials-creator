@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:review:0.1",
+  "title": "Nordle review",
+  "description": "Comments pinned on a document, saved versions and approvals. One file per document, beside it.",
+  "type": "object",
+  "required": ["schema", "doc", "comments", "versions", "approvals"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.review/0.1" },
+    "doc": { "$ref": "#/$defs/id" },
+    "comments": { "type": "array", "items": { "$ref": "#/$defs/comment" } },
+    "versions": { "type": "array", "items": { "$ref": "#/$defs/version" } },
+    "approvals": { "type": "array", "items": { "$ref": "#/$defs/approval" } },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "autonomy": {
+          "description": "How far Claude may go on this document. suggest: changes are only proposed. review: changes are applied but flagged for the owner to accept or reject. apply: changes are applied.",
+          "enum": ["suggest", "review", "apply"]
+        }
+      }
+    },
+    "changes": { "type": "array", "items": { "$ref": "#/$defs/change" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 64 },
+    "author": { "enum": ["human", "claude"] },
+    "date": { "type": "string", "format": "date-time" },
+    "reply": {
+      "type": "object",
+      "required": ["id", "author", "text", "created"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "author": { "$ref": "#/$defs/author" },
+        "text": { "type": "string", "maxLength": 4000 },
+        "created": { "$ref": "#/$defs/date" }
+      }
+    },
+    "comment": {
+      "type": "object",
+      "required": ["id", "page", "x", "y", "text", "author", "created", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "page": { "$ref": "#/$defs/id" },
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "time": { "type": "number", "minimum": 0, "description": "Video comments: the second of the video the pin is on. Page is then \"video\"." },
+        "general": { "type": "boolean", "description": "A note about the whole post, not a spot: x and y are only placeholders." },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "layer": { "$ref": "#/$defs/id" },
+        "size": { "$ref": "#/$defs/id" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "author": { "$ref": "#/$defs/author" },
+        "created": { "$ref": "#/$defs/date" },
+        "docV": { "type": "integer", "minimum": 0 },
+        "status": { "enum": ["open", "resolved"] },
+        "resolvedIn": { "$ref": "#/$defs/id" },
+        "replies": { "type": "array", "items": { "$ref": "#/$defs/reply" } }
+      }
+    },
+    "version": {
+      "type": "object",
+      "required": ["id", "name", "created", "docV", "file"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "note": { "type": "string", "maxLength": 1000 },
+        "created": { "$ref": "#/$defs/date" },
+        "docV": { "type": "integer", "minimum": 0 },
+        "file": { "type": "string", "pattern": "^review/versions/[a-z0-9_-]+/[a-z0-9_-]+\\.json$" },
+        "author": { "$ref": "#/$defs/author" }
+      }
+    },
+    "change": {
+      "description": "An edit made by Claude. mode applied: it is already in the document and can be taken back. mode proposed: it has not been applied and waits for the owner.",
+      "type": "object",
+      "required": ["id", "mode", "status", "note", "created", "ops"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "mode": { "enum": ["applied", "proposed"] },
+        "status": { "enum": ["pending", "accepted", "rejected"] },
+        "auto": { "type": "boolean" },
+        "note": { "type": "string", "maxLength": 1000 },
+        "created": { "$ref": "#/$defs/date" },
+        "decided": { "$ref": "#/$defs/date" },
+        "baseV": { "type": "integer", "minimum": 0 },
+        "v": { "type": "integer", "minimum": 0 },
+        "ops": { "type": "array", "items": { "type": "object" } },
+        "summary": { "type": "array", "items": { "type": "string" } },
+        "touched": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["page"],
+            "additionalProperties": false,
+            "properties": { "page": { "$ref": "#/$defs/id" }, "layer": { "type": ["string", "null"] } }
+          }
+        },
+        "regions": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": ["id", "versionId", "docV", "by", "date"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "versionId": { "$ref": "#/$defs/id" },
+        "docV": { "type": "integer", "minimum": 0 },
+        "by": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "date": { "$ref": "#/$defs/date" },
+        "note": { "type": "string", "maxLength": 1000 },
+        "revoked": { "$ref": "#/$defs/date" }
+      }
+    }
+  }
+}

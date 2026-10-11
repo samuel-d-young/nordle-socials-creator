@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schemas/brand.schema.json",
+  "schema": "nordle.brand/0.1",
+  "id": "little-gannet",
+  "name": "Little Gannet Coffee",
+  "note": "Fictional sample brand made for Nordle. Any resemblance to a real business is coincidence.",
+  "colors": {
+    "ink": "#1F2A2E",
+    "paper": "#F5EEE3",
+    "accent": "#D4752B",
+    "accentDark": "#A8520F",
+    "sea": "#3F6C7A",
+    "muted": "#6F7F83"
+  },
+  "fonts": {
+    "display": { "family": "Fraunces", "weights": [600, 700], "source": "google" },
+    "body": { "family": "Inter", "weights": [400, 600], "source": "google" }
+  },
+  "logos": { "primary": "assets/logo.svg" },
+  "voice": {
+    "audience": "Locals and day-trippers in a small harbour town",
+    "tone": ["warm", "plain-spoken", "a little cheeky"],
+    "do": ["Name the drink and one real detail", "Say when and where"],
+    "dont": ["Claim health benefits", "Stack exclamation marks"],
+    "bannedPhrases": ["world's best", "guaranteed"]
+  },
+  "motion": { "personality": "calm", "ease": "out-cubic" },
+  "captionStyle": {
+    "font": "$brand.fonts.display",
+    "size": 64,
+    "weight": 700,
+    "color": "$brand.colors.paper",
+    "highlightColor": "$brand.colors.accent",
+    "uppercase": false
+  },
+  "colourways": {
+    "night": { "colors": { "ink": "#F5EEE3", "paper": "#1F2A2E", "muted": "#A9B6B8" } }
+  },
+  "links": { "handle": "@littlegannet", "website": "https://example.com" }
+}

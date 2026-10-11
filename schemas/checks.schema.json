@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:checks:0.1",
+  "title": "Nordle checks record",
+  "description": "The record of how a post was checked, kept at <project>/checks/<doc id>.json. A post is only 'verified' when every required check passed at the document's current version, by more than one checker.",
+  "type": "object",
+  "required": ["schema", "doc", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.checks/0.1" },
+    "doc": { "type": "string" },
+    "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["check", "by", "status", "v", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "enum": ["design", "technical", "copy", "compliance", "facts", "media-match", "speech-cuts", "broll", "audio", "brief", "uniqueness"],
+          "description": "design = critique score; technical = verify; copy = caption and alt text; compliance = pack rules; facts = every phone, address, price, name and number in the words comes from facts.json or the brief; media-match = every caption/text claim is true of the photo or clip it sits on; speech-cuts = no speaker cut off mid-sentence; broll = cutaways make sense for what is being said; audio = levels, ducking, music; brief = does it do what the idea asked; uniqueness = no repeated photo or hook within the month."
+        },
+        "by": { "enum": ["auto", "designer", "reviewer", "owner"], "description": "auto = a script; designer = the Claude that built it; reviewer = a separate Claude that did not build it and looked fresh; owner = the person." },
+        "status": { "enum": ["pass", "fail", "warn", "skipped"] },
+        "v": { "type": "integer", "minimum": 0, "description": "The document version that was checked." },
+        "hash": { "type": "string", "description": "Short fingerprint of the document file that was checked. A document rebuilt from a spec keeps its version number, so the fingerprint is what shows an old check no longer applies." },
+        "at": { "type": "string" },
+        "score": { "type": "number" },
+        "summary": { "type": "string" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["message"],
+            "additionalProperties": false,
+            "properties": {
+              "level": { "enum": ["error", "warn", "info"] },
+              "rule": { "type": "string", "description": "Short id of the rule that raised this, e.g. ahpra-dental/painless." },
+              "page": { "type": "string" },
+              "layer": { "type": "string" },
+              "media": { "type": "string" },
+              "time": { "type": "number" },
+              "message": { "type": "string" },
+              "fix": { "type": "string" }
+            }
+          }
+        },
+        "pairs": {
+          "type": "array",
+          "description": "media-match: for each piece of media, what the words say and what the picture shows, and the verdict.",
+          "items": {
+            "type": "object",
+            "required": ["media", "verdict"],
+            "additionalProperties": false,
+            "properties": {
+              "page": { "type": "string" },
+              "time": { "type": "number", "description": "Video only: where on the timeline (seconds) the media is shown." },
+              "media": { "type": "string" },
+              "words": { "type": "string" },
+              "shows": { "type": "string" },
+              "verdict": { "enum": ["match", "mismatch", "unsure"] },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

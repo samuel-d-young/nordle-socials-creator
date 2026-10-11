@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:facts:0.1",
+  "title": "Nordle facts",
+  "description": "What is true about a brand, written down once with where it came from, so a post never has to guess. Every phone number, web address, email, handle, price, address, opening hour, staff name and title, statistic and treatment in a post is checked against this file (and the post's brief). Lives at <project>/facts.json. If a fact is not here, a post must leave it out.",
+  "type": "object",
+  "required": ["schema", "brand"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.facts/0.1" },
+    "brand": { "$ref": "#/$defs/id" },
+    "updated": { "type": "string", "description": "Date this file was last checked against the real sources, YYYY-MM-DD." },
+    "names": {
+      "type": "array",
+      "description": "The ways the business may be named in a post (full name first).",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "phones": { "type": "array", "items": { "$ref": "#/$defs/phone" } },
+    "emails": { "type": "array", "items": { "$ref": "#/$defs/email" } },
+    "addresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+    "hours": { "type": "array", "items": { "$ref": "#/$defs/hours" } },
+    "websites": { "type": "array", "items": { "$ref": "#/$defs/website" } },
+    "social": { "type": "array", "items": { "$ref": "#/$defs/social" } },
+    "staff": { "type": "array", "items": { "$ref": "#/$defs/staff" } },
+    "services": {
+      "type": "array",
+      "description": "Treatments or products the business really offers. A post that mentions one that is not listed is flagged.",
+      "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/$defs/service" }] }
+    },
+    "prices": { "type": "array", "description": "Prices that may be quoted.", "items": { "$ref": "#/$defs/price" } },
+    "approvedCtas": { "type": "array", "description": "Calls to action the owner has approved, word for word.", "items": { "type": "string", "minLength": 1 } },
+    "approvedStats": { "type": "array", "description": "Numbers that may be quoted (percentages, counts, years of experience), each with where it came from.", "items": { "$ref": "#/$defs/stat" } },
+    "bannedClaims": { "type": "array", "description": "Phrases this business must never use.", "items": { "type": "string", "minLength": 1 } },
+    "riskStatement": {
+      "type": "object",
+      "description": "The general risk wording this business already uses on implant, cosmetic or similar content. Posts about those treatments must carry it.",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" },
+        "appliesTo": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Words that make a post need it (default: implant, veneer, cosmetic, smile makeover, aligner, whitening, all-on)." }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 80 },
+    "source": { "type": "string", "minLength": 1, "description": "Where this fact comes from: the practice's website page, a sign, a document, the owner. Required, so nothing is guessed." },
+    "phone": {
+      "type": "object",
+      "required": ["number", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "description": "What the number is for: main, bookings, emergency, mobile." },
+        "number": { "type": "string", "minLength": 6 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "email": {
+      "type": "object",
+      "required": ["address", "source"],
+      "additionalProperties": false,
+      "properties": { "label": { "type": "string" }, "address": { "type": "string", "minLength": 3 }, "source": { "$ref": "#/$defs/source" } }
+    },
+    "address": {
+      "type": "object",
+      "required": ["text", "source"],
+      "additionalProperties": false,
+      "properties": { "label": { "type": "string" }, "text": { "type": "string", "minLength": 3 }, "source": { "$ref": "#/$defs/source" } }
+    },
+    "hours": {
+      "type": "object",
+      "required": ["text", "source"],
+      "additionalProperties": false,
+      "properties": { "label": { "type": "string" }, "text": { "type": "string", "minLength": 3, "description": "As it may be quoted, e.g. 'Mon to Fri 8 am to 5 pm'." }, "source": { "$ref": "#/$defs/source" } }
+    },
+    "website": {
+      "type": "object",
+      "required": ["url", "source"],
+      "additionalProperties": false,
+      "properties": { "label": { "type": "string" }, "url": { "type": "string", "minLength": 3 }, "source": { "$ref": "#/$defs/source" } }
+    },
+    "social": {
+      "type": "object",
+      "required": ["platform", "handle", "source"],
+      "additionalProperties": false,
+      "properties": { "platform": { "type": "string" }, "handle": { "type": "string", "minLength": 2 }, "source": { "$ref": "#/$defs/source" } }
+    },
+    "staff": {
+      "type": "object",
+      "required": ["name", "title", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "description": "As written on the practice's own page, e.g. 'Dr Jane Citizen'." },
+        "title": { "type": "string", "minLength": 1, "description": "Exactly the role the practice gives them. Never guessed." },
+        "titleAliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Other wordings that mean the same role and may be used." },
+        "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Other ways the person is named in posts (first name only, nickname)." },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "source": { "type": "string" }
+      }
+    },
+    "price": {
+      "type": "object",
+      "required": ["text", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string" },
+        "text": { "type": "string", "minLength": 1, "description": "The price as it may be written, e.g. '$6.50' or 'from $120'." },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "stat": {
+      "type": "object",
+      "required": ["text", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "description": "The claim as it may be written, e.g. 'More than 20 years in Port Wren'." },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    }
+  }
+}

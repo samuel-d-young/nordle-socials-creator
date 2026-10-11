@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:pack:0.1",
+  "title": "Nordle pack",
+  "description": "A shareable folder of lint rules, templates and brand kits. Packs are declarative data. A pack that needs to run code must say so (runsCode) and the user must approve it.",
+  "type": "object",
+  "required": ["schema", "id", "name", "version", "runsCode"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.pack/0.1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 64 },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "description": { "type": "string" },
+    "author": { "type": "string" },
+    "runsCode": { "type": "boolean" },
+    "disclaimer": { "type": "string" },
+    "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+    "templates": { "type": "array", "items": { "$ref": "#/$defs/relPath" } },
+    "brands": { "type": "array", "items": { "$ref": "#/$defs/relPath" } }
+  },
+  "$defs": {
+    "relPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 260,
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*\\.\\.)(?!.*\\\\)[^\\u0000]+$"
+    },
+    "scope": {
+      "description": "Which words a rule looks at. copy.alt = alt text (the copy.alt entries and image layer alts). layers.text = every text layer, on every page and in a video's overlay, runs and per-size text included. video.captions = the words spoken in a video (its caption transcript). copy.hashtags are split at capital letters, so #PainFreeCare reads as 'Pain Free Care'.",
+      "enum": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"]
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "type", "severity", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 64 },
+        "type": { "enum": ["phrase", "regex", "limit", "requireText"] },
+        "severity": { "enum": ["error", "warn", "info"] },
+        "message": { "type": "string", "minLength": 1 },
+        "scope": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/scope" } },
+        "phrases": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "wholeWord": { "type": "boolean" },
+        "caseSensitive": { "type": "boolean" },
+        "pattern": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "flags": { "type": "string", "pattern": "^[gimsuy]*$" },
+        "field": { "enum": ["copy.caption", "copy.hashtags.count", "timeline.duration"] },
+        "max": { "type": "number" },
+        "min": { "type": "number" },
+        "text": { "type": "string", "minLength": 1 },
+        "except": {
+          "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 },
+          "description": "phrase and regex rules: wordings that contain a match but are fine (for example 'feel free' for a rule on 'free'). A match that sits inside one of these is ignored."
+        },
+        "fix": { "type": "string", "minLength": 1, "description": "What to do instead; shown with the finding." },
+        "whenText": {
+          "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 },
+          "description": "The rule only applies to a post whose words contain at least one of these (so 'carry the risk wording' applies only to posts that mention implants)."
+        },
+        "when": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tagsInclude": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "kind": { "type": "array", "minItems": 1, "items": { "enum": ["graphic", "carousel", "video"] } }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "phrase" } }, "required": ["type"] },
+          "then": { "required": ["phrases", "scope"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "regex" } }, "required": ["type"] },
+          "then": { "required": ["pattern", "scope"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "limit" } }, "required": ["type"] },
+          "then": { "required": ["field"], "anyOf": [{ "required": ["max"] }, { "required": ["min"] }] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "requireText" } }, "required": ["type"] },
+          "then": { "required": ["scope"], "anyOf": [{ "required": ["text"] }, { "required": ["phrases"] }] }
+        }
+      ]
+    }
+  }
+}

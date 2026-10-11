@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:metrics:0.1",
+  "title": "Nordle post performance numbers",
+  "description": "How the posts of one brand actually performed: the numbers the owner exports from the platform (or types in), one entry per post, platform and window. Lives at <project>/metrics.json. Nothing here is estimated: an entry is a copy of what a platform showed on the day it was captured.",
+  "type": "object",
+  "required": ["schema", "brand", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.metrics/0.1" },
+    "brand": { "$ref": "#/$defs/id" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 80 },
+    "count": { "type": "number", "minimum": 0 },
+    "entry": {
+      "type": "object",
+      "required": ["post", "platform", "capturedAt", "window", "metrics", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "post": { "$ref": "#/$defs/id", "description": "The calendar item id this is about." },
+        "platform": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 30, "description": "instagram, facebook, tiktok, linkedin, youtube ..." },
+        "publishedAt": { "type": "string", "description": "When the platform says it went out (ISO 8601, or a date). Optional: the calendar item's date is used otherwise." },
+        "capturedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}", "description": "The day (or time) the numbers were read off the platform." },
+        "window": { "enum": ["7d", "28d", "lifetime"], "description": "How long after publishing these numbers cover. Numbers from different windows are never mixed." },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reach": { "$ref": "#/$defs/count", "description": "Accounts that saw it." },
+            "impressions": { "$ref": "#/$defs/count" },
+            "plays": { "$ref": "#/$defs/count", "description": "Video or reel plays." },
+            "views": { "$ref": "#/$defs/count", "description": "Views (Instagram's current headline number for reels, carousels and photos)." },
+            "likes": { "$ref": "#/$defs/count" },
+            "comments": { "$ref": "#/$defs/count" },
+            "shares": { "$ref": "#/$defs/count" },
+            "saves": { "$ref": "#/$defs/count" },
+            "follows": { "$ref": "#/$defs/count", "description": "New followers that came from this post." },
+            "profileVisits": { "$ref": "#/$defs/count" },
+            "linkClicks": { "$ref": "#/$defs/count" },
+            "watchTimeSec": { "$ref": "#/$defs/count", "description": "Total watch time in seconds." },
+            "avgWatchSec": { "$ref": "#/$defs/count", "description": "Average watch time per view, in seconds." },
+            "completionRate": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of views that reached the end, 0 to 1 (45 percent is 0.45)." },
+            "dmStarts": { "$ref": "#/$defs/count", "description": "Conversations started from the post." },
+            "swipes": { "$ref": "#/$defs/count", "description": "Carousels: swipes, when the platform gives them." }
+          }
+        },
+        "source": { "enum": ["csv", "manual", "buffer", "meta"], "description": "csv = an export the owner imported; manual = typed in; buffer, meta = read from the platform's own interface by a connector." },
+        "by": { "enum": ["owner", "claude"], "description": "Who entered it (so a number Claude typed from something the owner said can be told apart)." },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    }
+  }
+}

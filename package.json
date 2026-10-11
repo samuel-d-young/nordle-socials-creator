@@ -1,0 +1,34 @@
+{
+  "name": "nordle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local social-media editor you and Claude edit together: video, carousels, graphics and post copy.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "nordle": "nordle.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs --open",
+    "nordle": "node nordle.mjs",
+    "calendar": "node nordle.mjs calendar",
+    "doctor": "node nordle.mjs doctor",
+    "validate": "node nordle.mjs validate --assets",
+    "render": "node nordle.mjs render",
+    "verify:samples": "node nordle.mjs verify samples/little-gannet",
+    "sample:media": "node tools/make-sample-media.mjs",
+    "test": "node --test --test-timeout=180000 tests/*.test.mjs",
+    "verify": "node nordle.mjs doctor --ci && node nordle.mjs validate --assets && npm test && node nordle.mjs verify samples/little-gannet",
+    "studio:demo": "node tools/studio-demo.mjs --real",
+    "share-check": "node tools/share-check.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "playwright-core": "^1.63.0",
+    "pngjs": "^7.0.0"
+  }
+}

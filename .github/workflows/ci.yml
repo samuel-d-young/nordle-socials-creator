@@ -1,0 +1,51 @@
+name: ci
+
+# Private repo: Windows and Linux on every push; macOS only on main and tags (macOS minutes cost 10x).
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install the rendering browser (Linux also needs its system libraries)
+        run: npx playwright-core install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
+      - run: node tools/doctor.mjs --ci
+      - run: npm run validate
+      - run: npm test
+      - name: Render the sample project and keep the contact sheets
+        run: node nordle.mjs verify samples/little-gannet
+      - run: node nordle.mjs render samples/little-gannet --sheet
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sheets-${{ matrix.os }}
+          path: samples/little-gannet/out/**/sheet.png
+          if-no-files-found: ignore
+
+  verify-macos:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright-core install chromium
+      - run: node tools/doctor.mjs --ci
+      - run: npm run validate
+      - run: npm test
+      - run: node nordle.mjs verify samples/little-gannet

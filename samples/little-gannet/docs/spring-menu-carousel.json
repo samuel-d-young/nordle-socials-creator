@@ -1,0 +1,201 @@
+{
+  "$schema": "../../../schemas/doc.schema.json",
+  "schema": "nordle.doc/0.1",
+  "id": "spring-menu-carousel",
+  "title": "Spring menu carousel",
+  "kind": "carousel",
+  "brand": "little-gannet",
+  "sizes": ["ig-feed-4x5", "li-feed-4x5"],
+  "tags": ["menu", "seasonal"],
+  "copy": {
+    "caption": "Spring menu is here.\nThree new pours: a honey lavender latte, a cold brew tonic and a cardamom cortado. Open from 7 am on Quay Street.",
+    "cta": "Tell us which one you will try first.",
+    "hashtags": ["#littlegannet", "#portwren", "#springmenu"],
+    "alt": {
+      "cover": "A steaming cup of coffee above the words Spring menu is here.",
+      "latte": "Roasted coffee beans beside the words Honey lavender latte.",
+      "tonic": "Roasted coffee beans beside the words Cold brew tonic.",
+      "cortado": "Roasted coffee beans beside the words Cardamom cortado.",
+      "visit": "The Little Gannet logo above the words Come say hi."
+    }
+  },
+  "pages": [
+    {
+      "id": "cover",
+      "title": "Cover",
+      "background": "$brand.colors.paper",
+      "layers": [
+        {
+          "id": "kicker", "type": "text", "text": "NEW THIS SEASON",
+          "layout": { "anchor": "top-left", "x": 8, "y": 7, "w": 60 },
+          "style": { "font": "$brand.fonts.body", "size": 28, "weight": 600, "letterSpacing": 0.18, "color": "$brand.colors.accentDark" },
+          "animate": [{ "preset": "fade-in", "at": 0, "duration": 0.4 }]
+        },
+        {
+          "id": "headline", "type": "text",
+          "runs": [
+            { "text": "Spring menu\n" },
+            { "text": "is here", "style": { "italic": true, "color": "$brand.colors.accentDark" } }
+          ],
+          "layout": { "anchor": "top-left", "x": 8, "y": 11, "w": 84 },
+          "style": { "font": "$brand.fonts.display", "size": 132, "weight": 700, "lineHeight": 1.0, "color": "$brand.colors.ink", "balance": true },
+          "animate": [{ "preset": "rise-in", "at": 0.1, "duration": 0.7 }]
+        },
+        {
+          "id": "sub", "type": "text", "text": "Three new pours. Open from 7 am.",
+          "layout": { "anchor": "top-left", "x": 8, "y": 36, "w": 44 },
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.3, "color": "$brand.colors.muted", "balance": true }
+        },
+        {
+          "id": "cup", "type": "image", "src": "assets/hero-cup.svg", "fit": "contain",
+          "alt": "A steaming cup of coffee on a saucer",
+          "layout": { "anchor": "bottom-right", "x": 104, "y": 100, "w": 68, "h": "auto" }
+        },
+        {
+          "id": "swipe", "type": "text", "text": "Swipe",
+          "layout": { "anchor": "bottom-left", "x": 8, "y": 94 },
+          "style": { "font": "$brand.fonts.body", "size": 30, "weight": 600, "letterSpacing": 0.12, "color": "$brand.colors.ink" }
+        }
+      ]
+    },
+    {
+      "id": "latte",
+      "title": "Honey lavender latte",
+      "background": "$brand.colors.ink",
+      "layers": [
+        {
+          "id": "beans", "type": "image", "src": "assets/beans.svg", "fit": "contain", "alt": "",
+          "layout": { "anchor": "bottom-right", "x": 108, "y": 104, "w": 70, "h": "auto" }
+        },
+        {
+          "id": "number", "type": "text", "text": "01",
+          "layout": { "anchor": "top-left", "x": 8, "y": 8 },
+          "style": { "font": "$brand.fonts.display", "size": 56, "weight": 600, "color": "$brand.colors.accent" }
+        },
+        {
+          "id": "name", "type": "text",
+          "runs": [
+            { "text": "Honey lavender\n" },
+            { "text": "latte", "style": { "italic": true } }
+          ],
+          "layout": { "anchor": "top-left", "x": 8, "y": 18, "w": 84 },
+          "style": { "font": "$brand.fonts.display", "size": 116, "weight": 700, "lineHeight": 1.02, "color": "$brand.colors.paper", "balance": true }
+        },
+        {
+          "id": "desc", "type": "text",
+          "text": "House-made honey syrup and a pinch of dried lavender. Oat or dairy.",
+          "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.paper" }
+        },
+        {
+          "id": "price", "type": "text", "text": "6.50",
+          "layout": { "anchor": "bottom-left", "x": 8, "y": 94 },
+          "style": { "font": "$brand.fonts.display", "size": 64, "weight": 600, "color": "$brand.colors.accent" }
+        }
+      ]
+    },
+    {
+      "id": "tonic",
+      "title": "Cold brew tonic",
+      "background": "$brand.colors.sea",
+      "layers": [
+        {
+          "id": "beans", "type": "image", "src": "assets/beans.svg", "fit": "contain", "alt": "",
+          "layout": { "anchor": "bottom-right", "x": 108, "y": 104, "w": 70, "h": "auto" }
+        },
+        {
+          "id": "number", "type": "text", "text": "02",
+          "layout": { "anchor": "top-left", "x": 8, "y": 8 },
+          "style": { "font": "$brand.fonts.display", "size": 56, "weight": 600, "color": "$brand.colors.paper" }
+        },
+        {
+          "id": "name", "type": "text",
+          "runs": [
+            { "text": "Cold brew\n" },
+            { "text": "tonic", "style": { "italic": true } }
+          ],
+          "layout": { "anchor": "top-left", "x": 8, "y": 18, "w": 84 },
+          "style": { "font": "$brand.fonts.display", "size": 116, "weight": 700, "lineHeight": 1.02, "color": "$brand.colors.paper", "balance": true }
+        },
+        {
+          "id": "desc", "type": "text",
+          "text": "Twelve-hour cold brew over ice, topped with tonic and an orange peel.",
+          "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.paper" }
+        },
+        {
+          "id": "price", "type": "text", "text": "7.00",
+          "layout": { "anchor": "bottom-left", "x": 8, "y": 94 },
+          "style": { "font": "$brand.fonts.display", "size": 64, "weight": 600, "color": "$brand.colors.paper" }
+        }
+      ]
+    },
+    {
+      "id": "cortado",
+      "title": "Cardamom cortado",
+      "background": "$brand.colors.accent",
+      "layers": [
+        {
+          "id": "beans", "type": "image", "src": "assets/beans.svg", "fit": "contain", "alt": "",
+          "layout": { "anchor": "bottom-right", "x": 108, "y": 104, "w": 70, "h": "auto" }
+        },
+        {
+          "id": "number", "type": "text", "text": "03",
+          "layout": { "anchor": "top-left", "x": 8, "y": 8 },
+          "style": { "font": "$brand.fonts.display", "size": 56, "weight": 600, "color": "$brand.colors.ink" }
+        },
+        {
+          "id": "name", "type": "text",
+          "runs": [
+            { "text": "Cardamom\n" },
+            { "text": "cortado", "style": { "italic": true } }
+          ],
+          "layout": { "anchor": "top-left", "x": 8, "y": 18, "w": 84 },
+          "style": { "font": "$brand.fonts.display", "size": 116, "weight": 700, "lineHeight": 1.02, "color": "$brand.colors.ink", "balance": true }
+        },
+        {
+          "id": "desc", "type": "text",
+          "text": "Our house espresso, a crushed cardamom pod and warm milk.",
+          "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.ink" }
+        },
+        {
+          "id": "price", "type": "text", "text": "5.50",
+          "layout": { "anchor": "bottom-left", "x": 8, "y": 94 },
+          "style": { "font": "$brand.fonts.display", "size": 64, "weight": 600, "color": "$brand.colors.ink" }
+        }
+      ]
+    },
+    {
+      "id": "visit",
+      "title": "Come say hi",
+      "background": "$brand.colors.paper",
+      "layers": [
+        {
+          "id": "logo", "type": "image", "src": "assets/logo.svg", "fit": "contain", "alt": "Little Gannet Coffee logo",
+          "layout": { "anchor": "top-left", "x": 8, "y": 8, "w": 18, "h": "auto" }
+        },
+        {
+          "id": "headline", "type": "text",
+          "runs": [
+            { "text": "Come say " },
+            { "text": "hi", "style": { "italic": true, "color": "$brand.colors.accentDark" } }
+          ],
+          "layout": { "anchor": "center", "x": 50, "y": 44, "w": 84 },
+          "style": { "font": "$brand.fonts.display", "size": 150, "weight": 700, "align": "center", "color": "$brand.colors.ink", "balance": true }
+        },
+        {
+          "id": "where", "type": "text",
+          "text": "Quay Street, Port Wren\nOpen 7 am to 3 pm, every day",
+          "layout": { "anchor": "center", "x": 50, "y": 66, "w": 80 },
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.4, "align": "center", "color": "$brand.colors.muted" }
+        },
+        {
+          "id": "handle", "type": "text", "text": "@littlegannet",
+          "layout": { "anchor": "bottom", "x": 50, "y": 94 },
+          "style": { "font": "$brand.fonts.body", "size": 34, "weight": 600, "letterSpacing": 0.06, "align": "center", "color": "$brand.colors.accentDark" }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:platforms:0.1",
+  "title": "Nordle platform presets",
+  "description": "Sizes, safe zones and limits per platform. Data, so a platform change is an edit here and not a code change.",
+  "type": "object",
+  "required": ["schema", "presets"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.platforms/0.1" },
+    "note": { "type": "string" },
+    "presets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "platform", "name", "w", "h", "kinds", "safe", "verified"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 64 },
+          "platform": {
+            "enum": ["instagram", "facebook", "tiktok", "youtube", "linkedin", "x", "pinterest", "threads"]
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "w": { "type": "integer", "minimum": 64 },
+          "h": { "type": "integer", "minimum": 64 },
+          "kinds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "enum": ["graphic", "carousel", "video"] }
+          },
+          "safe": {
+            "description": "Fractions of the canvas to keep free of important text and faces: platform UI draws there.",
+            "type": "object",
+            "required": ["top", "right", "bottom", "left"],
+            "additionalProperties": false,
+            "properties": {
+              "top": { "type": "number", "minimum": 0, "maximum": 0.5 },
+              "right": { "type": "number", "minimum": 0, "maximum": 0.5 },
+              "bottom": { "type": "number", "minimum": 0, "maximum": 0.5 },
+              "left": { "type": "number", "minimum": 0, "maximum": 0.5 }
+            }
+          },
+          "maxCaption": { "type": "integer", "minimum": 1 },
+          "maxDuration": { "type": "number", "exclusiveMinimum": 0 },
+          "verified": {
+            "description": "True only when checked against the platform's current published guidance.",
+            "type": "boolean"
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

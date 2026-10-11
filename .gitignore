@@ -1,0 +1,30 @@
+node_modules/
+# user work and generated output never go in the repo
+/projects/
+out/
+/cache/
+/history/
+# browser-playable copies of footage and waveforms (src/video/proxy.mjs), made inside a project
+.proxies/
+# generated test media (tools/make-sample-media.mjs)
+samples/*/sources/
+# private packs are mounted here from the separate nordle-packs repo
+/packs/
+# the owner's private notes and the share gate's deny-list never enter the repo
+/private/
+.share-deny.txt
+# secrets and local settings
+.env
+.env.*
+*.local
+.token
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.claude/
+.nordle/
+
+# optional external programs (DeepFilterNet), never committed
+/tools/bin/
+CLAUDE.local.md

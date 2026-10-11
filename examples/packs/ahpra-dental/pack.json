@@ -1,0 +1,394 @@
+{
+  "$schema": "../../../schemas/pack.schema.json",
+  "schema": "nordle.pack/0.1",
+  "id": "ahpra-dental",
+  "name": "Australian dental and health advertising wording",
+  "version": "0.1.0",
+  "description": "Flags wording that Australian health advertising rules usually object to, in a dental or other health practice's captions, hashtags, alt text, on-screen text and spoken words: testimonials and reviews, before-and-after material, superlatives, absolute promises (painless, safe, guaranteed, cure), unreasonable expectations, offers without conditions, pressure and urgency, claims that need a source, comparisons with other practices, protected titles, and implant or healing time periods. Most phrase rules look at every place a post has words. Offers that are really allowed can be cleared one at a time with an \"allow\" entry (with a reason) in nordle.project.json.",
+  "author": "Nordle",
+  "runsCode": false,
+  "disclaimer": "A writing aid, not legal advice. It flags wording that Australian health advertising rules (section 133 of the Health Practitioner Regulation National Law, the AHPRA and National Boards 'Guidelines for advertising a regulated health service', and the Dental Board of Australia's advertising guidance) usually object to. A clean result does not mean an advertisement complies. Check the current AHPRA guidance (ahpra.gov.au, Resources, Advertising a regulated health service) and take your own advice before publishing.",
+  "rules": [
+    {
+      "id": "testimonials",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Testimonials and reviews cannot be used to advertise a regulated health service (National Law s133). Do not quote, show or point at patient reviews, ratings or comments.",
+      "fix": "Take it out and say what the practice does instead.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["testimonial", "google review", "patient review", "our reviews", "five star", "5 star", "star rating", "rated 5", "happy patient", "happy customer", "satisfied patient", "what our patients say", "what patients say", "patients say", "our patients say", "patients love", "loved by our patients", "rave review", "glowing review"],
+      "wholeWord": false
+    },
+    {
+      "id": "review-word",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "The word \"review\" usually points at patient reviews, which are not allowed in health advertising. It is fine only if it means the dentist reviewing a patient's care.",
+      "fix": "Say what you mean in other words (\"we check how it is going\"), or take it out.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["review", "reviews", "reviewed"],
+      "wholeWord": true,
+      "except": ["review your", "reviewing your", "reviews your", "review of your", "we review", "to review your", "check up and review", "peer review"]
+    },
+    {
+      "id": "patient-stories",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Patient stories and success stories work as testimonials, which are not allowed in health advertising.",
+      "fix": "Show the team, the rooms and what is done, not what patients said or how they felt.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["patient story", "patient stories", "success story", "success stories", "real patient", "patient journey", "patient feedback", "client story", "client stories"],
+      "wholeWord": false
+    },
+    {
+      "id": "before-after",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Before-and-after material is high risk in health advertising: it can create unreasonable expectations of results. This pack treats it as not allowed.",
+      "fix": "Leave out before-and-after wording and pictures. Describe the treatment, not the transformation.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["before and after", "before & after", "before/after", "before-and-after", "before + after", "beforeafter", "before and afters"],
+      "wholeWord": false
+    },
+    {
+      "id": "results-claims",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "Words that promise or show results (\"transformation\", \"real results\", \"see the difference\") read like before-and-after claims and can set unreasonable expectations.",
+      "fix": "Describe what happens at the appointment instead of what the patient gets.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["transformation", "transformations", "transform your", "makeover", "real results", "amazing results", "stunning results", "incredible results", "see the difference", "see the results", "results speak"],
+      "wholeWord": false
+    },
+    {
+      "id": "superlatives",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Superlatives (best, finest, leading, world-class, top-rated and the like) are claims you would have to prove, and cannot be backed up in health advertising.",
+      "fix": "Say what is specific and true instead: what the practice offers, the equipment it has, how long it has been open.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["best", "greatest", "finest", "world's best", "world class", "world-class", "premier", "leading", "top rated", "top-rated", "top dentist", "highest quality", "unrivalled", "unrivaled", "unbeatable", "second to none", "ultimate", "most trusted", "most advanced"],
+      "wholeWord": true,
+      "except": ["best practice", "best interests", "best friend", "best wishes", "to the best of", "best of luck", "leading to", "leading cause", "leading causes", "leading up to"]
+    },
+    {
+      "id": "number-one",
+      "type": "regex",
+      "severity": "error",
+      "message": "\"Number one\" and \"#1\" are claims you cannot back up in health advertising.",
+      "fix": "Take the ranking out.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "#\\s?1\\b|\\bno\\.?\\s?1\\b|\\bnumber\\s?(?:one|1)\\b"
+    },
+    {
+      "id": "painless",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Saying treatment is painless or will not hurt promises an outcome nobody can guarantee, and creates an unreasonable expectation.",
+      "fix": "Say what you do to keep people comfortable (\"we talk you through every step\") without promising no pain.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["painless", "pain-free", "pain free", "no pain", "without pain", "zero pain", "pain-less", "no discomfort", "discomfort-free", "won't hurt", "wont hurt", "doesn't hurt", "does not hurt", "never hurt", "hurt-free"],
+      "wholeWord": false
+    },
+    {
+      "id": "safety-absolutes",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Absolute safety claims (safest, completely safe, no risk, no side effects) are not allowed: every treatment carries some risk.",
+      "fix": "Take it out. If risk wording is needed, use the practice's own approved wording.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["safest", "100% safe", "completely safe", "totally safe", "perfectly safe", "absolutely safe", "entirely safe", "safe and painless", "risk-free", "risk free", "no risk", "zero risk", "without risk", "no side effects", "no side-effects", "no complications"],
+      "wholeWord": false
+    },
+    {
+      "id": "safe-word",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Safe\" on its own is an absolute claim about treatment.",
+      "fix": "Say what makes the practice careful (sterilisation, training, checks) rather than calling treatment safe.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["safe"],
+      "wholeWord": true,
+      "except": ["stay safe", "keep safe", "play it safe", "safe place", "safe space", "safe to ask"]
+    },
+    {
+      "id": "guarantees",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Do not guarantee outcomes. No one can promise a result in health care.",
+      "fix": "Take out the guarantee and the money-back wording.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["guarantee", "money back", "money-back"],
+      "wholeWord": false
+    },
+    {
+      "id": "cure",
+      "type": "phrase",
+      "severity": "error",
+      "message": "\"Cure\" promises an outcome. Dental care manages, repairs or replaces; it should not claim to cure.",
+      "fix": "Say what the treatment does (\"repairs\", \"replaces\", \"helps manage\").",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["cure", "cures", "cured"],
+      "wholeWord": true,
+      "except": ["light-cured", "light cured", "curing light", "dual-cured", "dual cured"]
+    },
+    {
+      "id": "unreasonable-expectations",
+      "type": "phrase",
+      "severity": "error",
+      "message": "This wording promises a dream result (perfect, flawless, a new life), which creates unreasonable expectations of benefit.",
+      "fix": "Describe the treatment plainly. Do not promise how anyone will look or feel afterwards.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["perfect smile", "perfect teeth", "perfect result", "perfect results", "perfectly straight", "flawless", "dream smile", "hollywood", "celebrity smile", "miracle", "life-changing", "life changing", "change your life", "transform your life", "smile you've always wanted", "smile you have always wanted"],
+      "wholeWord": false
+    },
+    {
+      "id": "perfect-word",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Perfect\" can read as a promise of a perfect result.",
+      "fix": "Use a plainer word.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["perfect"],
+      "wholeWord": true,
+      "except": ["perfect for"]
+    },
+    {
+      "id": "permanence-and-speed",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "Words like permanent, lifetime, forever, instant and overnight promise how long a result lasts or how fast it comes, which cannot be guaranteed.",
+      "fix": "Leave the time promise out. If a figure is truly needed, it must come from the practice and be backed up.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["permanent", "permanently", "lifetime", "forever", "for life", "instant", "instantly", "overnight", "immediate results", "quick fix"],
+      "wholeWord": true
+    },
+    {
+      "id": "confidence-claims",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "Promising confidence or self-esteem is an outcome claim.",
+      "fix": "Describe the care, not the feeling it will give.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["confidence", "self-esteem", "self esteem", "feel confident", "confident smile"],
+      "wholeWord": true,
+      "except": ["with confidence"]
+    },
+    {
+      "id": "cheapest",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Price comparisons and \"cheapest\" claims compare you with other practices and are hard to prove.",
+      "fix": "State the price or the offer plainly (with its conditions) without comparing.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["cheapest", "cheap", "lowest price", "best price", "price match", "price-match", "price beat", "beat any price", "bargain"],
+      "wholeWord": true
+    },
+    {
+      "id": "free",
+      "type": "phrase",
+      "severity": "error",
+      "message": "A free offer is an inducement. A health advertisement may offer a gift, discount or other inducement only if its full terms and conditions are stated in the same advertisement (National Law s133).",
+      "fix": "Take the offer out. If it is a real offer, write its full conditions in the post and add an allow entry in nordle.project.json with the reason.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["free"],
+      "wholeWord": true,
+      "except": ["feel free", "free to ask", "free to call", "free to message", "free to contact", "hassle-free", "hassle free", "stress-free", "stress free", "worry-free", "sugar-free", "sugar free", "metal-free", "metal free", "mercury-free", "latex-free", "fluoride-free", "gluten-free", "bpa-free", "pain-free", "risk-free", "free from"]
+    },
+    {
+      "id": "offers",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Discounts, gifts, vouchers and similar inducements may be advertised only with their full terms and conditions in the same post (National Law s133).",
+      "fix": "Remove the offer, or state every condition and ask the owner to allow it in nordle.project.json.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["complimentary", "no charge", "no cost", "at no cost", "on the house", "freebie", "voucher", "discount", "special offer", "special price", "deals", "bonus", "half price", "half-price", "two for one", "2 for 1", "bundle", "promo", "promotion", "giveaway", "win a", "no gap", "bulk bill"],
+      "wholeWord": true
+    },
+    {
+      "id": "percent-off",
+      "type": "regex",
+      "severity": "error",
+      "message": "A percentage off or a dollar saving is a discount, which needs its full terms and conditions in the same post.",
+      "fix": "Remove the discount, or state every condition and ask the owner to allow it in nordle.project.json.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "\\d+\\s?%\\s?off\\b|\\bsave\\s+(?:up to\\s+)?\\$?\\d|\\$\\s?\\d+\\s+off\\b"
+    },
+    {
+      "id": "offer-conditions",
+      "type": "requireText",
+      "severity": "error",
+      "message": "This post talks about an offer, so it must carry the offer's terms and conditions.",
+      "fix": "Add the full conditions (who can claim it, until when, any cost) to the caption.",
+      "scope": ["copy.caption", "layers.text"],
+      "phrases": ["terms and conditions", "terms & conditions", "t&cs", "t&c", "conditions apply", "terms apply"],
+      "whenText": ["discount", "special offer", "complimentary", "free consultation", "free check", "free exam", "% off", "voucher", "giveaway", "gift"]
+    },
+    {
+      "id": "pressure",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Pressure and urgency wording can push people to book treatment they do not need. Health advertising must not encourage that.",
+      "fix": "Take out the urgency. A plain \"book when you are ready\" is fine.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["limited time", "limited-time", "hurry", "act now", "act fast", "last chance", "today only", "ends soon", "ends tonight", "while stocks last", "while supplies last", "don't miss out", "dont miss out", "do not miss out", "don't wait", "spots are filling", "filling fast", "only a few spots", "limited spots", "limited availability", "limited appointments", "before it's too late", "before its too late", "now or never", "final days", "final call", "selling fast", "booking fast", "once in a lifetime", "this week only", "this month only", "one week only", "weekend only", "offer ends", "while it lasts"],
+      "wholeWord": false
+    },
+    {
+      "id": "unsupported-evidence",
+      "type": "phrase",
+      "severity": "error",
+      "message": "A claim like \"proven\", \"studies show\" or \"9 out of 10\" needs a named source, and posts cannot carry that.",
+      "fix": "Take it out, or name the exact source and have the owner approve the line in facts.json.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["proven", "clinically proven", "scientifically proven", "studies show", "research shows", "evidence shows", "science shows", "experts agree", "most dentists", "every dentist", "9 out of 10", "nine out of ten", "clinically tested"],
+      "wholeWord": true
+    },
+    {
+      "id": "unsubstantiated-claims",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "This kind of claim (cutting-edge, award-winning, trusted by thousands) has to be true and provable, and it is easy to get wrong.",
+      "fix": "Keep it only if you can point to proof, and put the proof in facts.json. Otherwise describe something specific.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["state-of-the-art", "state of the art", "cutting-edge", "cutting edge", "latest technology", "revolutionary", "breakthrough", "award-winning", "award winning", "awarded", "voted", "trusted by", "thousands of", "hundreds of", "millions of", "highly experienced", "highly skilled", "highly qualified", "hospital grade", "hospital-grade", "medical grade", "medical-grade"],
+      "wholeWord": true
+    },
+    {
+      "id": "dentist-recommended",
+      "type": "phrase",
+      "severity": "error",
+      "message": "\"Dentist recommended\" and similar endorsements work like testimonials and need evidence behind them.",
+      "fix": "Take it out.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["dentist recommended", "dentists recommend", "dentist-approved", "dentist approved", "recommended by dentists", "recommended by dentist", "endorsed by", "approved by dentists", "as seen on"],
+      "wholeWord": false
+    },
+    {
+      "id": "comparisons",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Comparing with other practices or treatments (better than, unlike others, the only one) is misleading unless it can be proven, and usually cannot be.",
+      "fix": "Say what this practice does, without comparing.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["better than", "more effective than", "superior", "unlike other", "unlike most", "than other dentists", "than other practices", "than any other", "than most", "compared to other", "outperform", "the only dentist", "the only practice", "only practice", "only dentist", "one of a kind", "no one else", "nobody else", "above the rest", "head and shoulders", "faster than", "safer than", "gentler than", "less painful", "more comfortable than", "less invasive than"],
+      "wholeWord": false
+    },
+    {
+      "id": "uniqueness-claims",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Unique\", \"first\" and \"only\" claims need to be provable.",
+      "fix": "Check it is true and sourced, or describe it more plainly.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["unique", "the first in", "first in", "the only"],
+      "wholeWord": true
+    },
+    {
+      "id": "specialist-title",
+      "type": "phrase",
+      "severity": "error",
+      "message": "\"Specialist\" is a protected title. Only dentists registered in a recognised specialty (orthodontics, endodontics and so on) may use it.",
+      "fix": "If this person is a registered specialist, use their exact title as on the register (for example \"orthodontist\"). If not, say \"dentist\".",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["specialist", "specialists"],
+      "wholeWord": true
+    },
+    {
+      "id": "specialising",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Specialising in\" can suggest a specialist registration the dentist may not hold.",
+      "fix": "Say \"special interest in\" or just describe the treatment, unless the dentist is a registered specialist.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["specialise", "specialises", "specialising", "specialize", "specializes", "specializing"],
+      "wholeWord": true
+    },
+    {
+      "id": "expert",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Expert\" and \"expertise\" are claims of superior skill that are hard to substantiate.",
+      "fix": "Say what the person has done or trained in (as on their page), not that they are an expert.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["expert", "experts", "expertise"],
+      "wholeWord": true
+    },
+    {
+      "id": "implant-healing-time",
+      "type": "regex",
+      "severity": "error",
+      "message": "A time period for an implant (how soon you get teeth, how long it takes to heal) sets an expectation that is different for every patient. Implant time periods are not to be used.",
+      "fix": "Take the time period out. Say a plan is made at the consultation instead.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "implants?\\b[^.!?\\n]{0,80}\\b(?:\\d+|one|two|three|four|five|six|a few|few|several)\\s*(?:to|-)?\\s*\\d*\\s*(?:hours?|days?|weeks?|months?)\\b"
+    },
+    {
+      "id": "implant-healing-time-before",
+      "type": "regex",
+      "severity": "error",
+      "message": "A time period for an implant (how soon you get teeth, how long it takes to heal) sets an expectation that is different for every patient. Implant time periods are not to be used.",
+      "fix": "Take the time period out. Say a plan is made at the consultation instead.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "\\b(?:\\d+|one|two|three|four|five|six|a few|few|several)\\s*(?:to|-)?\\s*\\d*\\s*(?:hours?|days?|weeks?|months?)\\b[^.!?\\n]{0,80}\\bimplants?\\b"
+    },
+    {
+      "id": "teeth-in-a-day",
+      "type": "phrase",
+      "severity": "error",
+      "message": "\"Teeth in a day\" and \"same day implants\" are time promises for implant treatment, which are not to be used.",
+      "fix": "Take it out.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["teeth in a day", "teeth in one day", "tooth in a day", "smile in a day", "teeth in 24 hours", "same day implant", "same-day implant", "same day teeth", "same-day teeth"],
+      "wholeWord": false
+    },
+    {
+      "id": "healing-time",
+      "type": "regex",
+      "severity": "warn",
+      "message": "A healing or recovery time sets an expectation that is different for every patient.",
+      "fix": "Say that recovery varies and the dentist will explain what to expect.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "\\b(?:heal(?:s|ed|ing)?|recover(?:s|ed|y|ing)?|settle[sd]?)\\b[^.!?\\n]{0,40}\\b(?:\\d+|one|two|three|four|five|six|a few|several)\\s*(?:to|-)?\\s*\\d*\\s*(?:days?|weeks?|months?)\\b"
+    },
+    {
+      "id": "same-day",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "\"Same day\" and \"one visit\" make a promise about timing that will not hold for every patient.",
+      "fix": "Leave the timing out, or say it depends on the patient.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["same day", "same-day", "in one visit", "in a single visit", "single visit", "one appointment"],
+      "wholeWord": false
+    },
+    {
+      "id": "absolute-percent",
+      "type": "regex",
+      "severity": "warn",
+      "message": "\"100%\" claims are absolute, and absolute claims about health care are hard to defend.",
+      "fix": "Take the figure out or say what it measures.",
+      "scope": ["copy.caption", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "pattern": "\\b100\\s?%"
+    },
+    {
+      "id": "encouraging-treatment",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "Wording that tells everyone they need treatment, or that they deserve it, can encourage unnecessary use of health services.",
+      "fix": "Explain what the treatment is for and who it suits; leave the nudge out.",
+      "scope": ["copy.caption", "copy.hashtags", "copy.cta", "copy.alt", "layers.text", "video.captions"],
+      "phrases": ["everyone needs", "everyone should", "every patient needs", "you deserve", "treat yourself", "upgrade your smile"],
+      "wholeWord": false
+    },
+    {
+      "id": "risk-wording",
+      "type": "requireText",
+      "severity": "warn",
+      "message": "Implant, cosmetic and similar posts should carry the general risk wording the practice already uses.",
+      "fix": "Add the practice's risk statement (for example \"Any surgical or invasive procedure carries risks. Seek a second opinion from an appropriately qualified health practitioner.\") to the caption.",
+      "scope": ["copy.caption"],
+      "phrases": ["carries risk", "carry risk", "carries risks", "carry risks", "second opinion"],
+      "when": { "tagsInclude": ["implant", "implants", "cosmetic", "veneers", "whitening", "aligners", "all-on-x", "smile-makeover"] }
+    }
+  ]
+}

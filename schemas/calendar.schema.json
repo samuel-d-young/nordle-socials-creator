@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:calendar:0.1",
+  "title": "Nordle content calendar",
+  "description": "The plan for a brand: dated post ideas that Claude proposes, the owner approves, and Claude builds as the date gets close. Lives at <project>/calendar.json.",
+  "type": "object",
+  "required": ["schema", "brand", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.calendar/0.1" },
+    "brand": { "$ref": "#/$defs/id" },
+    "timezone": { "type": "string", "description": "IANA name, e.g. Australia/Melbourne. Dates and times below are local to it." },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "leadDays": { "type": "integer", "minimum": 0, "maximum": 120, "description": "Build an approved idea when its date is within this many days." },
+        "perMonth": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 60 }, "description": "How many of each format per month, e.g. {\"reel\":8,\"carousel\":3,\"post\":2}." },
+        "autoBuild": { "type": "boolean", "description": "Off by default. When on, `nordle calendar run` builds due ideas without being asked." },
+        "autoPropose": { "type": "boolean", "description": "Off by default. When on, `nordle calendar run` also proposes ideas to keep the next months filled." },
+        "autoRevise": { "type": "boolean", "description": "On by default. When the owner presses Request changes in the Studio, the designer (a headless Claude run) starts on the change at once. Set false to leave sent-back posts for `nordle calendar run` or a Claude session." },
+        "horizonMonths": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "regions": { "type": "array", "items": { "enum": ["VIC", "WA", "NSW", "QLD", "SA", "TAS", "ACT", "NT"] }, "description": "Which states' holidays, school terms and occasions apply. Empty or missing = national dates only in lint, everything in listings." },
+        "ideaApproval": { "enum": ["owner", "delegated"], "description": "'delegated' = the owner has told Claude to go ahead before seeing the ideas: ideas Claude proposes arrive already approved. Only the owner can change this. Default owner." },
+        "compliance": { "type": "array", "items": { "type": "string" }, "description": "Rule sets that apply to this brand's content, e.g. [\"ahpra\"] for Australian health advertising. Dental and other health brands are treated as regulated even when this is empty." },
+        "maxBuildAttempts": { "type": "integer", "minimum": 1, "maximum": 10, "description": "How many times the runner tries to build one item before leaving it for the owner. Default 3." },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The performance review loop (docs/PERFORMANCE.md). Without it no review is ever due.",
+          "properties": {
+            "cadence": { "enum": ["weekly", "monthly"], "description": "How often the numbers are reviewed and the plan tuned." },
+            "weekday": { "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], "description": "Weekly only: the day of the week a review falls due, once every post in the week is 7 days old. Default monday. (Monthly reviews fall due on the 7th of the next month.)" },
+            "autoReview": { "type": "boolean", "description": "Off by default. When on, `nordle calendar run` also asks Claude to write a due review (the same safety rules as autoBuild)." }
+          }
+        },
+        "postTimes": { "type": "array", "items": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" } },
+        "pillars": { "type": "array", "items": { "$ref": "#/$defs/pillar" } }
+      }
+    },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$", "maxLength": 80 },
+    "date": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$" },
+    "pillar": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string" },
+        "about": { "type": "string" },
+        "share": { "type": "number", "minimum": 0, "maximum": 1, "description": "Roughly how much of the month this pillar should fill." }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "date", "format", "title", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "date": { "$ref": "#/$defs/date" },
+        "time": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+        "format": { "enum": ["reel", "carousel", "post", "story"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "pillar": { "type": "string" },
+        "idea": { "type": "string", "description": "The idea in a sentence or two: what it says and why this audience cares." },
+        "hook": { "type": "string", "description": "The first line or first second." },
+        "audience": { "type": "string" },
+        "occasion": { "type": "string", "description": "A date or season it rides on (Melbourne Cup, end of the health-fund year)." },
+        "mediaPlan": { "type": "string", "description": "What photos or footage it should use, in words." },
+        "status": {
+          "enum": ["idea", "approved", "building", "built", "changes", "signed-off", "scheduled", "rejected", "posted"],
+          "description": "idea = proposed by Claude; approved = owner said yes, build it; building; built = designed and waiting for the owner's sign-off; changes = owner asked for changes; signed-off = ready to schedule; scheduled = handed to a publishing adapter (see item.publish) for its time; rejected; posted."
+        },
+        "publish": {
+          "type": "object",
+          "description": "Set by the owner's publishing run (src/publish) when the post was scheduled: which adapter, when it is due (UTC, ISO 8601), the adapter's own id for it, and when it was handed over.",
+          "required": ["adapter", "at"],
+          "additionalProperties": false,
+          "properties": {
+            "adapter": { "type": "string" },
+            "scheduledAt": { "type": "string" },
+            "remoteId": { "type": "string" },
+            "at": { "type": "string" },
+            "targets": {
+              "type": "array",
+              "description": "One entry per channel the post was handed to (a brand can post to an Instagram account and several Facebook pages). The item is `scheduled` only when every channel the owner chose has ok: true; until then it keeps its status and this list shows what went and what failed.",
+              "items": {
+                "type": "object", "required": ["channel", "ok"], "additionalProperties": false,
+                "properties": { "channel": { "type": "string" }, "ok": { "type": "boolean" }, "scheduledAt": { "type": "string" }, "remoteId": { "type": "string" }, "message": { "type": "string" }, "at": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "origin": { "enum": ["claude", "owner"], "description": "Who thought of it." },
+        "ideaApproval": { "enum": ["owner", "delegated"], "description": "'delegated' = the owner told Claude to go ahead before seeing the ideas." },
+        "doc": { "$ref": "#/$defs/id", "description": "The document built for it, once there is one." },
+        "external": {
+          "type": "object",
+          "description": "A post made outside Nordle (an earlier pipeline). Copies of its files live inside the project so the Studio can show it.",
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string" },
+            "cover": { "type": "string" },
+            "video": { "type": "string" },
+            "slides": { "type": "array", "items": { "type": "string" } },
+            "caption": { "type": "string" },
+            "hashtags": { "type": "array", "items": { "type": "string" } },
+            "note": { "type": "string" }
+          }
+        },
+        "notes": { "type": "string" },
+        "feedback": {
+          "type": "array",
+          "description": "What the owner asked to change on a built post (status changes). Claude fixes the post and the entries get a resolved time.",
+          "items": {
+            "type": "object", "required": ["at", "comment"], "additionalProperties": false,
+            "properties": { "at": { "type": "string" }, "by": { "enum": ["owner", "claude"] }, "comment": { "type": "string" }, "resolved": { "type": "string" } }
+          }
+        },
+        "run": {
+          "type": "object",
+          "description": "The runner's record for this item (src/calendar/run.mjs): how many build attempts, when, and the last problem.",
+          "additionalProperties": false,
+          "properties": {
+            "attempts": { "type": "integer", "minimum": 0 },
+            "startedAt": { "type": "string" },
+            "lastAt": { "type": "string" },
+            "lastError": { "type": "string" },
+            "state": { "enum": ["building", "failed", "gave-up", "built"] }
+          }
+        },
+        "updated": { "type": "string" }
+      }
+    }
+  }
+}

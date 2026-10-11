@@ -1,0 +1,38 @@
+{
+  "$schema": "../../schemas/facts.schema.json",
+  "schema": "nordle.facts/0.1",
+  "brand": "little-gannet",
+  "updated": "2026-10-05",
+  "names": ["Little Gannet Coffee", "Little Gannet"],
+  "phones": [
+    { "label": "shop", "number": "03 5550 0142", "source": "Fictional sample: the shop door sign" }
+  ],
+  "emails": [
+    { "label": "orders", "address": "hello@example.com", "source": "Fictional sample" }
+  ],
+  "addresses": [
+    { "label": "shop", "text": "12 Quay Street, Port Wren VIC 3999", "source": "Fictional sample" }
+  ],
+  "hours": [
+    { "label": "daily", "text": "Open every day from 7 am to 3 pm", "source": "Fictional sample: the shop door sign" }
+  ],
+  "websites": [
+    { "url": "https://example.com", "source": "Fictional sample" }
+  ],
+  "social": [
+    { "platform": "instagram", "handle": "@littlegannet", "source": "Fictional sample" }
+  ],
+  "staff": [
+    { "name": "Maya", "title": "Head roaster", "source": "Fictional sample: the roastery page" },
+    { "name": "Tom Rowe", "title": "Barista", "titleAliases": ["Shop barista"], "source": "Fictional sample: the roastery page" }
+  ],
+  "services": ["Espresso coffee", { "name": "Cold brew", "aliases": ["cold brew tonic"] }, "Small-batch roasting"],
+  "prices": [
+    { "label": "latte", "text": "$6.50", "source": "Fictional sample: the menu board" }
+  ],
+  "approvedCtas": ["Come say hi", "Tell us which one you will try first."],
+  "approvedStats": [
+    { "text": "Roasting small batches since 2019", "source": "Fictional sample: the roastery page" }
+  ],
+  "bannedClaims": ["world's best coffee", "cures your tiredness"]
+}

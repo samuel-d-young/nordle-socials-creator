@@ -1,0 +1,15 @@
+{
+  "note": "Thresholds for `nordle critique` and the nordle_critique tool: the design rules a post is graded against. They are starting points, tuned for social posts at 1080 px wide. Change them here; no code needs to change.",
+  "hierarchy": { "minRatio": 1.8, "headlinePx": 64 },
+  "typeScale": { "maxSizes": 4, "maxFamilies": 2, "sizeStepPx": 4 },
+  "margins": { "minPct": 5 },
+  "alignment": { "maxEdges": 3, "clusterPct": 1.2 },
+  "overlap": { "textTextMaxFraction": 0.04, "textInsideShape": 0.9, "busyStdDev": 0.2 },
+  "balance": { "maxOffsetX": 0.22, "maxOffsetY": 0.28 },
+  "density": { "minCoverage": 0.1, "maxCoverage": 0.8, "backgroundShapeFraction": 0.85 },
+  "text": { "maxHeadlineLines": 4, "widowRatio": 0.22, "maxCharsPerLine": 58, "smallPx": 36, "maxSmallLayers": 3 },
+  "images": { "minScale": 1.0 },
+  "consistency": { "marginTolerancePct": 2.5, "headlineSizeTolerance": 0.18 },
+  "caption": { "hookChars": 125 },
+  "scoring": { "error": 15, "warn": 6, "info": 2, "passScore": 88 }
+}

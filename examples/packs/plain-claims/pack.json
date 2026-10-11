@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schemas/pack.schema.json",
+  "schema": "nordle.pack/0.1",
+  "id": "plain-claims",
+  "name": "Plain claims",
+  "version": "0.1.0",
+  "description": "Example lint pack: flags superlatives and absolute promises in captions and on-screen text, and keeps captions inside a length.",
+  "author": "Nordle",
+  "runsCode": false,
+  "disclaimer": "Example rules to show the pack format. They are a writing aid, not legal advice. Check the rules that apply to your industry and country.",
+  "rules": [
+    {
+      "id": "no-superlatives",
+      "type": "phrase",
+      "severity": "warn",
+      "message": "Superlatives are hard to back up. Say what is specific and true instead.",
+      "scope": ["copy.caption", "layers.text", "video.captions"],
+      "phrases": ["best", "number one", "world's best", "unbeatable"],
+      "wholeWord": true
+    },
+    {
+      "id": "no-guarantees",
+      "type": "phrase",
+      "severity": "error",
+      "message": "Do not promise outcomes you cannot guarantee.",
+      "scope": ["copy.caption", "layers.text", "video.captions"],
+      "phrases": ["guaranteed", "100% safe", "risk free"],
+      "wholeWord": false
+    },
+    {
+      "id": "no-shouting-punctuation",
+      "type": "regex",
+      "severity": "info",
+      "message": "Several exclamation marks in a row read as shouting.",
+      "scope": ["copy.caption", "layers.text"],
+      "pattern": "!{2,}"
+    },
+    {
+      "id": "caption-length",
+      "type": "limit",
+      "severity": "warn",
+      "message": "Caption is long. Most readers stop early.",
+      "field": "copy.caption",
+      "max": 600
+    }
+  ]
+}

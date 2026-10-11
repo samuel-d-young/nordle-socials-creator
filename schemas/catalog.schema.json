@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nordle:schema:catalog:0.1",
+  "title": "Nordle media catalog",
+  "description": "What each photo or clip actually shows, written after looking at it. The caption-matches-the-picture check is only as good as this. Lives at <project>/assets/catalog.json (clips: <project>/sources/catalog.json).",
+  "type": "object",
+  "required": ["schema", "brand", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema": { "const": "nordle.catalog/0.1" },
+    "brand": { "type": "string" },
+    "items": {
+      "type": "object",
+      "description": "Keyed by the project-relative path of the file.",
+      "propertyNames": { "type": "string", "maxLength": 260 },
+      "additionalProperties": { "$ref": "#/$defs/item" }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": ["shows"],
+      "additionalProperties": false,
+      "properties": {
+        "shows": { "type": "string", "minLength": 8, "description": "One plain sentence on what is in the frame: who, where, doing what. Not what you wish it showed." },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Lower-case words a caption might use for it: surgery, xray, team, reception, exterior, smile, child." },
+        "people": { "type": "array", "items": { "type": "string" }, "description": "Named staff visible. Never patients." },
+        "patientVisible": { "type": "boolean", "description": "True if a patient (not staff) is identifiable. Such media is not used." },
+        "setting": { "type": "string" },
+        "orientation": { "enum": ["portrait", "landscape", "square"] },
+        "focal": { "type": "object", "additionalProperties": false, "properties": { "x": { "type": "number", "minimum": 0, "maximum": 1 }, "y": { "type": "number", "minimum": 0, "maximum": 1 } }, "description": "Where the faces or the subject are, so crops keep them." },
+        "quality": { "enum": ["great", "good", "ok", "poor"] },
+        "traps": { "type": "array", "items": { "type": "string" }, "description": "Look-alikes: what this is NOT. e.g. 'is the X-ray plate scanner, not the steriliser'." },
+        "doNotUse": { "type": "string", "description": "If set, never use it; says why." },
+        "usedIn": { "type": "array", "items": { "type": "string" }, "description": "Documents that already use it, so a month does not repeat photos." },
+        "origin": { "type": "string", "description": "Where the original lives (for the owner's reference). Not used by the renderer." },
+        "license": { "type": "string", "description": "Stock only: the licence it came under (the full record is assets/stock/licences.json)." },
+        "start": { "type": "number", "description": "Clips only: usable range start, seconds." },
+        "end": { "type": "number", "description": "Clips only: usable range end, seconds." },
+        "speech": { "type": "string", "description": "Clips only: what is said, if anything." },
+        "motion": { "type": "string", "description": "Clips only: what moves (slow pan, static, handheld walk)." }
+      }
+    }
+  }
+}
