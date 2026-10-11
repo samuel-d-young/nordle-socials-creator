@@ -77,6 +77,42 @@ Rules: nothing is posted, scheduled or sent anywhere unless I press the button m
 Nordle shows me. Tell me when you are guessing.
 ````
 
+## Prompt for a tester (one paste: install, try it, report back)
+
+````text
+I am testing Nordle for its author, so please be a careful, honest tester. Nordle is a local social-media studio that you (Claude) and I use
+together: you plan, design and check posts, I approve them in a browser page. It is open source: https://github.com/samuel-d-young/nordle-socials-creator
+
+Part 1, install (stop and tell me if a step fails; do not improvise around it):
+1. `git ls-remote https://github.com/samuel-d-young/nordle-socials-creator` must work.
+2. Check Node.js 20 or newer, git, and ffmpeg (`node -v`, `git --version`, `ffmpeg -version`). If something is missing tell me how to install it for my
+   system and ask before installing anything outside the project folder. Note my operating system and these versions for the report.
+3. Ask me where to put it, then `git clone https://github.com/samuel-d-young/nordle-socials-creator <folder>`.
+4. Read `<folder>/setup.mjs` and `<folder>/README.md`, tell me in two lines what setup does, then run `node setup.mjs --register` in the folder.
+5. Run `node nordle.mjs doctor`, then `node server.mjs --open`, and tell me the address. Time each step (a rough number is fine).
+6. Tell me to restart Claude Code, then to paste "Part 2" below into the new session. (If this session already shows nordle_* tools, carry on.)
+
+Part 2, try it (use the nordle_* tools and the Studio in the browser; read the guide with nordle_get_guide first):
+1. Open the sample project (Little Gannet Coffee) in the Studio and look around: Month, Wall, Review, Plan.
+2. Ask me for my business and my website, then make my brand with the Studio's "Add a brand" wizard (the + Add button in the left bar).
+   Use made-up details if I do not want to share real ones.
+3. Plan three post ideas for next month, wait for me to approve them in the Studio, then build one carousel and look at every page as a picture.
+   Run the checks and critique, fix what they find, and tell me what you were unsure about.
+4. Use "Request changes" once with a comment. If it says Claude Code is not signed in, tell me and note it for the report.
+5. Export or schedule nothing outside this computer. Do not enter any real key or password.
+
+Part 3, report. Write `nordle-test-report.md` in a folder outside the Nordle folder, with:
+- my operating system, Node, git and ffmpeg versions, and how long install took;
+- for every step above: worked / worked with a problem / broke, with what I did, what I saw and what I expected, in plain words;
+- anything confusing in the words on screen, anything slow, anything that looked wrong (screenshots of the Studio help);
+- what I liked, and the one thing I would change first.
+Remove anything private first (real names, keys, local folder names). Then tell me where the file is and how to send it:
+open an issue at https://github.com/samuel-d-young/nordle-socials-creator/issues with the report pasted in, or send it to whoever gave me this prompt.
+
+Rules: never post, schedule or send anything for me, keep everything inside the Nordle folder and my Claude settings for the MCP server and skill, and never
+claim a step worked when it did not.
+````
+
 ## Other first messages to try
 
 ````text
