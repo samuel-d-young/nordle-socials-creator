@@ -114,3 +114,9 @@ blocks with a hairline edge (picture cool grey-blue, sound warm, photos mauve, t
 the stamp green only for "someone is speaking" in a waveform. Status is never colour alone: problems are diamonds (warning) or triangles (error) with words in the Check tab,
 a muted or locked clip says so in words and a hatch. Everything on the timeline is reachable by keyboard (Tab to a clip, Enter selects, Alt+arrows walk the track);
 the only motion is the spinner, which stops under reduced motion.
+
+## The skin (`app/studio-skin.css`)
+
+Loaded last, so it can be removed alone. Dot-grid paper, 2 px ink outlines, hard offset shadows that press in on click, one orange (`--hot`) for
+accents, Outfit for words and Doto for numbers. It never changes what a colour means (green approved, red needs you) and never uses orange for small
+text on paper (too pale). In the dark theme the outlines and shadows turn orange. Style follows RoboNuggets' RENDER Studio (CC BY 4.0).

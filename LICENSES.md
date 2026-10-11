@@ -41,6 +41,9 @@ Avoided on purpose:
 Fonts bundled in `fonts/` (variable fonts, latin, latin-ext and vietnamese subsets), copied unmodified from the
 `@fontsource-variable/fraunces` and `@fontsource-variable/inter` packages, version 5.3.0, both SIL Open Font License 1.1.
 The licence text for each is beside the font (`fonts/fraunces/OFL.txt`, `fonts/inter/OFL.txt`).
+The Studio's own look also uses `fonts/outfit` (Outfit) and `fonts/doto` (Doto, a dot-matrix face), from the `@fontsource-variable/outfit` and
+`@fontsource-variable/doto` packages, version 5.3.0, SIL Open Font License 1.1 (`fonts/outfit/OFL.txt`, `fonts/doto/OFL.txt`). They are not in `fonts/manifest.json`,
+so they are only the Studio's, never a brand's. The paper, ink and orange style follows RoboNuggets' RENDER Studio (CC BY 4.0); no code was copied.
 
 ## Not allowed in the repo
 

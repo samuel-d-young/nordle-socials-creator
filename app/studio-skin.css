@@ -1,0 +1,88 @@
+/* The Studio's skin: dotted paper, ink outlines, hard offset shadows, one orange, Outfit for words and Doto (a dot-matrix face)
+   for numbers. It only changes how things look: no layout, no sizes that matter, no colours that carry meaning (green still means
+   approved, red still means "needs you"). Delete this file and its <link> in index.html to get the old look back.
+   The look follows the "paper / ink / orange" style of RoboNuggets' RENDER Studio (CC BY 4.0, credited in LICENSES.md); the code is ours. */
+
+:root {
+  --hot: #FF6B1A;              /* the one accent: borders, shadows, fills with ink text on them. Never small text on paper (too pale). */
+  --on-hot: #17191B;
+  --edge: var(--ink);          /* the colour of outlines and hard shadows */
+  --hard: 3px 3px 0 var(--edge);
+  --hard-sm: 2px 2px 0 var(--edge);
+  --hard-lg: 6px 6px 0 var(--edge);
+  --dots: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1.4px);
+  --font-ui: 'Outfit Variable', Outfit, 'Inter Variable', Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit Variable', Outfit, 'Inter Variable', Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-dot: 'Doto Variable', Doto, ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --hot: #FF8A45; --edge: var(--hot); --dots: radial-gradient(color-mix(in srgb, var(--ink) 11%, transparent) 1px, transparent 1.4px); }
+}
+:root[data-theme="dark"] { --hot: #FF8A45; --edge: var(--hot); --dots: radial-gradient(color-mix(in srgb, var(--ink) 11%, transparent) 1px, transparent 1.4px); }
+
+/* paper with a faint dot grid behind the work */
+.studio .s-main { background-image: var(--dots); background-size: 22px 22px; }
+.studio .view { background: transparent; }
+
+/* the rail */
+.rail { border-right: 2px solid var(--ink); }
+.wordmark { font-weight: 800; letter-spacing: -.035em; }
+.wordmark i { color: var(--hot); }
+.rn.on { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink), var(--hard-sm); }
+.rn.on::before { left: -12px; width: 4px; background: var(--hot); }
+.rb.on { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink); }
+
+/* big words are Outfit, numbers are dot-matrix */
+.mast-h { font-weight: 800; letter-spacing: -.035em; }
+.mast-y, .fig-n, .rn-n, .rb-c, .start-n, .f-chip b, .f-count { font-family: var(--font-dot); font-weight: 900; letter-spacing: .02em; }
+.mast-y { color: var(--hot); }
+.fig-n { font-size: 38px; letter-spacing: 0; }
+.fig.pencil .fig-n { color: var(--pencil); }
+.start-n { letter-spacing: 0; }
+.figs { border-top-width: 3px; }
+.lbl, .lbl-i, .mast-date { font-weight: 600; letter-spacing: .14em; }
+
+/* buttons: ink outline, a hard shadow, and they press into the page */
+.btn { border: 2px solid var(--ink); background: var(--surface); box-shadow: var(--hard-sm); font-weight: 560; transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.btn:hover:not(:disabled) { border-color: var(--ink); transform: translate(-1px, -1px); box-shadow: var(--hard); }
+.btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
+.btn.primary, .btn.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); box-shadow: 3px 3px 0 var(--hot); }
+.btn.primary:hover:not(:disabled) { background: var(--ink); box-shadow: 4px 4px 0 var(--hot); }
+.btn.go { border-color: var(--ink); box-shadow: var(--hard-sm); }
+.btn.go:hover:not(:disabled) { border-color: var(--ink); box-shadow: var(--hard); }
+.btn.quiet, .btn.ghost, .btn.approved, .btn.nope, .btn.approved:disabled { border-color: transparent; box-shadow: none; background: transparent; }
+.btn.approved, .btn.approved:disabled { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.btn.quiet:hover:not(:disabled), .btn.ghost:hover:not(:disabled), .btn.nope:hover:not(:disabled) { transform: none; box-shadow: none; border-color: transparent; }
+.btn.ask { background: transparent; }
+.btn.edit-video { border-color: var(--ink); }
+/* on dark surfaces (the selection bar, notices, toasts, tips) the shadow has nothing to sit on */
+.selbar .btn, .notice .btn, .stk-toast .btn, .g-hint .btn, .tip .btn { box-shadow: none; transform: none; }
+kbd { border-color: var(--ink); }
+
+/* filters and fields */
+.f-search, .f-sel, .f-seg, .f-chip { border: 2px solid var(--ink); background: var(--surface); }
+.f-seg button { height: 28px; }
+.f-search:focus-within { box-shadow: var(--hard-sm); outline: 0; }
+.f-chip.on, .f-seg button.on { background: var(--ink); color: var(--on-ink); }
+.filters { border-bottom: 2px solid var(--ink); }
+input[type="text"], input[type="search"], input[type="url"], input[type="number"], input[type="date"], input[type="time"], select, textarea { border-color: var(--rule-strong); }
+input[type="text"]:focus, input[type="search"]:focus, input[type="url"]:focus, input[type="number"]:focus, select:focus, textarea:focus { border-color: var(--ink); box-shadow: var(--hard-sm); outline: 0; }
+
+/* pictures: ink outlines, a hard shadow that turns orange on hover */
+.wc-pic .th { outline: 2px solid var(--ink); outline-offset: 0; box-shadow: var(--hard); transition: box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.wc-pic:hover .th { outline: 2px solid var(--ink); outline-offset: 0; box-shadow: 5px 5px 0 var(--hot); transform: translate(-1px, -1px); }
+.wc.picked .th { outline: 3px solid var(--stamp); outline-offset: 0; }
+.wc-title { font-weight: 700; letter-spacing: -.01em; }
+
+/* panels that float: the detail drawer, dialogs, menus */
+.detail { border-left: 2px solid var(--ink); }
+dialog { border: 2px solid var(--ink); border-radius: 4px; box-shadow: var(--hard-lg); }
+dialog .dh { font-weight: 800; letter-spacing: -.02em; }
+dialog::backdrop { background: color-mix(in srgb, var(--ink) 38%, transparent); background-image: var(--dots); background-size: 22px 22px; }
+.popmenu { border: 2px solid var(--ink); box-shadow: var(--hard); }
+.notice, .stk-toast { box-shadow: 4px 4px 0 var(--hot); }
+.selbar { box-shadow: 4px 4px 0 var(--hot); }
+
+/* the editor and the video editor share these tokens and read well with them; keep their dense chrome calmer */
+.studio .mast { position: relative; }
+@media (prefers-reduced-motion: reduce) { .btn, .wc-pic .th { transition: none; transform: none !important; } }
