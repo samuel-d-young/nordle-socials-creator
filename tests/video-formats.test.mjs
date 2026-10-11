@@ -174,7 +174,7 @@ test('gif: 15 fps, no wider than 540, no sound, no cover or sheet, and the lengt
   assert.deepEqual([list[0].width, list[0].height], [540, 960], 'scaled down from 720 to the default 540 wide, same shape');
   const p = await probeMedia(gif.file, { animated: true });
   assert.ok(Math.abs(p.duration - 2) < 0.25, `duration ${p.duration}`);
-  assert.ok(Math.abs(p.video.fps - 15) < 1.5, `fps ${p.video.fps}`);
+  assert.ok(Math.abs(p.video.fps - 15) < 2, `fps ${p.video.fps}`); // GIF frame delays are whole centiseconds, so 15 fps reads back as 14.3 or 16.7
   assert.equal(gif.output.audio, null);
   assert.equal(gif.files.cover, undefined); assert.equal(gif.files.sheet, undefined);
   assert.equal(existsSync(join(proj, 'out', 'card-gif', 'sheet.png')), false);

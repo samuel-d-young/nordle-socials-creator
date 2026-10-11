@@ -224,6 +224,7 @@ test('when Claude Code is not signed in, the post says how to fix it instead of 
       setImmediate(() => { child.stdout.emit('data', JSON.stringify({ type: 'result', is_error: true, result: 'Failed to authenticate: OAuth session expired and could not be refreshed' })); child.emit('close', 1, null); });
       return child;
     };
+    await sleep(1100); // a post written in the last second before a revise starts counts as the revise's own work (src/calendar/run.mjs settle)
     const r = await runDue({ projectDir: join(work, 'projects', a.project), itemId: a.itemId, yes: true, spawn, exec: async () => ({ code: 0, stdout: '', stderr: '' }), validate: false, log: quiet });
     assert.deepEqual(r.ran.map((x) => x.outcome), ['signed-out']);
     assert.match(r.ran[0].error, /not signed in on this computer.*claude auth login/);
