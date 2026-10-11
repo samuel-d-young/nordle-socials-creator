@@ -1,6 +1,6 @@
 name: ci
 
-# Private repo: Windows and Linux on every push; macOS only on main and tags (macOS minutes cost 10x).
+# Windows and Linux on every push; macOS on main and tags. Video features need ffmpeg, which is never bundled, so each job installs it.
 on:
   push:
   pull_request:
@@ -18,6 +18,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install ffmpeg (video tests need it; Nordle never bundles it)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install ffmpeg; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then choco install ffmpeg -y --no-progress; fi
+          ffmpeg -version | head -1
       - run: npm ci
       - name: Install the rendering browser (Linux also needs its system libraries)
         run: npx playwright-core install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
@@ -43,6 +50,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install ffmpeg (video tests need it; Nordle never bundles it)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install ffmpeg; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then choco install ffmpeg -y --no-progress; fi
+          ffmpeg -version | head -1
       - run: npm ci
       - run: npx playwright-core install chromium
       - run: node tools/doctor.mjs --ci
