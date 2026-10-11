@@ -30,7 +30,7 @@ jobs:
         run: npx playwright-core install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
       - run: node tools/doctor.mjs --ci
       - run: npm run validate
-      - run: npm test
+      - run: node --test --test-concurrency=2 --test-timeout=240000 "tests/*.test.mjs"
       - name: Render the sample project and keep the contact sheets
         run: node nordle.mjs verify samples/little-gannet
       - run: node nordle.mjs render samples/little-gannet --sheet
@@ -61,5 +61,5 @@ jobs:
       - run: npx playwright-core install chromium
       - run: node tools/doctor.mjs --ci
       - run: npm run validate
-      - run: npm test
+      - run: node --test --test-concurrency=2 --test-timeout=240000 "tests/*.test.mjs"
       - run: node nordle.mjs verify samples/little-gannet
