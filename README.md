@@ -18,6 +18,8 @@ What makes it different from a template tool:
 
 Early release (v0.1): it works, it is tested, and it is still changing. See the guides in `docs/` and `SECURITY.md`.
 
+On a Mac? See [docs/MACOS.md](docs/MACOS.md) (Homebrew install, the Command key, what is tested).
+
 **Testing it for someone else, or having a friend try it?** [SHARE-PROMPT.md](SHARE-PROMPT.md) has a one-paste prompt that installs Nordle, tries it, and writes a report to send back.
 
 Want to see the whole workflow work before you trust it? Paste the prompt in [docs/SELF-TEST.md](docs/SELF-TEST.md): Claude uses the Studio on three brands and reports what worked and what broke.
