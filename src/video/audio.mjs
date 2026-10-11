@@ -222,7 +222,10 @@ function mixGraph(clips, { duration, envFiles = new Map(), trim = null, tail = '
     labels.push(`[a${k}]`);
   });
   if (labels.length) {
-    lines.push(`${labels.join('')}amix=inputs=${labels.length}:normalize=0:duration=longest:dropout_transition=0,apad=whole_dur=${n6(duration)},atrim=end=${n6(duration)},asetpts=PTS-STARTPTS${trim ? `,atrim=start=${n6(trim.from)}:end=${n6(trim.to)},asetpts=PTS-STARTPTS` : ''}${tail}[mix]`);
+    // A silent track as long as the whole timeline is mixed in, so the sound always lasts as long as the picture. (Padding after the mix with
+    // apad=whole_dur came out short with the ffmpeg 9.0.1 Homebrew ships for macOS; a real silent input does not depend on that filter.)
+    lines.push(`anullsrc=r=${SR}:cl=stereo:d=${n6(duration)},aformat=sample_fmts=fltp:channel_layouts=stereo[sil]`);
+    lines.push(`${labels.join('')}[sil]amix=inputs=${labels.length + 1}:normalize=0:duration=longest:dropout_transition=0,apad=whole_dur=${n6(duration)},atrim=end=${n6(duration)},asetpts=PTS-STARTPTS${trim ? `,atrim=start=${n6(trim.from)}:end=${n6(trim.to)},asetpts=PTS-STARTPTS` : ''}${tail}[mix]`);
   } else {
     const len = trim ? trim.to - trim.from : duration;
     lines.push(`anullsrc=r=${SR}:cl=stereo:d=${n6(len)}${tail ? `,${tail.replace(/^,/, '')}` : ''}[mix]`);
