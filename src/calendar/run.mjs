@@ -19,6 +19,7 @@ import { buildPrompt, proposePrompt } from './prompts.mjs';
 import { CalendarError, linkDoc, listProjects, loadProject, mutateCalendar, runnableItems } from './service.mjs';
 import { monthReport } from './plan.mjs';
 import { addMonths, monthOf } from './dates.mjs';
+import { claudeProgram, missingClaudeMessage } from './claude-bin.mjs';
 
 export const DEFAULT_TIMEOUT_MS = 25 * 60 * 1000;
 export const DEFAULT_MAX_TURNS = 60;
@@ -53,7 +54,7 @@ export function defaultExec(cmd, args = [], opts = {}) {
 
 // ---- the Claude Code command line --------------------------------------------------------------------------------------
 
-export const claudeBin = () => process.env.NORDLE_CLAUDE_BIN || 'claude';
+export const claudeBin = () => claudeProgram();
 
 /** The MCP config that gives the headless run the Nordle tools (written to a temp file for --mcp-config). */
 export function mcpConfig(nordleRoot = ROOT) {
@@ -109,10 +110,10 @@ export function runClaude({ spawn, exec, bin, args, cwd, env, prompt, timeoutMs,
     const onAbort = () => { aborted = true; if (child) { killTree(child, exec); backstop = setTimeout(() => finish({ signal: 'SIGKILL' }), 10000); } else finish({ signal: 'SIGKILL' }); };
     if (signal?.aborted) { aborted = true; finish({ signal: 'SIGKILL' }); return; }
     signal?.addEventListener?.('abort', onAbort, { once: true });
-    try { child = spawn(bin, args, { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (e) { finish({ error: e.message }); return; }    const keep = (cur, chunk) => (cur + String(chunk)).slice(-2_000_000);
+    try { child = spawn(bin, args, { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...(/\.(cmd|bat)$/i.test(String(bin)) ? { shell: true } : {}) }); } catch (e) { finish({ error: e.message }); return; }    const keep = (cur, chunk) => (cur + String(chunk)).slice(-2_000_000);
     child.stdout?.on('data', (d) => { stdout = keep(stdout, d); });
     child.stderr?.on('data', (d) => { stderr = keep(stderr, d); });
-    child.on('error', (e) => finish({ error: e.code === 'ENOENT' ? `Could not start Claude Code ("${bin}"). Install it, or set NORDLE_CLAUDE_BIN to its full path.` : e.message }));
+    child.on('error', (e) => finish({ error: e.code === 'ENOENT' ? missingClaudeMessage(bin) : e.message }));
     child.on('close', (code, signal) => finish({ code, signal }));
     child.stdin?.on?.('error', () => {});
     try { child.stdin?.end(prompt); } catch { /* the process may already have exited */ }

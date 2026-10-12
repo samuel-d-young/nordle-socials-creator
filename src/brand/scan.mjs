@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { binary } from '../video/ffmpeg.mjs';
 import { UNREADABLE_DOC_EXT, readGuideFile } from './guide-text.mjs';
 import { cleanIndustry, detectIndustry } from './industry.mjs';
+import { coreFromTrain, postsFromTrain, withNamedColours } from './train.mjs';
 
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const FONT = new Set(['.ttf', '.otf', '.woff', '.woff2']);
@@ -410,6 +411,14 @@ export async function scanBrand(input = {}) {
   const folderFonts = [];
   const guideDocs = [];
   const shot = input.shot && typeof input.shot === 'object' ? input.shot : null;
+  const train = input.train && typeof input.train === 'object' ? input.train : null;
+  const core = coreFromTrain(train);
+  if (train?.colors?.length) {
+    // example posts: the colours the brand really uses, and the jobs they do. The jobs it named win over a guess.
+    train.colors.forEach((c) => palette.set(c.hex.toUpperCase(), (palette.get(c.hex.toUpperCase()) ?? 0) + 250 + Math.round((c.share ?? 0.1) * 100)));
+    for (const [role, hex] of Object.entries(core ?? {})) if (hex) palette.set(hex.toUpperCase(), (palette.get(hex.toUpperCase()) ?? 0) + (role === 'accent' ? 900 : 700));
+    found.push(`Read ${train.postsSeen || 'your'} example post${train.postsSeen === 1 ? '' : 's'}: ${train.colors.length} colour${train.colors.length === 1 ? '' : 's'}${core ? ` (${Object.entries(core).filter(([, v]) => v).map(([k]) => ({ ink: 'text', paper: 'background', accent: 'accent', muted: 'quiet text' }[k])).join(', ')} found)` : ''}.`);
+  }
   if (shot?.colors?.length) {
     shot.colors.forEach((c, i) => palette.set(c.hex.toUpperCase(), (palette.get(c.hex.toUpperCase()) ?? 0) + 300 - i * 8));
     found.push(`Read ${shot.colors.length} colour${shot.colors.length === 1 ? '' : 's'} from your screenshot${shot.fallback ? ' (worked out from the pixels: check them)' : ''}.`);
@@ -441,6 +450,13 @@ export async function scanBrand(input = {}) {
     fonts = { display: shot.fonts.heading ?? shot.fonts.subheading ?? fonts.display, body: shot.fonts.body ?? shot.fonts.subheading ?? fonts.body };
     found.push(`Fonts from your screenshot: ${[...new Set([shot.fonts.heading, shot.fonts.subheading, shot.fonts.body].filter(Boolean))].join(', ')}.`);
   } else if (shot?.fallback) problems.push('The fonts in your screenshot could not be read without Claude Code. Choose them yourself below.');
+  if (!shot?.fonts?.heading && !shot?.fonts?.body && (train?.fonts?.headline || train?.fonts?.body)) {
+    fonts = { display: train.fonts.headline ?? fonts.display, body: train.fonts.body ?? fonts.body };
+    found.push(`Fonts from your example posts: ${[...new Set([train.fonts.headline, train.fonts.body].filter(Boolean))].join(', ')}.`);
+  }
+  if (train?.fallback) problems.push('Which colour does which job, the fonts and the layout of your example posts could not be read without Claude Code. The colours were worked out from the pictures.');
+  const namedColours = [...(shot?.colors ?? []).map((c) => ({ hex: c.hex, name: c.name })), ...(train?.colors ?? []).map((c) => ({ hex: c.hex, name: c.role === 'other' ? null : c.role }))];
+  const extraFonts = [shot?.fonts?.subheading ? ['subheading', shot.fonts.subheading] : null, ...(shot?.fonts?.other ?? []).slice(0, 3).map((f, i) => [`extra${i + 1}`, f]), train?.fonts?.accent ? ['accentFont', train.fonts.accent] : null].filter(Boolean);
   const guideTone = [...new Set([...guideDocs.flatMap((d) => d.tone), ...(shot?.tone ?? [])])].slice(0, 8);
   const guideBanned = [...new Set(guideDocs.flatMap((d) => d.banned))].slice(0, 12);
 
@@ -465,7 +481,8 @@ export async function scanBrand(input = {}) {
   const caps = scanCaptions(input.captions);
   found.push(...caps.found);
 
-  const { colors, notes } = colorsFromPalette(palette);
+  const { colors: autoColors, notes } = colorsFromPalette(palette);
+  const colors = autoColors ? withNamedColours(autoColors, namedColours) : autoColors;
   problems.push(...notes.filter((n) => palette.size));
   if (!colors && !problems.length) problems.push('No colours could be found: add a folder with the logo, or a website, or set the colours by hand.');
   const name = String(input.name ?? '').trim() || (meta.site?.['og:site_name'] ?? '').trim() || (shot?.brandName ?? '');
@@ -483,8 +500,9 @@ export async function scanBrand(input = {}) {
   const draft = {
     ...(name ? { name } : {}),
     ...(industry ? { industry } : {}),
+    ...(train ? { train: { postsSeen: train.postsSeen, layout: train.layout, fonts: train.fonts } } : {}),
     ...(colors ? { colors } : {}),
-    ...((fonts.display || fonts.body) ? { fonts: { ...(fonts.display ? { display: { family: fonts.display, source: folderFonts.includes(fonts.display) ? 'system' : 'google' } } : {}), ...(fonts.body ? { body: { family: fonts.body, source: folderFonts.includes(fonts.body) ? 'system' : 'google' } } : {}) } } : {}),
+    ...((fonts.display || fonts.body) ? { fonts: { ...Object.fromEntries(extraFonts.map(([k, f]) => [k, { family: f, source: 'google' }])), ...(fonts.display ? { display: { family: fonts.display, source: folderFonts.includes(fonts.display) ? 'system' : 'google' } } : {}), ...(fonts.body ? { body: { family: fonts.body, source: folderFonts.includes(fonts.body) ? 'system' : 'google' } } : {}) } } : {}),
     voice: { tone: [...guideTone, caps.hints.emojiHeavy ? 'playful, with emoji' : null, caps.hints.exclaims ? 'upbeat' : null].filter(Boolean), bannedPhrases: guideBanned },
     links: { ...(handle ? { handle: `@${handle}` } : {}), ...(String(input.website ?? '').trim() ? { website: /^https?:\/\//i.test(String(input.website).trim()) ? String(input.website).trim() : `https://${String(input.website).trim()}` } : {}) },
     ...(noteParts.length ? { note: noteParts.join('\n') } : {}),

@@ -27,7 +27,7 @@ test('what a screenshot says is cleaned: real colours once each, plain font name
   assert.deepEqual(s.tone, ['warm', 'plain-spoken']);
   assert.equal(s.extra, undefined);
   assert.equal(cleanShot(null).colors.length, 0);
-  assert.equal(cleanShot({ colors: Array.from({ length: 30 }, (_, i) => ({ hex: `#${String(i).padStart(2, '0')}AA00` })) }).colors.length, 12);
+  assert.equal(cleanShot({ colors: Array.from({ length: 40 }, (_, i) => ({ hex: `#${String(i).padStart(2, '0')}AA00` })) }).colors.length, 24, 'a kit with many colours keeps up to 24');
   assert.deepEqual(jsonFrom('Here you go: {"colors":[{"hex":"#112233"}]} done'), { colors: [{ hex: '#112233' }] });
   assert.equal(jsonFrom('no json here'), null);
 });

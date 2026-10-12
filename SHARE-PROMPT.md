@@ -110,7 +110,7 @@ Part 2, try it (use the nordle_* tools and the Studio in the browser; read the g
 1. Open the sample project (Little Gannet Coffee) in the Studio and look around: Create, Month, Wall, Review, Plan.
 2. Ask me for my business and my website, then make my brand with the Studio's "Add a brand" wizard (the + Add button in the left bar). Try the brand kit
    parts: add a logo in two kinds (use "Make black" or "Make white" if it can), choose a folder with the folder window (not by typing), add a file such
-   as a style guide, say what field the business is in, and (if I have one) add a screenshot of a Canva Brand Kit and press "Read my screenshot".
+   as a style guide, say what field the business is in, and (if I have them) add a screenshot of a Canva Brand Kit and press "Read my screenshot", and two or three of my own finished posts under "Train it on your own posts" (press "Read my posts"). Tell me whether every colour and font in the screenshot came through, and whether the colours in the posts are the ones the brand kit reads as background, headline and accent.
    Use made-up details if I do not want to share real ones.
 3. On the Create page (key `n`): make a campaign, show me its options, tick some and "Add as ideas, schedule later"; then pick "Decide for me" and a
    style for a normal month and add a few. Say what was confusing.

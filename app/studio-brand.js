@@ -6,7 +6,7 @@ import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { load } from './studio-store.js';
 import { folderPicker, notify } from './studio-ui.js';
-import { LOGO_KINDS, logoSlots, shotImport } from './studio-logos.js';
+import { LOGO_KINDS, logoSlots, shotImport, trainImport } from './studio-logos.js';
 
 const MAX_FOLDERS = 8;   // the same limit the server's scan applies (src/brand/scan.mjs)
 
@@ -239,11 +239,11 @@ function guideFromDraft(draft, name) {
 /** Add a brand in a few steps. `onCreated(id)` runs once it exists (the Studio switches to it). */
 export function openAddBrand({ onCreated, openPublishing } = {}) {
   const m = modal('Add a brand');
-  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', logoNames: {}, logoPrev: {}, shotState: { names: [], previews: [], shot: null, busy: false, note: '' }, folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
+  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', logoNames: {}, logoPrev: {}, shotState: { names: [], previews: [], shot: null, busy: false, note: '' }, trainState: { names: [], previews: [], shot: null, busy: false, note: '' }, folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
   const STEPS = () => (st.mode === 'auto' ? ['The brand', 'Look for its style', 'Check it', 'Done'] : ['The brand', 'Its style', 'Done']);
   const stepOf = () => (st.mode === 'manual' && st.step >= 3 ? st.step - 1 : st.step);
   const bar = () => h('ol', { class: 'wz-steps', 'aria-label': 'Steps' }, STEPS().map((t, i) => h('li', { class: i + 1 === stepOf() ? 'on' : i + 1 < stepOf() ? 'done' : '' }, h('span', { class: 'wz-n' }, i + 1 < stepOf() ? icon('check', 12) : String(i + 1)), t)));
-  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.industry.trim() || st.folders.length || st.files.length || Object.keys(st.logoNames).length || st.shotState.names.length || st.bio.trim() || st.captions.trim());
+  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.industry.trim() || st.folders.length || st.files.length || Object.keys(st.logoNames).length || st.shotState.names.length || st.trainState.names.length || st.bio.trim() || st.captions.trim());
   const syncScan = () => { const b = m.foot.querySelector('[data-act="wz-scan"]'); if (b) b.disabled = st.scanning || !hasInput(); };   // the Look button wakes up as soon as something is filled in
   const input = (key, ph, extra = {}) => { const el = h('input', { class: 'field', value: st[key], placeholder: ph, 'data-field': `wz-${key}`, ...extra }); el.addEventListener('input', () => { st[key] = el.value; syncScan(); }); return el; };
   const field = (label, control, hint) => h('div', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
@@ -328,6 +328,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
       field('Instagram', input('instagram', '@yourbrand or the page address'), 'Instagram often asks for a sign-in; if it will not show, paste the bio and captions below.'),
       field('Logos', logoSlots({ session: st.session, staged: { names: st.logoNames, previews: st.logoPrev }, onChange: syncScan }), 'Add the full-colour logo and, if you have them, a black one, a white one, an icon and a wordmark. Pictures use the one that reads on their background. Colours are taken from them.'),
       field('A screenshot of your brand page (optional)', shotImport({ session: st.session, state: st.shotState, onChange: () => { syncScan(); draw(); } }), 'For example your Canva Brand Kit page. Nordle reads the colours and fonts out of the picture. Claude Code must be signed in to read the fonts.'),
+      field('Train it on your own posts (optional)', trainImport({ session: st.session, state: st.trainState, onChange: () => { syncScan(); draw(); } }), 'Drop in two or three posts you have already made. Nordle sees which colour is the background, the headline and the accent, which fonts and how the posts are laid out, and makes new posts the same way.'),
       field('Files (a style guide, a logo, fonts, photos)', files(), 'A written style guide (Markdown, text, CSS or HTML) is read for colours, fonts, tone and phrases to avoid. A PDF is kept with the brand but cannot be read yet. Added files stay with the brand.'),
       field('Folders on this computer', folders(), 'Logos, photos and font files, from one folder or several. A file with “logo” in its name gives the best colours.'),
       field('Bio (optional)', (() => { const t = h('textarea', { class: 'field', rows: 2, 'data-field': 'wz-bio' }); t.value = st.bio; t.addEventListener('input', () => { st.bio = t.value; syncScan(); }); return t; })()),
@@ -343,7 +344,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
   async function doScan() {
     st.scanning = true; draw();
     try {
-      st.scan = await api.post('/brand/scan', { name: st.name, industry: st.industry, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, logoFiles: st.logoNames, shot: st.shotState.shot, bio: st.bio, captions: st.captions });
+      st.scan = await api.post('/brand/scan', { name: st.name, industry: st.industry, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, logoFiles: st.logoNames, shot: st.shotState.shot, train: st.trainState.shot, bio: st.bio, captions: st.captions });
       st.guide = guideFromDraft({ ...st.scan.draft, industryAlt: (st.scan.industry?.alternatives ?? []).map((a) => a.label) }, st.name); st.editor = null;
     } catch (e) { st.scan = { found: [], problems: [problem(e)], palette: [], draft: {} }; st.guide = guideFromDraft({}, st.name); st.editor = null; }
     st.scanning = false; draw();
@@ -360,7 +361,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
     try { patch = st.editor.read(); } catch (e) { notify(e.message, { kind: 'error' }); return; }
     st.creating = true; draw();
     try {
-      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: patch, files: st.files.map((f) => f.name), logoFiles: st.logoNames, uploadSession: st.session });
+      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: { ...patch, fonts: { ...Object.fromEntries(Object.entries(st.scan?.draft?.fonts ?? {}).filter(([k]) => !['display', 'body'].includes(k))), ...patch.fonts } }, train: st.trainState.shot, files: st.files.map((f) => f.name), logoFiles: st.logoNames, uploadSession: st.session });
       st.id = r.id;
       try { await load({ force: true }); } catch { /* the Studio finds it on its next refresh */ }
       onCreated?.(r.id);

@@ -11,6 +11,14 @@ The colours in your logos are the truest brand colours there are, so the scan co
 the colours it shows (using the hex codes written on the page when there are some), the fonts it names, and any words about the voice. Nordle shows what it found; you check it, and it goes into the draft. Claude Code must
 be signed in for this (`claude auth login`), and it costs about 20 to 30 cents (a real test read four colours, two fonts and the voice in about ten seconds). If it is not, the colours are still worked out from the pixels and Nordle says the fonts could not be read. Text inside a screenshot is only ever read as brand information.
 
+**Train it on your own posts.** Drop in two or three posts you have already made (pictures of the finished posts). Claude looks at them together and says which colour is the background, the headline,
+the body text and the accent, which fonts they use, and how they are laid out: left or centred, where the text sits, capital headlines, how an emphasised word is set, where the logo goes. Nordle turns that
+into the brand's five core colours and its house style for posts, so new posts are made the same way. Colours Claude can only estimate are moved to the real colour in the picture (a dark green comes out as that
+dark green, not a near neighbour). A real test on two made-up posts got the jobs, the layout and the three exact colours right in 10 seconds for about 10 cents. Without Claude Code the colours are still found from the pixels and Nordle says what could not be read.
+
+**Every colour and font from a screenshot is kept.** The core five are chosen (ink, paper, accent, a darker accent, quiet text) and every other colour in the kit stays as a named brand colour (up to 20 more, using the
+names on the page), so nothing is thrown away. A subheading font and other fonts the page names are kept too.
+
 **The rest.** A website (colours, fonts, the site's own logo), folders and files (a written style guide is read for colours, fonts, tone and phrases to avoid), pasted captions and a bio, and the field the brand is in. Then you check and change
 everything on one page before the brand is made.
 

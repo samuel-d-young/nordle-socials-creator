@@ -61,7 +61,15 @@ function checkWritable() {
   return { name: 'Project folder writable', required: true, ok, detail: ROOT, fix: 'move Nordle to a folder you can write to' };
 }
 
-const checks = [checkNode(), checkGit(), checkFfmpeg('ffmpeg'), checkFfmpeg('ffprobe'), await checkBrowser(), checkWritable()];
+async function checkClaude() {
+  const { findClaude, missingClaudeMessage } = await import('../src/calendar/claude-bin.mjs');
+  const f = findClaude();
+  return f.path
+    ? { name: 'Claude Code', required: false, ok: true, detail: `${f.path} (found in ${f.how})` }
+    : { name: 'Claude Code', required: false, ok: false, detail: 'not found (needed for Ask Claude now, Build it now and reading screenshots)', fix: missingClaudeMessage('claude', platform) };
+}
+
+const checks = [checkNode(), checkGit(), checkFfmpeg('ffmpeg'), checkFfmpeg('ffprobe'), await checkBrowser(), checkWritable(), await checkClaude()];
 const failed = checks.filter((c) => c.required && !c.ok);
 
 if (flags.has('--json')) {

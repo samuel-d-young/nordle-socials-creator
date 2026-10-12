@@ -115,7 +115,8 @@ export function applyGuide(brand, patch) {
   }
   if (patch.fonts !== undefined) {
     next.fonts = { ...next.fonts };
-    for (const role of ['display', 'body']) if (patch.fonts[role] !== undefined) next.fonts[role] = cleanFont(next.fonts[role], patch.fonts[role], role);
+    // the two main fonts, and the extra roles a brand kit can name (a subheading font, an accent font, other fonts it uses)
+    for (const role of ['display', 'body', 'subheading', 'accentFont', 'extra1', 'extra2', 'extra3']) if (patch.fonts[role] !== undefined) next.fonts[role] = cleanFont(next.fonts[role] ?? next.fonts.body, patch.fonts[role], role);
   }
   if (patch.voice !== undefined) {
     const v = { ...(next.voice ?? {}) };

@@ -84,7 +84,13 @@ export function logoSlots({ project, files = {}, session, staged, onGuide, onCha
 /**
  * @param {{ session: string, state: { names: string[], previews: string[], shot: object|null, busy: boolean, note: string }, onChange: ()=>void }} o
  */
-export function shotImport({ session, state, onChange }) {
+export const shotImport = (o) => imageImport({ ...o, kind: 'shot' });
+/** Example posts the brand already made: "train" Nordle on how its colours are used. */
+export const trainImport = (o) => imageImport({ ...o, kind: 'train' });
+
+function imageImport({ session, state, onChange, kind }) {
+  const train = kind === 'train';
+  const ROLE = { background: 'Background', headline: 'Headline', body: 'Body text', accent: 'Accent', highlight: 'Highlight', muted: 'Quiet text', button: 'Button', other: 'Other' };
   const add = async (list) => {
     const fit = [...list].filter((f) => /^image\/(png|jpe?g|webp)$/.test(f.type) || /\.(png|jpe?g|webp)$/i.test(f.name)).slice(0, 6 - state.names.length);
     if (!fit.length) return notify('Add a PNG, JPG or WebP screenshot.', { kind: 'error' });
@@ -101,15 +107,15 @@ export function shotImport({ session, state, onChange }) {
   const read = async () => {
     state.busy = true; state.note = 'Claude is looking at your screenshot. This takes about half a minute.'; onChange();
     try {
-      const r = await api.post('/brand/read-screenshots', { uploadSession: session, files: state.names });
-      state.shot = r.shot; state.note = r.note ?? '';
+      const r = await api.post(train ? '/brand/read-examples' : '/brand/read-screenshots', { uploadSession: session, files: state.names });
+      state.shot = train ? r.train : r.shot; state.note = r.note ?? '';
     } catch (e) { state.note = say(e); }
     state.busy = false; onChange();
   };
   const input = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', multiple: true, hidden: true, 'data-field': 'shot-file', onchange: () => { const l = [...input.files]; input.value = ''; add(l); } });
   const drop = h('div', { class: 'shot-drop', tabindex: '0', 'data-field': 'shot-drop', 'aria-label': 'Add a screenshot: drop it here, paste it, or choose a file' },
-    h('span', { class: 'muted' }, 'Drop a screenshot here, press Ctrl+V (Command+V on a Mac) to paste one, or'),
-    h('button', { class: 'btn', type: 'button', 'data-act': 'shot-add', disabled: state.busy || state.names.length >= 6, onclick: () => input.click() }, 'Choose a screenshot…'), input);
+    h('span', { class: 'muted' }, train ? 'Drop two or three of your own posts here (pictures of finished posts), or' : 'Drop a screenshot here, press Ctrl+V (Command+V on a Mac) to paste one, or'),
+    h('button', { class: 'btn', type: 'button', 'data-act': train ? 'train-add' : 'shot-add', disabled: state.busy || state.names.length >= 6, onclick: () => input.click() }, train ? 'Choose example posts…' : 'Choose a screenshot…'), input);
   for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
   for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); });
   drop.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) add(e.dataTransfer.files); });
@@ -121,13 +127,18 @@ export function shotImport({ session, state, onChange }) {
   };
   document.addEventListener('paste', onPaste);
   const s = state.shot;
-  return h('div', { class: 'shot', 'data-field': 'shot-import' },
+  return h('div', { class: 'shot', 'data-field': train ? 'train-import' : 'shot-import' },
     drop,
     state.names.length ? h('div', { class: 'shot-thumbs' }, state.previews.map((p, i) => h('span', { class: 'shot-th' }, h('img', { src: p, alt: `Screenshot ${i + 1}`, draggable: 'false' }),
       h('button', { class: 'btn sm quiet', type: 'button', 'aria-label': `Remove screenshot ${i + 1}`, 'data-act': 'shot-remove', onclick: () => { URL.revokeObjectURL(p); state.names.splice(i, 1); state.previews.splice(i, 1); state.shot = null; onChange(); } }, 'Remove')))) : null,
-    state.names.length ? h('div', { class: 'cr-go' }, h('button', { class: 'btn primary', type: 'button', 'data-act': 'shot-read', disabled: state.busy, onclick: read }, state.busy ? 'Working…' : s ? 'Read it again' : 'Read my screenshot')) : null,
+    state.names.length ? h('div', { class: 'cr-go' }, h('button', { class: 'btn primary', type: 'button', 'data-act': train ? 'train-read' : 'shot-read', disabled: state.busy, onclick: read }, state.busy ? 'Working…' : s ? 'Read it again' : train ? 'Read my posts' : 'Read my screenshot')) : null,
     state.note ? h('p', { class: `muted bg-hint${state.busy ? '' : ' shot-note'}`, role: 'status', 'data-state': 'shot-note' }, state.note) : null,
-    s ? h('div', { class: 'shot-result', 'data-state': 'shot-read' },
+    s && train ? h('div', { class: 'shot-result', 'data-state': 'train-read' },
+      h('ul', { class: 'bg-sws' }, s.colors.map((c) => h('li', { class: 'bg-sw', title: `${ROLE[c.role] ?? 'Colour'}: ${c.hex}` }, h('i', { style: { background: c.hex } }), h('span', {}, ROLE[c.role] ?? ''), h('code', {}, c.hex)))),
+      h('p', {}, [s.fonts.headline && `Headlines: ${s.fonts.headline}`, s.fonts.body && `Body: ${s.fonts.body}`, s.fonts.accent && `Accent: ${s.fonts.accent}`].filter(Boolean).join(' · ') || (s.fallback ? 'The fonts could not be read.' : 'No fonts could be named from the posts.')),
+      h('p', { class: 'muted' }, [s.layout.align && `${s.layout.align === 'center' ? 'Centred' : 'Left-aligned'} text`, s.layout.textZone && `text ${s.layout.textZone === 'bottom' ? 'low' : s.layout.textZone === 'top' ? 'high' : 'in the middle'}`, s.layout.headlineCase === 'upper' && 'capital headlines', s.layout.logo && s.layout.logo !== 'none' && `logo ${s.layout.logo.replace('-', ' ')}`, s.layout.photo && `${s.layout.photo.replace('-', ' ')} photos`].filter(Boolean).join(', ') || 'The layout was not clear from these posts.'),
+      s.notes ? h('p', { class: 'muted' }, s.notes) : null) : null,
+    s && !train ? h('div', { class: 'shot-result', 'data-state': 'shot-read' },
       h('ul', { class: 'bg-sws' }, s.colors.map((c) => h('li', { class: 'bg-sw', title: `${c.name ?? 'Colour'}: ${c.hex}` }, h('i', { style: { background: c.hex } }), h('span', {}, c.name ?? ''), h('code', {}, c.hex)))),
       h('p', {}, [s.fonts.heading && `Headings: ${s.fonts.heading}`, s.fonts.subheading && `Subheadings: ${s.fonts.subheading}`, s.fonts.body && `Body: ${s.fonts.body}`].filter(Boolean).join(' · ') || (s.fallback ? 'The fonts could not be read.' : 'No fonts were named in the screenshot.')),
       s.tone.length ? h('p', { class: 'muted' }, `Voice: ${s.tone.join(', ')}`) : null,

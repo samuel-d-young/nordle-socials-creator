@@ -5,6 +5,7 @@
 //                                                      -> { draft, found:[text], problems:[text], hashtags, palette }   reads a local folder and web pages; saves nothing
 //   POST /api/brand/logo/upload?project=&variant=primary|black|white|icon|wordmark (owner, octet-stream) -> { ok, guide };  POST /api/brand/logo/derive { project, to:'black'|'white', from? };  POST /api/brand/logo/remove { project, variant }
 //   POST /api/brand/read-screenshots (owner) { uploadSession, files:[names] } -> { ok, shot:{ colors:[{hex,name?}], fonts:{heading,subheading,body}, tone, brandName, logoSeen, notes }, note? }   a screenshot of a brand page (a Canva Brand Kit), read by Claude; send `shot` back to /scan
+//   POST /api/brand/read-examples (owner) { uploadSession, files:[names] } -> { ok, train:{ colors:[{hex,role,share}], fonts, layout, postsSeen, notes }, note? }   example posts, read by Claude; send `train` to /scan and /create
 //   POST /api/brand/pick-folder (owner) { title? } -> { ok, path } | { ok, cancelled: true } | { ok: false, unavailable: true, message }   opens the system's folder window on this computer
 //   POST /api/brand/upload  (owner) octet-stream, x-filename + x-upload-session -> { ok, name, size }   stages a file for the wizard (style guide, logo, fonts, photos)
 //   POST /api/brand/create  (owner) { name, guide?, timezone? } -> { ok, id }              makes the project (brand.json + folders); guide = the reviewed draft
@@ -18,7 +19,8 @@ import { GuideError, brandFile, newBrand, saveGuide, toGuide, readBrand } from '
 import { MAX_UPLOADS, scanBrand } from '../../brand/scan.mjs';
 import { slug } from '../store.mjs';
 import { PickerError, pickFolder } from '../folder-picker.mjs';
-import { SHOT_EXT, cleanShot, readBrandScreenshots } from '../../brand/screenshot.mjs';
+import { SHOT_EXT, cleanShot, cleanTrain, readBrandScreenshots, readExamplePosts } from '../../brand/screenshot.mjs';
+import { postsFromTrain } from '../../brand/train.mjs';
 import { LOGO_MAX_BYTES, LOGO_VARIANTS, deriveLogo, removeLogo, saveLogo } from '../../brand/logos.mjs';
 
 const validZone = (z) => { try { new Intl.DateTimeFormat('en-AU', { timeZone: z }); return true; } catch { return false; } };
@@ -53,7 +55,7 @@ export default {
   scope: 'root',
   key: 'brand',
   async handle(ctx) {
-    const { seg, method, url, req, res, store, sendJson, readJsonBody, readBody, need, needHuman, pickFolder: pick, HttpError, brandReader } = ctx;
+    const { seg, method, url, req, res, store, sendJson, readJsonBody, readBody, need, needHuman, pickFolder: pick, HttpError, brandReader, exampleReader } = ctx;
     const sub = seg[1];
     try {
       if (sub === 'guide') {
@@ -73,8 +75,8 @@ export default {
         need(method === 'POST', 405, 'POST only.');
         needHuman();
         const b = await readJsonBody(req);
-        const { uploads: _ignored, logoPaths: _lp, files, uploadSession, logoFiles, shot, ...rest } = b;
-        return sendJson(res, 200, { ok: true, ...(await scanBrand({ ...rest, uploads: stagedFiles(uploadSession, files), logoPaths: stagedFiles(uploadSession, logoFiles && typeof logoFiles === 'object' ? Object.values(logoFiles) : []), shot: cleanShot(shot) })) });
+        const { uploads: _ignored, logoPaths: _lp, files, uploadSession, logoFiles, shot, train, ...rest } = b;
+        return sendJson(res, 200, { ok: true, ...(await scanBrand({ ...rest, uploads: stagedFiles(uploadSession, files), logoPaths: stagedFiles(uploadSession, logoFiles && typeof logoFiles === 'object' ? Object.values(logoFiles) : []), shot: cleanShot(shot), train: cleanTrain(rest.train ?? train) })) });
       }
       if (sub === 'upload') {
         need(method === 'POST', 405, 'POST only.');
@@ -98,6 +100,15 @@ export default {
         for (let i = 2; existsSync(join(dir, final)); i++) final = `${base}-${i}${extname(name)}`;
         writeAtomic(join(dir, final), buf);
         return sendJson(res, 201, { ok: true, name: final, size: buf.length });
+      }
+      if (sub === 'read-examples') {
+        need(method === 'POST', 405, 'POST only.');
+        needHuman();
+        const b = await readJsonBody(req);
+        const files = stagedFiles(b.uploadSession, Array.isArray(b.files) ? b.files.filter((f) => SHOT_EXT.test(String(f))) : []);
+        need(files.length, 400, 'Add at least one example post first (PNG, JPG or WebP).');
+        const r = await readExamplePosts(files, { reader: exampleReader ?? undefined });
+        return sendJson(res, 200, { ok: true, ...r });
       }
       if (sub === 'read-screenshots') {
         need(method === 'POST', 405, 'POST only.');
@@ -162,6 +173,15 @@ export default {
         for (const [variant, staged] of Object.entries(b.logoFiles && typeof b.logoFiles === 'object' ? b.logoFiles : {})) {
           const [file] = stagedFiles(b.uploadSession, [staged]);
           if (file) { try { saveLogo(dir, variant, basename(file), readFileSync(file)); } catch { /* a logo that is not usable is left out; the brand is still made */ } }
+        }
+        // what the example posts showed about the house style (alignment, where the text sits, capitals, the logo), only as the brand schema allows
+        if (b.train && typeof b.train === 'object') {
+          const posts = postsFromTrain(cleanTrain(b.train), { hasLogo: Object.keys(readBrand(dir).logos ?? {}).length > 0 });
+          if (posts) {
+            if (posts.logo && !readBrand(dir).logos?.white && !readBrand(dir).logos?.black) posts.logo.key = 'primary';
+            const cur = readBrand(dir);
+            writeAtomic(brandFile(dir), `${JSON.stringify({ ...cur, posts: { ...(cur.posts ?? {}), ...posts } }, null, 2)}\n`);
+          }
         }
         const keep = stagedFiles(b.uploadSession, b.files);
         if (keep.length) {
