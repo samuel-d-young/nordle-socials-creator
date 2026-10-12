@@ -12,6 +12,18 @@ Nordle was created by Samuel Young (https://github.com/samuel-d-young/nordle-soc
 Some steps start Claude by itself ("Ask Claude now", "Build it now", reading a screenshot). They use your own Claude usage: about 20 to 30 cents to read a
 screenshot or write ideas, and about 1 to 2 dollars to build one post. Nordle caps each run, and says what it cost.
 
+## The short version (paste this one)
+
+Paste into Claude Code. Nordle's repo has everything else Claude needs, so this is enough:
+
+````text
+Install Nordle for me: https://github.com/samuel-d-young/nordle-socials-creator (a free, local social-media studio created by Samuel Young, CC BY 4.0; credit him if I share or build on it).
+Check I have Node 20+, git and ffmpeg and tell me how to install anything missing (ask before installing). Clone it into a folder I choose, read its README.md and setup.mjs, tell me in two lines what setup does, then run `node setup.mjs --register`, `node nordle.mjs doctor` and `node server.mjs --open`.
+Stop and tell me if a step fails. No sudo, nothing outside the Nordle folder (except Claude's MCP and skill settings), and never post anything for me. Finish in five lines: where it is, the address, how to start it next time. Then tell me to restart Claude Code and, after the restart, say: "Set Nordle up for my business: read SHARE-PROMPT.md Prompt 2 in the Nordle folder and follow it."
+````
+
+The longer prompts below are the same thing with every step spelled out, for people who want that.
+
 ## Prompt 1: install
 
 ````text
