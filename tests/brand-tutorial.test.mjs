@@ -1,6 +1,9 @@
 // After a brand is added, "Brand added" explains what comes next: its style guide, publishing, its logo and photos, Stock and the Library (with a button for each).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { closeBrowser } from './helpers.mjs';
 import { studioPage, TODAY } from './studio-helpers.mjs';
 
@@ -40,4 +43,34 @@ test('the Brand added page explains Stock and the Library in plain words, and ea
     await page.waitForFunction(() => location.hash === '#/projects');
     await page.waitForSelector('.proj');
   });
+});
+
+test('setup can add a footage and stock folder right on the Brand added page; it is saved for that brand and Claude will search it itself', async () => {
+  const settings = mkdtempSync(join(tmpdir(), 'nordle-wzstock-set-'));
+  const footage = mkdtempSync(join(tmpdir(), 'nordle-wzstock-footage-'));
+  mkdirSync(join(footage, 'shoot'), { recursive: true });
+  process.env.NORDLE_PUBLISH_DIR = settings;   // never the real stock settings
+  try {
+    await studioPage(async ({ page, open, call }) => {
+      await makeBrand(page, open, 'Footage First');
+      await page.waitForSelector('[data-field="wz-stock"]');
+      await page.locator('[data-act="wz-stock-add"]').click();
+      assert.match(await page.locator('[data-state="wz-stock-note"]').innerText(), /Choose the folder first/);
+      await page.fill('[data-field="wz-stock-path"]', footage);
+      await page.fill('[data-field="wz-stock-name"]', 'My footage');
+      await page.locator('[data-field="wz-stock-kind-photo"]').uncheck();
+      await page.locator('[data-act="wz-stock-add"]').click();
+      await page.waitForSelector('.wz-stock-list li');
+      assert.match(await page.locator('.wz-stock-list').innerText(), /My footage[\s\S]*added for Footage First\. Claude will search it itself when it builds/);
+      const libs = (await call('/stock/libraries')).body.libraries;
+      const mine = libs.find((l) => l.id === 'my-footage');
+      assert.ok(mine, 'the folder library exists');
+      assert.deepEqual([mine.type, mine.kinds, mine.brands, mine.path], ['folder', ['video'], ['footage-first'], footage]);
+      assert.equal(await page.locator('[data-act="wz-stock-add"]').innerText(), 'Add another folder');
+    });
+  } finally {
+    delete process.env.NORDLE_PUBLISH_DIR;
+    rmSync(settings, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
+    rmSync(footage, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
+  }
 });

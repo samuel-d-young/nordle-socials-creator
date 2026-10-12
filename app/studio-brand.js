@@ -7,6 +7,7 @@ import { h, icon } from './dom.js';
 import { load } from './studio-store.js';
 import { folderPicker, notify } from './studio-ui.js';
 import { LOGO_KINDS, logoSlots, shotImport, trainImport } from './studio-logos.js';
+import { stockSetup } from './studio-stock-setup.js';
 
 const MAX_FOLDERS = 8;   // the same limit the server's scan applies (src/brand/scan.mjs)
 
@@ -370,14 +371,14 @@ export function openAddBrand({ onCreated, openPublishing, openStock, openLibrary
   }
 
   function stepDone() {
-    const item = (n, title, text, action) => h('li', { class: 'wz-next' }, h('span', { class: 'wz-n' }, String(n)), h('div', {}, h('b', {}, title), h('p', { class: 'muted' }, text)), action ?? null);
+    const item = (n, title, text, action, inside) => h('li', { class: 'wz-next' }, h('span', { class: 'wz-n' }, String(n)), h('div', {}, h('b', {}, title), h('p', { class: 'muted' }, text), inside ?? null), action ?? null);
     return [h('div', { class: 'acc-banner ok', role: 'status' }, h('span', { class: 'acc-banner-i' }, icon('check', 18)), h('div', {}, h('b', {}, `${st.editor?.read().name || st.name} is ready`), h('p', {}, 'It now shows in the Brands list on the left.'))),
       h('h4', { class: 'lbl' }, 'Next'),
       h('ol', { class: 'wz-nexts' },
         item(1, 'Check its style guide', 'Open it any time from the brand’s ⋯ menu.', btn('Open style guide', { quiet: true, act: 'wz-open-guide', onclick: () => { m.close(); openGuide(st.id, { brandName: st.name }); } })),
         item(2, 'Connect where it posts', 'Choose its Buffer account and channels in Publishing.', openPublishing ? btn('Open Publishing', { quiet: true, act: 'wz-open-publishing', onclick: () => { m.close(); openPublishing(); } }) : null),
         item(3, 'Add its logo and photos', `Put them in the brand’s assets folder (projects/${st.id}/assets), and your own footage where Nordle can read it (it is never copied or moved).`),
-        item(4, 'Stock: your own footage and stock, used automatically', 'Add the folders where your footage and stock live (Envato downloads, a shoot folder), and free online libraries such as Pexels, Pixabay and Freesound with a free key you type in once. After that, Claude searches them by itself whenever it builds a post: your own folders first, online libraries only for a shot your own material cannot cover. You never have to pick files. Whatever it uses is copied into this brand with its licence written down, and Nordle never buys or signs in anywhere.', openStock ? btn('Open Stock', { quiet: true, act: 'wz-open-stock', onclick: () => { m.close(); openStock(st.id); } }) : null),
+        item(4, 'Stock: your own footage and stock, used automatically', 'Add the folders where your footage and stock live (Envato downloads, a shoot folder), and free online libraries such as Pexels, Pixabay and Freesound with a free key you type in once. After that, Claude searches them by itself whenever it builds a post: your own folders first, online libraries only for a shot your own material cannot cover. You never have to pick files. Whatever it uses is copied into this brand with its licence written down, and Nordle never buys or signs in anywhere.', openStock ? btn('Online libraries…', { quiet: true, act: 'wz-open-stock', onclick: () => { m.close(); openStock(st.id); } }) : null, stockSetup({ brandId: st.id, brandName: st.editor?.read().name || st.name })),
         item(5, 'The Library: every brand and every post', 'The Library (in the left bar) lists each brand with all its carousels, graphics and videos as cards. Open one to edit it by hand, or press New post to start one yourself. Everything stays on this computer.', openLibrary ? btn('Open the Library', { quiet: true, act: 'wz-open-library', onclick: () => { m.close(); openLibrary(); } }) : null),
         item(6, 'Then make your first posts', 'Press Create (key n): Nordle suggests a month of ideas, and Claude builds the ones you approve.'))];
   }

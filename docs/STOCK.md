@@ -20,6 +20,8 @@ written down. Code: `src/stock/*`, command `node nordle.mjs stock`, API `/api/st
 
 A library that is added and ready (a folder that is set, or a key that is saved) and allowed for the brand is listed in the build prompt (`stockBrief` in `src/stock/index.mjs`, `stockLines` in `src/calendar/prompts.mjs`). Claude searches the owner's own folders first, then online libraries only for a shot their own material cannot cover, brings files in with `nordle_stock_get`, and must look at each one (it arrives catalogued "not looked at yet") before using it. Nothing is added for a motion-graphics reel. The owner never picks files. Test: `tests/stock-auto.test.mjs`.
 
+**In setup.** The "Brand added" page at the end of Add a brand has a short form (`app/studio-stock-setup.js`) that adds a folder of the owner's footage or stock through the system folder window: it saves the same folder library the Stock window makes, for that brand (or all brands if ticked), and tests it. Online libraries (a key typed in once) are added in the Stock window, which the page links to. Test: `tests/brand-tutorial.test.mjs` (it uses a temporary `NORDLE_PUBLISH_DIR`, never the real stock settings).
+
 ## Use
 
 ```
