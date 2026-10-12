@@ -17,6 +17,8 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const GRADES = {
   none: null,
   neutral: 'eq=contrast=1.03:saturation=1.05',
+  // a hint of warmth: about a third of the warm shift, for footage that goes orange under warm
+  soft: 'eq=contrast=1.04:saturation=1.07:gamma_r=1.015:gamma_b=0.98,colorbalance=rs=0.01:rm=0.03:rh=0.03:bs=-0.01:bm=-0.03:bh=-0.03',
   warm: 'eq=contrast=1.06:saturation=1.12:gamma_r=1.04:gamma_b=0.94,colorbalance=rs=0.03:rm=0.09:rh=0.08:bs=-0.03:bm=-0.09:bh=-0.08',
 };
 /** a per-source brightness correction (see `levels` in the document schema) as an ffmpeg eq filter; numbers only, so nothing from a document reaches the command line as text */

@@ -192,7 +192,7 @@ A `motion` scene is a finished piece of animated design in the brand's colours a
 | `focal {x,y}` 0 to 1 | the point kept in the middle of the 9:16 crop of 16:9 footage (clamped to the picture) |
 | `zoom {from,to,ease}` | Ken Burns; 1 = whole crop, 1.2 = 20% closer. Only `from` = pull out. Works on photos |
 | `pan {from:{x,y},to:{x,y},ease}` | the crop window slides across the source; default start is `focal` |
-| `grade` | `none`, `neutral` (a little contrast and colour), `warm` |
+| `grade` | `none`, `neutral` (a little contrast and colour), `soft` (neutral with a hint of warmth), `warm`. A project can grade all its real footage the same way with `nordle.project.json` `{ "video": { "footageGrade": "soft" } }` (a clip that names its own grade keeps it) |
 | `denoise` | smooth camera noise |
 | `transition {type,duration,direction}` | how this clip comes in over its first `duration` s: `cut`, `fade` (cross-dissolve), `dip` (through black), `slide` (`direction` left/right/up/down). Sound is never changed |
 | `gainDb`, `mute`, `fade {in,out}`, `duck {under,amountDb,attack,release}` | sound (and `fade` also fades the picture from/to black) |

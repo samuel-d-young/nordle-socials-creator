@@ -21,7 +21,7 @@ const HINT = {
   focal: 'The point of the footage that stays in the middle of the crop (for 16:9 footage in a tall picture).',
   zoom: 'A slow push in (or pull out). 1 is the whole crop, 1.2 is 20% closer.',
   pan: 'Slide the crop across the footage over the length of the clip.',
-  grade: 'A light, consistent look.',
+  grade: 'A light, consistent look: neutral, soft (a hint of warmth) or warm.',
   denoise: 'Smooth camera noise (for footage shot in low light).',
   cleanAudio: 'Cut wind, crowd hum and air conditioning out of the sound. Speech is kept.',
   transition: 'How this clip comes in from the one before it.',
@@ -141,7 +141,7 @@ export function mountInspector(root, { monitor, sourceMonitor }) {
       sections.push(group('Picture',
         row('Fit', choose('clip-fit', c.fit ?? 'cover', ['cover', 'contain', 'fill'], (v) => set(['fit'], v === 'cover' ? undefined : v)), HINT.fit),
         row('Focal point', focalPicker(c, src), HINT.focal),
-        row('Grade', choose('clip-grade', c.grade ?? 'none', ['none', 'neutral', 'warm'], (v) => set(['grade'], v === 'none' ? undefined : v)), HINT.grade),
+        row('Grade', choose('clip-grade', c.grade ?? 'none', ['none', 'neutral', 'soft', 'warm'], (v) => set(['grade'], v === 'none' ? undefined : v)), HINT.grade),
         row('Denoise', tick('clip-denoise', c.denoise, 'Smooth camera noise', (v) => set(['denoise'], v ? true : undefined)), HINT.denoise)));
 
       const z = c.zoom ?? {};

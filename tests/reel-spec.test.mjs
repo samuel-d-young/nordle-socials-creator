@@ -122,3 +122,11 @@ test('cleanAudio on a reel spec reaches every footage clip, and the document is 
   const plain = buildReelDoc(spec(), { brand, platforms }).doc.timeline.tracks.flatMap((t) => t.clips);
   assert.ok(plain.every((c) => c.cleanAudio === undefined), 'off unless asked for');
 });
+
+test('the soft grade (neutral with a hint of warmth) is accepted by the document and put on every footage clip', () => {
+  const { doc } = buildReelDoc({ ...spec(), grade: 'soft' }, { brand, platforms });
+  const clips = doc.timeline.tracks.flatMap((t) => t.clips).filter((c) => c.source && c.type !== 'audio' && c.grade);
+  assert.ok(clips.length >= 2 && clips.every((c) => c.grade === 'soft'), 'footage clips carry the soft grade');
+  const bad = validateDocData(doc, { brand, projectDir, platforms, assets: false }).filter((i) => i.level === 'error');
+  assert.deepEqual(bad, []);
+});

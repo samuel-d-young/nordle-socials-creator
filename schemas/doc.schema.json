@@ -452,7 +452,7 @@
             "ease": { "enum": ["linear", "in", "out", "in-out"] }
           }
         },
-        "grade": { "description": "A light, consistent look: none, neutral (a little contrast and colour) or warm.", "enum": ["none", "warm", "neutral"] },
+        "grade": { "description": "A light, consistent look: none, neutral (a little contrast and colour), soft (neutral with a hint of warmth) or warm.", "enum": ["none", "warm", "soft", "neutral"] },
         "denoise": { "description": "Smooth camera noise (for footage shot in low light).", "type": "boolean" },
         "cleanAudio": { "description": "Noise reduction for this clip's sound: a low cut under 90 Hz and an FFT denoiser that learns the steady background (wind, crowd hum, air conditioning). Speech is kept.", "type": "boolean" },
         "transition": {
