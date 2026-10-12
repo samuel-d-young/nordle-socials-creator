@@ -200,5 +200,5 @@ export function suggestOptions(projectDir, o = {}) {
   try { request = proposePrompt(projectDir, { months: [month], today }) + ask; } catch { request = `Please propose ${count} post ideas for ${p.brand.name ?? p.id} for ${monthName(month)}.${ask}`; }
 
   const short = options.length < count ? `Only ${options.length} of the ${count} options could be made from what Nordle knows about this brand. Add its team and services to facts.json for more, or press Ask Claude to write the rest.` : null;
-  return { project: p.id, short, brand: p.brand.name ?? p.id, month, monthLabel: monthName(month), count, decided: !!(o.decide || !o.count), want, need, haveCounts: have.counts, options, learned, learnedLine, styles: STYLES.map(({ id, label, hint }) => ({ id, label, hint })), request };
+  return { project: p.id, short, ask, brand: p.brand.name ?? p.id, month, monthLabel: monthName(month), count, decided: !!(o.decide || !o.count), want, need, haveCounts: have.counts, options, learned, learnedLine, styles: STYLES.map(({ id, label, hint }) => ({ id, label, hint })), request };
 }

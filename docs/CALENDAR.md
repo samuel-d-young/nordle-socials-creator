@@ -211,3 +211,18 @@ month's missing mix. Tick the ones you like, then **Add to the calendar** (appro
 *this account's own history*: the format that engaged the biggest share of the people it reached (about a fifth of the month moves to it), and the themes and openings that scored best
 against posts of their own kind. It is a lean, never proof of cause, and a choice you make always wins. The route is `GET /calendar/suggest` and the engine is
 `src/calendar/suggest.mjs`.
+
+## Starting Claude from the Studio, and seeing it work
+
+You do not have to paste a prompt into Claude. Nordle can start Claude itself, on this computer, under your sign-in (`claude auth login` once; the Studio says so
+if it is signed out):
+
+- **Ask Claude now** (Create page): writes ideas for the month you chose, using what you asked for. They arrive in the Plan as ideas for you to approve.
+- **Build it now** (an approved post's panel): builds that post straight away, even if its day has not come. Otherwise Claude builds each approved post when its date
+  gets within the lead time (`autoBuild` on), or when you ask it to.
+- **Request changes** already works this way.
+
+While Claude works, the Studio says so: a line at the top ("Claude is building *Title* · 3 min"), a pulsing mark on the post, and in the post's panel what is happening
+and since when ("Claude is building this post now · started 3 min ago · try 2 of 3"). A queued post says when it starts ("about 6 Dec, 14 days before it goes out") and, once its day
+has come, whether it is waiting its turn. A post marked as being built with nothing running says so, and can be started again. One Claude job runs at a time in a brand.
+The routes are `POST /calendar/run` (owner only) and `GET /calendar/run-status`; the work is `runPropose` and `runDue` in `src/calendar/run.mjs`.

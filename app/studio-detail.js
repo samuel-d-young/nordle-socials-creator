@@ -3,7 +3,7 @@
 import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, dateFmt, load, project } from './studio-store.js';
-import { brandName, brandTick, emptyState, FORMAT_LABEL, glyph, kbd, mark, notify, plainWaits, plural, statusChip, statusOf } from './studio-ui.js';
+import { brandName, brandTick, buildLine, emptyState, FORMAT_LABEL, glyph, kbd, mark, notify, plainWaits, plural, statusChip, statusOf } from './studio-ui.js';
 import { thumbUrl } from './studio-ui.js';
 import * as act from './studio-actions.js';
 import { accountsOf, autoNote, openConnect, openSchedule, pub as pubState, quickLabel, quickReady, quickSchedule, serviceIcon } from './studio-publish.js';
@@ -224,10 +224,11 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
   }
   if (s === 'rejected') return wrap(h('button', { class: 'btn', 'data-act': 'reopen', onclick: () => done(() => act.reopen(post)) }, 'Reopen this post'));
   if (s === 'building' && post.revising) {
-    return wrap(h('div', { class: 'sent' }, h('div', { class: 'acts-done muted revising', role: 'status', 'data-state': 'revising' }, h('i', { class: 'spin', 'aria-hidden': 'true' }), designerLine(d, post)), sentNote(d)), editor);
+    return wrap(h('div', { class: 'sent' }, post.build?.active ? buildLine(post) : h('div', { class: 'acts-done muted revising', role: 'status', 'data-state': 'revising' }, h('i', { class: 'spin', 'aria-hidden': 'true' }), designerLine(d, post)), sentNote(d)), editor);
   }
   if (s === 'approved' || s === 'building') {
-    return wrap(h('div', { class: 'acts-done muted' }, s === 'approved' ? 'Approved. Waiting to be built.' : 'Being built. Nothing to review yet.'),
+    return wrap(post.build ? buildLine(post) : h('div', { class: 'acts-done muted' }, s === 'approved' ? 'Approved. Waiting to be built.' : 'Being built. Nothing to review yet.'),
+      post.build && !post.build.active ? h('button', { class: 'btn go', 'data-act': 'build-now', onclick: async (e) => { e.currentTarget.disabled = true; try { await api.post(`/projects/${encodeURIComponent(post.project)}/calendar/run`, { action: 'build', item: post.itemId }); notify('Claude is on it. This page shows when it starts and when it is done.', { kind: 'ok' }); await load({ force: true }); } catch (err) { notify(err.message, { kind: 'error' }); e.currentTarget.disabled = false; } } }, icon('check', 16), 'Build it now') : null,
       h('button', { class: 'btn nope', 'data-act': 'idea-reject', onclick: () => decided(() => act.rejectIdea(post)) }, 'Drop it'), editor);
   }
   return wrap(h('div', { class: 'acts-done muted' }, s === 'posted' ? 'Posted.' : ''), editor);

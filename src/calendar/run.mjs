@@ -28,7 +28,7 @@ const BUILD_TOOLS = ['mcp__nordle', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Ag
 const PROPOSE_TOOLS = ['mcp__nordle', 'Read', 'Glob', 'Grep'];
 
 /** `claude -p` runs with its own sign-in, not the desktop app's: when that is missing or expired every run fails the same way, at once. */
-const SIGNED_OUT = /failed to authenticate|oauth session expired|not logged in|please run \/login|invalid api key|authentication_error/i;
+export const SIGNED_OUT = /failed to authenticate|oauth session expired|not logged in|please run \/login|invalid api key|authentication_error/i;
 export const SIGNED_OUT_MESSAGE = 'Claude Code is not signed in on this computer, so it could not start. In a terminal run: claude auth login (then press Ask again).';
 
 const clip = (s, n) => (String(s ?? '').length > n ? `${String(s).slice(0, n - 3)}...` : String(s ?? ''));
@@ -311,20 +311,21 @@ const readState = (dir) => { try { return JSON.parse(readFileSync(stateFile(dir)
  */
 export async function runPropose({
   projectDir, today, yes = false, dryRun = false, timeoutMs = DEFAULT_TIMEOUT_MS, maxTurns = DEFAULT_MAX_TURNS, minHours = 20,
-  exec = defaultExec, spawn = nodeSpawn, log = () => {}, nordleRoot = ROOT, now = Date.now(), model,
+  exec = defaultExec, spawn = nodeSpawn, log = () => {}, nordleRoot = ROOT, now = Date.now(), model, months: onlyMonths, extra = '',
 } = {}) {
   const dir = resolve(projectDir);
   const p = loadProject(dir);
   const day = today ?? p.today;
   const months = [];
-  for (let i = 0; i < p.settings.horizonMonths; i++) { const m = addMonths(monthOf(day), i); if (monthReport(p.cal, m).missingTotal > 0) months.push(m); }
+  if (Array.isArray(onlyMonths) && onlyMonths.length) months.push(...onlyMonths);   // the owner picked the month (the Create page)
+  else for (let i = 0; i < p.settings.horizonMonths; i++) { const m = addMonths(monthOf(day), i); if (monthReport(p.cal, m).missingTotal > 0) months.push(m); }
   const result = { project: p.id, today: day, enabled: true, months, ran: [] };
   if (!yes && !p.settings.autoPropose) return { ...result, enabled: false, reason: `autoPropose is off for "${p.id}". Turn it on (node nordle.mjs calendar settings ${p.id} --auto-propose on) or run with --propose --yes.` };
   if (!months.length) return result;
   const last = readState(dir);
   if (!yes && last.lastAt && now - Date.parse(last.lastAt) < minHours * 3600 * 1000) return { ...result, skipped: `Proposed ${Math.round((now - Date.parse(last.lastAt)) / 3600000)} hours ago; waiting.` };
 
-  const prompt = proposePrompt(dir, { months, today: day, nordleRoot });
+  const prompt = proposePrompt(dir, { months, today: day, nordleRoot }) + (extra ? `\n${String(extra).slice(0, 6000)}` : '');
   if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, model })], promptChars: prompt.length, prompt }] };
 
   const lock = acquireRunLock(dir, { mode: 'propose', item: null }, { staleMs: timeoutMs * 1.5 + 120000 });

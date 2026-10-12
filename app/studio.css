@@ -1404,3 +1404,15 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .cr-err { margin: 0; color: var(--proof); font-weight: 560; }
 @media (max-width: 720px) { .create { padding: 16px 14px 60px; } .cr-row > .lbl-i { width: 100%; } }
 .bg-check { display: flex; align-items: center; gap: 8px; }
+
+/* Claude at work: the line in a post, the bar at the top, the chip that pulses */
+.build-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 2px solid var(--rule-strong); border-radius: var(--radius); background: var(--paper); color: var(--ink-2); }
+.build-line.live { border-color: var(--hot); background: color-mix(in srgb, var(--hot) 9%, var(--paper)); color: var(--ink); box-shadow: 3px 3px 0 var(--hot); }
+.build-line b { color: var(--ink); }
+.build-line .bad { color: var(--proof); }
+.build-line .wait { width: 10px; height: 10px; border: 2px solid currentColor; border-radius: 50%; flex: none; }
+.working { display: flex; align-items: center; gap: 10px; padding: 8px 28px; background: color-mix(in srgb, var(--hot) 14%, var(--paper)); border-bottom: 2px solid var(--hot); color: var(--ink); }
+.working .linklike { margin-left: auto; }
+.st-live .mk-building { animation: pulse 1.4s ease-in-out infinite; color: var(--hot); }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .st-live .mk-building { animation: none; } }

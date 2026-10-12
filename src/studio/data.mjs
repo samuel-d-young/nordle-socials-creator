@@ -6,6 +6,9 @@ import { getCoverTime } from '../publish/covers.mjs';
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { readRunLock } from '../calendar/lock.mjs';
+import { DEFAULT_LEAD_DAYS } from '../calendar/plan.mjs';
+import { DEFAULT_TIMEZONE, addDays } from '../calendar/dates.mjs';
 import { requiredChecks, verificationStatus } from '../verify/store.mjs';
 
 // ---- cached JSON ----------------------------------------------------------------------------------------------------------
@@ -230,6 +233,35 @@ function scoreOf(project, docId, rec, v) {
 const activeApproval = (review) => [...(review.approvals ?? [])].reverse().find((a) => !a.revoked) ?? null;
 
 /** One post, as the grids and lists need it. */
+/**
+ * Is Claude working on this post, and if not, when will it be? Only for posts that are approved (queued) or being built.
+ *   active   a build or a change is running right now (the run lock names this post and its process is alive)
+ *   stalled  the post says "building" but nothing is running: the run stopped, and it will be tried again
+ *   startsOn the day the build begins (the post's date minus the lead time); due = that day has come
+ *   ahead    how many approved posts are due sooner, so "3 ahead of it" can be said
+ */
+function buildOf(project, item, calendar) {
+  if (!item || !['approved', 'building'].includes(item.status)) return null;
+  let lock = null;
+  try { lock = readRunLock(project.dir); } catch { /* no lock */ }
+  const lead = calendar?.settings?.leadDays ?? DEFAULT_LEAD_DAYS;
+  const today = todayIn(calendar?.timezone ?? DEFAULT_TIMEZONE, process.env.NORDLE_TODAY);
+  const startsOn = addDays(item.date, -lead);
+  if (item.status === 'building') {
+    const active = !!lock && (lock.item === item.id || (lock.item == null && item.run?.state === 'building'));
+    return {
+      phase: 'building', active, stalled: !active, mode: item.doc ? 'change' : 'build',
+      since: active ? lock.started ?? item.run?.startedAt ?? null : item.run?.startedAt ?? null,
+      attempt: item.run?.attempts ?? null, maxAttempts: calendar?.settings?.maxBuildAttempts ?? 3,
+      busyWith: null,
+    };
+  }
+  const items = Array.isArray(calendar?.items) ? calendar.items : [];
+  const ahead = items.filter((i) => i.status === 'approved' && i.id !== item.id && (i.date < item.date || (i.date === item.date && i.id < item.id))).length
+    + items.filter((i) => i.status === 'building').length;
+  return { phase: 'queued', active: false, startsOn, due: today >= startsOn, leadDays: lead, autoBuild: !!calendar?.settings?.autoBuild, ahead, busy: !!lock, attempt: item.run?.attempts ?? null, lastError: item.run?.lastError ?? null };
+}
+
 function summarize(project, lane, item, docId, calendar) {
   const info = docId ? docOf(project, docId) : null;
   const doc = info?.doc ?? null;
@@ -288,6 +320,7 @@ function summarize(project, lane, item, docId, calendar) {
     failing: !!(checks && checks.fail > 0),
     approvedAt: approval && !approvalStale ? approval.date : null,
     approvalStale,
+    build: buildOf(project, item, calendar),
     revising: !!(item && item.status === 'building' && item.doc),   // the designer is changing a post the owner sent back
     // the designer has made what the owner asked for and the post is back for another look ("Updated"); false once it is signed off again
     revised: !!(item && item.status === 'built' && needsReview && (item.feedback ?? []).some((f) => (f.by ?? 'owner') === 'owner' && f.resolved)),

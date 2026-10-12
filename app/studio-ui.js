@@ -2,7 +2,7 @@
 
 import { api } from './api.js';
 import { h, icon, dialog } from './dom.js';
-import { S, project } from './studio-store.js';
+import { S, dateFmt, project } from './studio-store.js';
 
 const token = document.querySelector('meta[name="nordle-token"]')?.content ?? '';
 
@@ -29,8 +29,8 @@ export function statusOf(p) {
     case 'changes': return { key: 'changes', label: 'Changes requested', tone: 'pencil' };
     case 'signed-off': return { key: 'signed', label: 'Signed off', tone: 'stamp' };
     case 'scheduled': return { key: 'scheduled', label: 'Scheduled', tone: 'stamp' };
-    case 'approved': return { key: 'queued', label: 'Queued to build', tone: 'plain' };
-    case 'building': return { key: 'building', label: p.revising ? 'Being changed' : 'Being built', tone: 'plain' };
+    case 'approved': return { key: 'queued', label: p.build?.due ? 'Waiting for Claude' : 'Queued to build', tone: 'plain' };
+    case 'building': return { key: 'building', label: p.build?.active ? (p.revising ? 'Claude is changing it' : 'Claude is building it') : p.revising ? 'Being changed' : 'Being built', tone: 'plain' };
     case 'idea': return { key: 'idea', label: 'Idea', tone: 'ghost' };
     case 'rejected': return { key: 'rejected', label: 'Rejected', tone: 'ghost' };
     case 'posted': return { key: 'posted', label: 'Posted', tone: 'plain' };
@@ -43,7 +43,7 @@ export const notScheduled = (p) => p.status === 'signed-off' && !p.staleSignoff;
 export const UNSCHED_TIP = 'Approved, but not scheduled in a platform yet';
 export function statusChip(p, { short = false } = {}) {
   const s = statusOf(p);
-  return h('span', { class: `st st-${s.tone}` }, mark(s.key), h('span', {}, short ? s.label.replace('Updated · needs your review', 'Updated').replace('Needs your review', 'To review').replace('Changes requested', 'Changes') : s.label),
+  return h('span', { class: `st st-${s.tone}${p.build?.active ? ' st-live' : ''}` }, mark(s.key), h('span', {}, short ? s.label.replace('Updated · needs your review', 'Updated').replace('Needs your review', 'To review').replace('Changes requested', 'Changes') : s.label),
     notScheduled(p) ? h('span', { class: 'st-unsched', title: UNSCHED_TIP }, 'Not scheduled') : null);
 }
 
@@ -230,4 +230,40 @@ export function folderPicker(input, { title = 'Choose a folder', field = 'choose
   const wrap = h('span', { class: 'pick-row' }, input, button, hint);
   wrap.input = input;
   return wrap;
+}
+
+/** How long since a time, in plain words that are short enough to keep counting: "40 s", "3 min", "1 h 5 min". */
+export function elapsed(iso, now = Date.now()) {
+  const ms = now - Date.parse(iso);
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const s = Math.round(ms / 1000);
+  if (s < 90) return `${Math.max(s, 1)} s`;
+  const m = Math.floor(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`;
+}
+
+/**
+ * What is happening to a post that is queued or being built, in one plain line that keeps counting while Claude works.
+ * Returns an element, or null when the post is neither. `p.build` comes from src/studio/data.mjs (buildOf).
+ */
+export function buildLine(p) {
+  const b = p?.build;
+  if (!b) return null;
+  const el = h('div', { class: `build-line${b.active ? ' live' : ''}`, role: 'status', 'data-state': b.active ? 'working' : b.stalled ? 'stalled' : b.due ? 'due' : 'queued' });
+  const paint = () => {
+    const kids = [];
+    if (b.phase === 'building' && b.active) {
+      kids.push(h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', {}, h('b', {}, b.mode === 'change' ? 'Claude is changing this post now' : 'Claude is building this post now'), b.since ? ` · started ${elapsed(b.since)} ago` : '', b.attempt > 1 ? ` · try ${b.attempt} of ${b.maxAttempts}` : '', '. It comes back here to be reviewed when it is done.'));
+    } else if (b.phase === 'building') {
+      kids.push(icon('alert', 14), h('span', {}, 'It was being built, but nothing is running now. It will be picked up again; or press Build it now.'));
+    } else if (b.due) {
+      kids.push(h('i', { class: 'wait', 'aria-hidden': 'true' }), h('span', {}, b.busy ? `Waiting its turn${b.ahead ? ` (${b.ahead} ahead)` : ''}: Claude is busy with another post.` : b.autoBuild ? `Ready to build${b.ahead ? ` (${b.ahead} ahead of it)` : ''}. Claude starts when it is free.` : 'Ready to build. Automatic building is off, so press Build it now, or ask Claude to build it.'), b.lastError ? h('span', { class: 'bad' }, ` The last try failed: ${b.lastError.length > 160 ? `${b.lastError.slice(0, 157)}...` : b.lastError}`) : null);
+    } else {
+      kids.push(h('i', { class: 'wait', 'aria-hidden': 'true' }), h('span', {}, `Queued. ${b.autoBuild ? 'Claude starts' : 'It becomes due'} about ${dateFmt.long(b.startsOn)} (${b.leadDays} days before it goes out).`));
+    }
+    el.replaceChildren(...kids.filter(Boolean));
+  };
+  paint();
+  if (b.active) { const t = setInterval(() => { if (!el.isConnected) clearInterval(t); else paint(); }, 15000); }
+  return el;
 }

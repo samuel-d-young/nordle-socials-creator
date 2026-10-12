@@ -5,13 +5,13 @@
 import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, addMonths, dateFmt, monthOf, project, load } from './studio-store.js';
-import { FORMAT_LABEL, emptyState, glyph, notify, plural } from './studio-ui.js';
+import { FORMAT_LABEL, elapsed, emptyState, glyph, notify, plural } from './studio-ui.js';
 
 const FORMATS = ['reel', 'carousel', 'post', 'story'];
 const FORMAT_WORD = { reel: 'Reels', carousel: 'Carousels', post: 'Posts', story: 'Stories' };
 const COUNTS = [4, 8, 12];
 
-const st = { brand: null, prompt: '', month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
+const st = { job: null, jobTimer: 0, brand: null, prompt: '', month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
 
 function brandId() {
   if (S.brand && S.brand !== 'all') return S.brand;
@@ -34,6 +34,44 @@ async function suggest(redraw) {
     st.picked = new Set(st.result.options.map((o) => o.id));
   } catch (e) { st.error = e.message; }
   st.loading = false; redraw();
+}
+
+/** Start Claude on this month, from here: no pasting. Nordle runs `claude` on this computer (it must be signed in: claude auth login). */
+async function askClaude(redraw) {
+  const id = brandId();
+  if (!id) return;
+  if (!st.result) await suggest(() => {});
+  try {
+    await api.post(`/projects/${encodeURIComponent(id)}/calendar/run`, { action: 'propose', months: [st.month ?? nextMonth()], extra: st.result?.ask ?? st.prompt });
+  } catch (e) { st.error = e.message; return redraw(); }
+  watchJob(redraw);
+}
+
+async function checkJob(redraw) {
+  const id = brandId();
+  if (!id) return;
+  try {
+    const r = await api.get(`/projects/${encodeURIComponent(id)}/calendar/run-status`);
+    const was = st.job?.running;
+    st.job = r;
+    if (r.running) { clearTimeout(st.jobTimer); st.jobTimer = setTimeout(() => checkJob(redraw), 3000); }
+    else if (was) { await load({ force: true }); }
+  } catch { /* the next look will try again */ }
+  redraw();
+}
+function watchJob(redraw) { clearTimeout(st.jobTimer); checkJob(redraw); }
+
+function jobPanel() {
+  const j = st.job;
+  if (!j || (!j.running && !j.last) || (j.last && j.last.kind !== 'propose' && !j.running)) return null;
+  if (j.running?.kind === 'propose') {
+    return h('div', { class: 'build-line live', role: 'status', 'data-state': 'working' }, h('i', { class: 'spin', 'aria-hidden': 'true' }),
+      h('span', {}, h('b', {}, 'Claude is writing ideas'), ` for ${(j.running.months ?? []).map((m) => dateFmt.monthYear(m)).join(', ') || 'the next month'} · ${elapsed(j.running.startedAt)}. This takes a few minutes. You can leave this page; the ideas appear in the Plan.`));
+  }
+  if (j.running) return null;
+  const l = j.last;
+  if (l.outcome === 'proposed') return h('div', { class: 'build-line', role: 'status', 'data-state': 'done' }, icon('check', 14), h('span', {}, h('b', {}, `Claude added ${plural(l.added ?? 0, 'idea')}`), ' for you to look at. ', h('a', { href: '#/s/plan' }, 'Open the plan')));
+  return h('div', { class: 'build-line', role: 'alert', 'data-state': 'failed' }, icon('alert', 14), h('span', { class: 'bad' }, l.error ?? 'Claude did not add any ideas.'));
 }
 
 async function addPicked(redraw, { approved }) {
@@ -79,7 +117,7 @@ function controls(pr, redraw) {
   return h('section', { class: 'cr-card', 'aria-label': 'Choose what to make' },
     h('h3', { class: 'lbl' }, 'Or choose, and Nordle suggests'),
     S.brand === 'all' && S.projects.length > 1 ? h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Brand'),
-      h('select', { class: 'field', 'data-field': 'create-brand', onchange: (e) => { st.brand = e.target.value; st.result = null; redraw(); } }, S.projects.map((p) => h('option', { value: p.id, selected: p.id === pr.id }, p.name)))) : null,
+      h('select', { class: 'field', 'data-field': 'create-brand', onchange: (e) => { st.brand = e.target.value; st.result = null; st.job = null; redraw(); } }, S.projects.map((p) => h('option', { value: p.id, selected: p.id === pr.id }, p.name)))) : null,
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'For'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Month' }, months.map((m) => chip(dateFmt.monthYear(m), m === month, () => { st.month = m; st.result = null; redraw(); }, { 'data-month': m })))),
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'How many'),
@@ -122,8 +160,10 @@ export function renderCreate(root, ctx) {
     h('h3', { class: 'lbl' }, 'Tell Claude what you want'),
     (() => { const t = h('textarea', { class: 'field cr-prompt', rows: 3, 'data-field': 'create-prompt', placeholder: 'e.g. Three reels about meeting the team, and a carousel on what to expect at a first visit. Keep it light.' }); t.value = st.prompt; t.addEventListener('input', () => { st.prompt = t.value; }); return t; })(),
     h('div', { class: 'cr-go' },
-      h('button', { class: 'btn', type: 'button', 'data-act': 'create-ask', onclick: () => { if (r) return copyRequest(r.request); suggest(redraw).then(() => st.result && copyRequest(st.result.request)); } }, icon('clipboard', 14), 'Copy this for Claude'),
-      h('span', { class: 'muted' }, 'Claude writes the real hooks and builds the posts you approve. Or skip this and pick from the options below.')));
+      h('button', { class: 'btn primary', type: 'button', 'data-act': 'create-run', disabled: !!st.job?.running, onclick: () => askClaude(redraw) }, 'Ask Claude now'),
+      h('button', { class: 'btn', type: 'button', 'data-act': 'create-ask', onclick: () => { if (r) return copyRequest(r.request); suggest(redraw).then(() => st.result && copyRequest(st.result.request)); } }, icon('clipboard', 14), 'Copy for Claude Code instead'),
+      h('span', { class: 'muted' }, 'Nordle starts Claude on this computer and the ideas land in your Plan. Claude Code must be signed in (claude auth login). Or pick from the options below.')),
+    jobPanel());
 
   const results = r ? h('section', { class: 'cr-card cr-results', 'aria-label': 'Options', 'data-state': 'options' },
     h('header', { class: 'cr-rh' },
@@ -138,6 +178,7 @@ export function renderCreate(root, ctx) {
       h('button', { class: 'btn quiet', type: 'button', 'data-act': 'create-copy', onclick: () => copyRequest(r.request) }, icon('clipboard', 14), 'Ask Claude to improve these')),
     st.added ? h('p', { class: 'cr-added', role: 'status' }, `${plural(st.added.done, 'post')} ${st.added.approved ? 'added and approved' : 'added as ideas'}. `, st.added.note, ' ', h('a', { href: '#/s/plan' }, 'Open the plan')) : null) : null;
 
+  if (!st.job) { st.job = { running: null, last: null }; checkJob(redraw); }
   root.replaceChildren(h('div', { class: 'create' },
     h('header', { class: 'cr-head' },
       h('h2', {}, `For ${pr.name}`),

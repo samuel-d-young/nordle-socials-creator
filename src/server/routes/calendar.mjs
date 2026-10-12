@@ -24,6 +24,8 @@
 //                 ideaApproval?, doc?, external?, notes?, feedback?:[{at,by,comment,resolved?}], run?:{attempts,state,lastError?,...}, updated? }
 //   GET  /calendar/due               -> { today, leadDays, autoBuild, due:[ { mode, item } ] }
 //   GET  /calendar/slots?month=YYYY-MM -> { month, quota, need, slots:[ { date, time, format } ] }
+//   POST /calendar/run (owner) { action:'propose', months?:[YYYY-MM], extra? } | { action:'build', item } -> 202 { ok, running, last }   starts Claude (claude -p) in the background
+//   GET  /calendar/run-status -> { running: null|{kind,startedAt,item?,months?}, last: null|{kind,finishedAt,outcome,added?,error?} }
 //   GET  /calendar/suggest?month=&count=&decide=1&formats=reel,carousel&styles=team,educate&learn=0&prompt=...  (the Create page)
 //        -> { options:[ { id, date, time, format, title, idea, hook, pillar?, occasion?, style, why } ], learned, request (a ready prompt for Claude), want, need, ... }
 //   GET  /calendar/occasions?from=&to=&regions=VIC,WA&tags=dental&minRelevance=medium -> { occasions:[...] }
@@ -53,6 +55,8 @@ import { needFor, monthCounts, quotaOf, spreadSlots } from '../../calendar/plan.
 import { isDate, isMonth } from '../../calendar/dates.mjs';
 import { occasionsBetween } from '../../calendar/occasions.mjs';
 import { suggestOptions } from '../../calendar/suggest.mjs';
+import { jobStatus, startJob } from '../../calendar/jobs.mjs';
+import { runDue, runPropose } from '../../calendar/run.mjs';
 import { buildPrompt, proposePrompt } from '../../calendar/prompts.mjs';
 
 const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : undefined);
@@ -61,7 +65,7 @@ export default {
   scope: 'project',
   key: 'calendar',
   async handle(ctx) {
-    const { req, res, url, seg, method, project, human, sendJson, readJsonBody, needHuman, HttpError } = ctx;
+    const { req, res, url, seg, method, project, human, sendJson, readJsonBody, needHuman, HttpError, claudeRunner } = ctx;
     const rest = seg.slice(3);
     const dir = project.dir;
     const q = url.searchParams;
@@ -78,6 +82,29 @@ export default {
         const p = loadProject(dir);
         const day = isDate(q.get('today')) ? q.get('today') : p.today;
         return sendJson(res, 200, { today: day, leadDays: p.settings.leadDays, autoBuild: p.settings.autoBuild, due: runnableItems(p.cal, day).map(({ item, mode }) => ({ mode, item })) });
+      }
+      if (method === 'GET' && rest[0] === 'run-status') return sendJson(res, 200, { ok: true, ...jobStatus(dir) });
+      if (method === 'POST' && rest[0] === 'run') {
+        needHuman();   // Claude is started by the owner, on the owner's computer, under the owner's sign-in
+        const b = await readJsonBody(req);
+        const run = claudeRunner ?? { propose: runPropose, build: runDue };
+        if (b.action === 'propose') {
+          const months = (Array.isArray(b.months) ? b.months : []).filter((m) => isMonth(m)).slice(0, 3);
+          const extra = typeof b.extra === 'string' ? b.extra : '';
+          const r = startJob(dir, 'propose', () => run.propose({ projectDir: dir, yes: true, months, extra }), { months });
+          return sendJson(res, r.started ? 202 : 409, { ok: r.started, ...(r.started ? {} : { errors: [{ message: 'Claude is already working in this brand. It is shown at the top of the page.' }] }), ...jobStatus(dir) });
+        }
+        if (b.action === 'build') {
+          const id = String(b.item ?? '');
+          const p = loadProject(dir);
+          const it = p.cal.items.find((i) => i.id === id);
+          if (!it) throw new CalendarError(404, 'No such post on the calendar.');
+          if (!['approved', 'changes'].includes(it.status)) throw new CalendarError(409, `A ${it.status} post is not waiting to be built.`);
+          // today = the post's own date, so a post that is not due yet can still be built early when the owner asks
+          const r = startJob(dir, 'build', () => run.build({ projectDir: dir, yes: true, itemId: id, today: it.date >= p.today ? it.date : p.today }), { item: id });
+          return sendJson(res, r.started ? 202 : 409, { ok: r.started, ...(r.started ? {} : { errors: [{ message: 'Claude is already working in this brand. Wait for it to finish.' }] }), ...jobStatus(dir) });
+        }
+        throw new CalendarError(400, 'action must be "propose" or "build".');
       }
       if (method === 'GET' && rest[0] === 'suggest') {
         const month = q.get('month');

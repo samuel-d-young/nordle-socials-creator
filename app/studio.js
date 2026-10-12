@@ -6,7 +6,7 @@ import {
   S, VIEWS, STATUS_GROUPS, addMonths, brandCounts, buildQueue, dateFmt, figures, inBrand, load, matches, months, monthOf, patchPost, project, subscribe, update, visible,
 } from './studio-store.js';
 import {
-  cycleThemeGlobal, emptyState, hideTip, kbd, notify, skeleton, themeMode,
+  cycleThemeGlobal, elapsed, emptyState, hideTip, kbd, notify, skeleton, themeMode,
 } from './studio-ui.js';
 import { releaseViewer, activeViewer, mediaViewer } from './studio-media.js';
 import { renderMonth, isPhone, monthSpan, scrollToMonth, scrollAgenda } from './studio-month.js';
@@ -209,7 +209,8 @@ function build() {
   el.view = h('main', { class: 'view', id: 'studio-view', tabindex: '-1' });
   el.selbar = h('div', { class: 'selbar hidden', role: 'region', 'aria-label': 'Selected posts' });
   el.banner = h('div', { class: 'offline hidden', role: 'status' });
-  el.main = h('div', { class: 's-main' }, el.banner, el.mast, el.filters, el.view, el.selbar);
+  el.working = h('div', { class: 'working hidden', role: 'status', 'data-state': 'working' });
+  el.main = h('div', { class: 's-main' }, el.banner, el.working, el.mast, el.filters, el.view, el.selbar);
   el.scrim = h('div', { class: 'scrim', onclick: closeDetail });
   el.detail = h('aside', { class: 'detail', 'aria-label': 'Post', 'aria-hidden': 'true' });
   el.tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Views' });
@@ -496,6 +497,12 @@ function render() {
   el.studio.classList.toggle('is-queue', S.view === 'queue');
   el.studio.classList.toggle('with-detail', S.open && S.view !== 'queue');
   el.studio.dataset.view = S.view;
+  const live = S.posts.filter((p) => p.build?.active);
+  el.working.classList.toggle('hidden', !live.length);
+  if (live.length) {
+    const first = live[0];
+    el.working.replaceChildren(h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', {}, h('b', {}, first.build.mode === 'change' ? 'Claude is changing ' : 'Claude is building '), `“${first.title}”`, first.build.since ? ` · ${elapsed(first.build.since)}` : '', live.length > 1 ? ` · and ${live.length - 1} more` : ''), h('button', { class: 'linklike', type: 'button', onclick: () => select(first.uid, { open: true }) }, 'Open it'));
+  }
   el.banner.classList.toggle('hidden', !S.offline);
   if (S.offline) el.banner.replaceChildren(icon('alert', 15), h('span', {}, 'Nordle is not answering. This is the last copy it sent.'), h('button', { class: 'linklike', onclick: () => load({ force: true }) }, 'Try again'));
   if (S.load !== 'ready') { cached('boot', `${S.load}|${S.error}`, renderBoot); renderRail0(); return; }
