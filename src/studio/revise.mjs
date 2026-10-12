@@ -11,7 +11,7 @@
 
 import { recoverStale, runDue } from '../calendar/run.mjs';
 import { readRunLock } from '../calendar/lock.mjs';
-import { loadProject } from '../calendar/service.mjs';
+import { loadProject, takeQueuedRevisions } from '../calendar/service.mjs';
 import { locate } from './data.mjs';
 
 const sleep = (ms, signal) => new Promise((done) => {
@@ -78,6 +78,17 @@ export function createReviser({ run = runDue, retryMs = 30000, maxWaits = 60, lo
       if (!job) return false;
       job.controller.abort();
       return true;
+    },
+
+    /** Start the designer on posts whose changes were asked for while they were being built and are now back. Safe to call often. */
+    async sweep(store) {
+      const started = [];
+      for (const project of store.scan()) {
+        try {
+          for (const id of await takeQueuedRevisions(project.dir)) { const uid = `${project.id}:${id}`; if (this.start(store, uid).started) started.push(uid); }
+        } catch (e) { log(`${project.id}: could not start queued changes (${e.message})`); }
+      }
+      return started;
     },
 
     running: (uid) => jobs.has(uid),

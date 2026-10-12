@@ -49,6 +49,8 @@ if (port === undefined) { console.error('nordle: no free port found near 5400.')
 // a run that died with the last server left its post on "building": put it back and start that revision again
 autoScheduler.start(app.store);
 autoSync.start(app.store);
+// posts whose changes were asked for while Claude was building them: start the designer on them when the build is done (also checked after every build the Studio starts)
+setInterval(() => { reviser.sweep(app.store).catch(() => {}); }, 20000).unref();
 reviser.recover(app.store).then((again) => { if (again.length) console.log(`Revising again after the restart: ${again.join(', ')}`); }, () => {});
 
 const url = `http://127.0.0.1:${port}/`;

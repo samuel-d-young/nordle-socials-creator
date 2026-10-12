@@ -263,6 +263,7 @@ export function buildLine(p) {
     } else {
       kids.push(h('i', { class: 'wait', 'aria-hidden': 'true' }), h('span', {}, `Queued. ${b.autoBuild ? 'Claude starts' : 'It becomes due'} about ${dateFmt.long(b.startsOn)} (${b.leadDays} days before it goes out).`));
     }
+    if (b.pending) kids.push(h('span', { class: 'muted', 'data-state': 'changes-queued' }, ` ${b.pending === 1 ? 'A change is' : `${b.pending} changes are`} queued: it starts by itself when this is done.`));
     el.replaceChildren(...kids.filter(Boolean));
   };
   paint();

@@ -58,7 +58,7 @@ import { isDate, isMonth } from '../../calendar/dates.mjs';
 import { occasionsBetween } from '../../calendar/occasions.mjs';
 import { suggestOptions } from '../../calendar/suggest.mjs';
 import { suggestForCampaign } from '../../calendar/suggest-campaign.mjs';
-import { jobStatus, startJob } from '../../calendar/jobs.mjs';
+import { jobStatus, retryWhileLocked, startJob } from '../../calendar/jobs.mjs';
 import { runDue, runPropose } from '../../calendar/run.mjs';
 import { buildPrompt, proposePrompt } from '../../calendar/prompts.mjs';
 import { stockBrief } from '../../stock/index.mjs';
@@ -70,7 +70,10 @@ export default {
   scope: 'project',
   key: 'calendar',
   async handle(ctx) {
-    const { req, res, url, seg, method, project, human, sendJson, readJsonBody, needHuman, HttpError, claudeRunner } = ctx;
+    const { req, res, url, seg, method, project, human, sendJson, readJsonBody, needHuman, HttpError, claudeRunner, reviser, store } = ctx;
+    /** After a job: a post whose changes were asked for while it was being built is back for them, so the designer starts on it. */
+    const afterJob = async (r) => { try { await reviser?.sweep?.(store); } catch { /* the interval sweep tries again */ } return r; };
+    const wait = ctx.retryMs === undefined ? {} : { ms: ctx.retryMs };
     const rest = seg.slice(3);
     const dir = project.dir;
     const q = url.searchParams;
@@ -104,7 +107,7 @@ export default {
         if (b.action === 'propose') {
           const months = (Array.isArray(b.months) ? b.months : []).filter((m) => isMonth(m)).slice(0, 3);
           const extra = typeof b.extra === 'string' ? b.extra : '';
-          const r = startJob(dir, 'propose', () => run.propose({ projectDir: dir, yes: true, months, extra }), { months });
+          const r = startJob(dir, 'propose', () => retryWhileLocked(() => run.propose({ projectDir: dir, yes: true, months, extra }), wait), { months });
           return sendJson(res, r.started || r.queued ? 202 : 409, { ok: r.started || !!r.queued, ...(r.queued ? { queued: true, position: r.position } : {}), ...(r.started || r.queued ? {} : { errors: [{ message: r.full ? 'Claude already has 20 things waiting in this brand. Let some finish first.' : 'Claude is already doing exactly this. It is shown at the top of the page.' }] }), ...jobStatus(dir) });
         }
         if (b.action === 'build') {
@@ -114,7 +117,7 @@ export default {
           if (!it) throw new CalendarError(404, 'No such post on the calendar.');
           if (!['approved', 'changes'].includes(it.status)) throw new CalendarError(409, `A ${it.status} post is not waiting to be built.`);
           // today = the post's own date, so a post that is not due yet can still be built early when the owner asks
-          const r = startJob(dir, 'build', () => run.build({ projectDir: dir, yes: true, itemId: id, today: it.date >= p.today ? it.date : p.today }), { item: id });
+          const r = startJob(dir, 'build', () => retryWhileLocked(() => run.build({ projectDir: dir, yes: true, itemId: id, today: it.date >= p.today ? it.date : p.today }), wait).then(afterJob), { item: id });
           return sendJson(res, r.started || r.queued ? 202 : 409, { ok: r.started || !!r.queued, ...(r.queued ? { queued: true, position: r.position } : {}), ...(r.started || r.queued ? {} : { errors: [{ message: r.full ? 'Claude already has 20 things waiting in this brand. Let some finish first.' : 'Claude is already building this post.' }] }), ...jobStatus(dir) });
         }
         throw new CalendarError(400, 'action must be "propose" or "build".');

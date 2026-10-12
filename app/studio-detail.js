@@ -226,11 +226,13 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
       h('button', { class: 'btn nope', 'data-act': 'idea-reject', onclick: () => decided(() => act.rejectIdea(post)) }, 'Reject', kbd('R')));
   }
   if (s === 'rejected') return wrap(h('button', { class: 'btn', 'data-act': 'reopen', onclick: () => done(() => act.reopen(post)) }, 'Reopen this post'));
+  // while Claude is working on a post, a change can still be asked for: it waits in line and starts by itself when the work is done
+  const queueChange = h('button', { class: 'btn ask', type: 'button', 'data-act': 'changes-queue', title: 'Claude is busy on this post. Say what to change: it starts when Claude is done.', onclick: () => done(() => act.requestChanges(post)) }, 'Queue a change');
   if (s === 'building' && post.revising) {
-    return wrap(h('div', { class: 'sent' }, post.build?.active ? buildLine(post) : h('div', { class: 'acts-done muted revising', role: 'status', 'data-state': 'revising' }, h('i', { class: 'spin', 'aria-hidden': 'true' }), designerLine(d, post)), sentNote(d)), editor);
+    return wrap(queueChange, h('div', { class: 'sent' }, post.build?.active ? buildLine(post) : h('div', { class: 'acts-done muted revising', role: 'status', 'data-state': 'revising' }, h('i', { class: 'spin', 'aria-hidden': 'true' }), designerLine(d, post)), sentNote(d)), editor);
   }
   if (s === 'approved' || s === 'building') {
-    return wrap(post.build ? buildLine(post) : h('div', { class: 'acts-done muted' }, s === 'approved' ? 'Approved. Waiting to be built.' : 'Being built. Nothing to review yet.'),
+    return wrap(s === 'building' ? queueChange : null, post.build ? buildLine(post) : h('div', { class: 'acts-done muted' }, s === 'approved' ? 'Approved. Waiting to be built.' : 'Being built. Nothing to review yet.'),
       post.build && !post.build.active ? h('button', { class: 'btn go', 'data-act': 'build-now', onclick: async (e) => { e.currentTarget.disabled = true; try { const r = await api.post(`/projects/${encodeURIComponent(post.project)}/calendar/run`, { action: 'build', item: post.itemId }); notify(r.queued ? `Claude is busy with another post, so this one is in line${r.position > 1 ? ` (${r.position - 1} ahead)` : ' and goes next'}. It starts by itself.` : 'Claude is on it. This page shows when it starts and when it is done.', { kind: 'ok' }); await load({ force: true }); } catch (err) { notify(err.message, { kind: 'error' }); e.currentTarget.disabled = false; } } }, icon('check', 16), 'Build it now') : null,
       h('button', { class: 'btn nope', 'data-act': 'idea-reject', onclick: () => decided(() => act.rejectIdea(post)) }, 'Drop it'), editor);
   }

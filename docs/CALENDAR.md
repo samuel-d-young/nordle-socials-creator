@@ -192,6 +192,10 @@ use `POST .../items/<id>` for edits until PATCH is allowed through.
 HTTP and MCP surfaces including everything the agent token must not be able to do. The tests set `NORDLE_CLAUDE_BIN` to a path that does not exist, so a
 bug cannot start the real Claude.
 
+## Waiting in line while Claude is busy
+
+Nothing is refused because Claude is already working. **Build it now** and **Ask Claude now** join a line for the brand (`src/calendar/jobs.mjs`: one at a time, up to 20, the same request is never queued twice) and start by themselves; if another run holds the brand (a revision, another process) they wait and try again (`retryWhileLocked`). **Request changes** on a post that is being built is kept as `pendingChanges` on the item; when the build is linked (`linkDoc`) the post goes straight to `changes` with those notes and the Studio starts the designer on it (`reviser.sweep`, run after every Studio-started build and every 20 seconds). The post says "In line" and "N changes are queued". There is no Undo for a queued change.
+
 ## How a reel is made (`reel`) and extra information (`guidance`)
 
 Two optional fields on a calendar item, both checked by the calendar service and written into the build prompt:

@@ -74,12 +74,14 @@ async function requestChanges(store, at, body) {
   if (!text && !pins.length) throw new StudioError(400, 'Say what should change, so the designer knows.');
   if (text.length > 4000) throw new StudioError(400, 'That note is too long (4000 characters at most).');
   const sum = summaryFor(store, at);
-  if (sum.revising) throw new StudioError(409, 'Claude is already changing this post. It comes back for another look when it is done.');
-  if (notBuilt(sum.status)) throw new StudioError(409, 'This post has not been built yet. Edit the idea instead.');
+  // Claude is working on this post right now: the change waits in line and starts by itself when the work is done
+  const busy = item?.status === 'building';
+  if (!busy && notBuilt(sum.status)) throw new StudioError(409, 'This post has not been built yet. Edit the idea instead.');
   if (['rejected', 'posted'].includes(sum.status)) throw new StudioError(409, `This post is ${sum.status}.`);
   const before = item ? structuredClone(item) : null;
   const note = [text, text && pins.length ? '' : null, pins.length ? 'Pinned notes:' : null, ...pins.map((p) => `- ${p}`)].filter((x) => x !== null).join('\n');
   if (item) await svc(project, () => decide(project.dir, item.id, 'changes', { comment: note }));
+  if (busy) return { undo: null, sent: pins.length, queued: true };   // no undo: by the time it is pressed the build may be done, and restoring the old state would be wrong
   const review = reviewFor(project, docId);
   let commentId = null;
   let revoked = false;

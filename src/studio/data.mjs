@@ -254,7 +254,7 @@ function buildOf(project, item, calendar) {
       phase: 'building', active, stalled: !active, mode: item.doc ? 'change' : 'build',
       since: active ? lock.started ?? item.run?.startedAt ?? null : item.run?.startedAt ?? null,
       attempt: item.run?.attempts ?? null, maxAttempts: calendar?.settings?.maxBuildAttempts ?? 3,
-      busyWith: null,
+      busyWith: null, pending: item.pendingChanges?.length ?? 0,
     };
   }
   const items = Array.isArray(calendar?.items) ? calendar.items : [];

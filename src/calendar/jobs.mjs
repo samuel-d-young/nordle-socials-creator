@@ -59,6 +59,20 @@ export const jobStatus = (dir) => ({ running: running.has(dir) ? { ...running.ge
 /** Where a post waits in line for its project: 1 is next. 0 when it is not in line. */
 export const queuePosition = (dir, itemId) => ((queued.get(dir) ?? []).findIndex((q) => q.kind === 'build' && q.meta?.item === itemId) + 1);
 
+/**
+ * Run `fn`; while it answers that another run holds the project (a revision, or another process), wait and try again. This is what lets "Build it now" be pressed while
+ * Claude is busy on something the job queue does not know about: it waits its turn instead of failing. Gives up after `max` tries.
+ */
+export async function retryWhileLocked(fn, { ms = 5000, max = 360, sleep = (t) => new Promise((r) => setTimeout(r, t)) } = {}) {
+  let r;
+  for (let tries = 0; tries <= max; tries++) {
+    r = await fn();
+    if (!r?.locked) return r;
+    await sleep(ms);
+  }
+  return r;
+}
+
 /** Is Claude working on anything right now, in any project? (Signing out in the middle of a job would make it fail.) */
 export const anyJobRunning = () => running.size > 0;
 

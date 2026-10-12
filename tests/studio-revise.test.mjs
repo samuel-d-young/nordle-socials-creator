@@ -144,7 +144,7 @@ test('Undo takes the request back and stops the designer', async () => {
 
 const setItem = (work, project, id, fn) => mutateCalendar(join(work, 'projects', project), (cal) => { fn(cal.items.find((i) => i.id === id)); });
 
-test('while the designer works, the post says so and cannot be approved or sent back again; when it fails, the reason shows', async () => {
+test('while the designer works, the post says so and cannot be approved, and a second change waits in line; when it fails, the reason shows', async () => {
   await studio(async ({ call, work }) => {
     const { posts } = await overview(call);
     const post = builtOnCalendar(posts)[0];
@@ -153,11 +153,13 @@ test('while the designer works, the post says so and cannot be approved or sent 
     assert.deepEqual([now.status, now.revising], ['building', true]);
     const sheet = await call(`/studio/post?uid=${encodeURIComponent(post.uid)}`);
     assert.equal(sheet.body.item.run.state, 'building');
-    for (const action of ['approve', 'changes']) {
-      const r = await call('/studio/act', 'POST', { uid: post.uid, action, text: 'again' });
-      assert.equal(r.status, 409, action);
-      assert.match(r.body.errors[0].message, /Claude is (still|already) changing/);
-    }
+    // approving is still refused while Claude works on it; asking for another change is accepted and waits in line (it starts by itself when the work is done)
+    const approve = await call('/studio/act', 'POST', { uid: post.uid, action: 'approve', text: 'again' });
+    assert.equal(approve.status, 409, 'approve');
+    assert.match(approve.body.errors[0].message, /Claude is (still|already) changing/);
+    const queued = await call('/studio/act', 'POST', { uid: post.uid, action: 'changes', text: 'again' });
+    assert.equal(queued.status, 200, JSON.stringify(queued.body));
+    assert.equal(queued.body.queued, true);
     await setItem(work, post.project, post.itemId, (it) => { it.status = 'changes'; it.run = { attempts: 1, state: 'failed', lastError: 'Claude finished (exit 1) without building the post.', lastAt: new Date().toISOString() }; });
     const failed = (await overview(call)).posts.find((p) => p.uid === post.uid);
     assert.deepEqual([failed.status, failed.revising, failed.reviseFailed], ['changes', false, true]);

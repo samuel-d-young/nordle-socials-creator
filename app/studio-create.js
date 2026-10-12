@@ -271,7 +271,8 @@ const STYLES_FALLBACK = [
 
 let renderAgain = null;
 export function renderCreate(root, ctx) {
-  const redraw = () => renderCreate(root, ctx);
+  // timers and finished requests call this later: if the person has gone to another page by then, it must not paint Create back over it
+  const redraw = () => { if (S.view === 'create') renderCreate(root, ctx); };
   renderAgain = redraw;
   const id = brandId();
   const pr = id && project(id);

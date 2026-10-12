@@ -94,6 +94,8 @@
         "campaign": { "type": "string", "description": "The id of the campaign this post belongs to (calendar.campaigns)." },
         "occasion": { "type": "string", "description": "A date or season it rides on (Melbourne Cup, end of the health-fund year)." },
         "mediaPlan": { "type": "string", "description": "What photos or footage it should use, in words." },
+        "pendingChanges": { "type": "array", "description": "Changes the owner asked for while Claude was building this post: they wait here and are applied when the build is done.", "items": { "type": "object", "required": ["at", "comment"], "additionalProperties": false, "properties": { "at": { "type": "string" }, "comment": { "type": "string" } } } },
+        "queuedRevise": { "type": "boolean", "description": "Set when waiting changes were just applied: the Studio starts the designer on this post, then clears it." },
         "guidance": { "type": "string", "maxLength": 2000, "description": "Extra information from the owner to steer this post: what to stress, who to feature, what to avoid, a reference to follow." },
         "reel": {
           "type": "object", "additionalProperties": false,

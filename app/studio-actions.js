@@ -94,8 +94,8 @@ export async function requestChanges(post) {
   if (text === null) return false;
   try {
     const r = await send({ uid: post.uid, action: 'changes', text });
-    remember(r.undo, `Asked for changes on “${short(post.title)}”`);
-    notify(`Sent back “${short(post.title)}”${r.sent ? ` with ${plural(r.sent, 'comment')}` : ''}.${r.revising ? ' Claude is making the change now.' : ''}`, { kind: 'ok', action: { label: 'Undo', key: 'U', fn: undoLast } });
+    if (!r.queued) remember(r.undo, `Asked for changes on “${short(post.title)}”`);
+    notify(r.queued ? `Queued: Claude is working on “${short(post.title)}” right now, so your change goes next and starts by itself.` : `Sent back “${short(post.title)}”${r.sent ? ` with ${plural(r.sent, 'comment')}` : ''}.${r.revising ? ' Claude is making the change now.' : ''}`, { kind: 'ok', ...(r.queued ? {} : { action: { label: 'Undo', key: 'U', fn: undoLast } }) });
     return true;
   } catch (e) { notify(e.message, { kind: 'error' }); return false; }
 }

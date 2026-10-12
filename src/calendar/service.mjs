@@ -117,7 +117,7 @@ export const EDITABLE = ['date', 'time', 'format', 'title', 'pillar', 'idea', 'h
 const CONTENT = ['date', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'reel', 'guidance'];
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 // fields the server owns: a caller may send an item back whole, and these are ignored (never written from the outside)
-const SERVER_KEYS = new Set(['id', 'status', 'comment', 'origin', 'ideaApproval', 'doc', 'external', 'run', 'feedback', 'updated']);
+const SERVER_KEYS = new Set(['id', 'status', 'comment', 'origin', 'ideaApproval', 'doc', 'external', 'run', 'feedback', 'updated', 'pendingChanges', 'queuedRevise']);
 
 /** Pick and check the editable fields. Returns { fields, errors:[{path,message}] }. null clears a field. */
 export function cleanFields(input, { forAdd = false } = {}) {
@@ -259,7 +259,7 @@ const TRANSITIONS = {
   unapprove: { from: ['approved'] },
   reject: { from: ['idea', 'approved', 'building', 'built', 'changes', 'signed-off'] },
   signoff: { from: ['built', 'signed-off'], needsDoc: true },
-  changes: { from: ['built', 'signed-off', 'changes'], needsComment: true },
+  changes: { from: ['built', 'signed-off', 'changes', 'building'], needsComment: true },   // from `building` the change waits in line (pendingChanges) and starts when the build is done
   posted: { from: ['signed-off', 'built', 'scheduled', 'posted'] },
   retry: { from: ['approved', 'changes'] },       // forget the runner's failed attempts so it tries again
 };
@@ -291,6 +291,11 @@ function applyTransition(cal, item, action, { comment }) {
     case 'reject': item.status = 'rejected'; if (comment) item.notes = [item.notes, `Rejected: ${comment}`].filter(Boolean).join('\n'); break;
     case 'signoff': item.status = 'signed-off'; break;
     case 'changes':
+      if (item.status === 'building') {
+        // Claude is working on this post right now: the request waits in line and is applied the moment the build is linked (see linkDoc)
+        item.pendingChanges = [...(item.pendingChanges ?? []), { at, comment: String(comment).trim() }];
+        break;
+      }
       item.status = 'changes';
       item.feedback = [...(item.feedback ?? []), { at, by: 'owner', comment: String(comment).trim() }];
       delete item.run;
@@ -301,6 +306,15 @@ function applyTransition(cal, item, action, { comment }) {
   }
   item.updated = at;
   return item;
+}
+
+/** The posts that went straight back for changes because the owner asked while they were being built: their ids, and the flag is cleared so each is started once. */
+export function takeQueuedRevisions(projectDir) {
+  return mutateCalendar(projectDir, (cal) => {
+    const ids = [];
+    for (const item of cal.items) if (item.queuedRevise) { delete item.queuedRevise; if (item.status === 'changes' && item.doc) ids.push(item.id); }
+    return ids;
+  });
 }
 
 /** approve | unapprove | reject | signoff | changes (needs a comment) | posted. Owner only: the caller must check the role. */
@@ -449,6 +463,14 @@ export function linkDoc(projectDir, id, docId, { role = 'agent' } = {}) {
     item.status = 'built';
     for (const f of item.feedback ?? []) if (!f.resolved) f.resolved = at;
     item.run = { attempts: 0, state: 'built', lastAt: at };   // a finished build ends the cycle: failed attempts no longer count
+    if (item.pendingChanges?.length) {
+      // the owner asked for changes while this was being built: it goes straight back for them, and the Studio starts the designer on it (takeQueuedRevisions)
+      item.feedback = [...(item.feedback ?? []), ...item.pendingChanges.map((p) => ({ at: p.at, by: 'owner', comment: p.comment }))];
+      delete item.pendingChanges;
+      item.status = 'changes';
+      item.queuedRevise = true;
+      delete item.run;
+    }
     item.updated = at;
     return { item };
   });
