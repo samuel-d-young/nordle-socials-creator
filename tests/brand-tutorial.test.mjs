@@ -21,8 +21,10 @@ test('the Brand added page explains Stock and the Library in plain words, and ea
   await studioPage(async ({ page, open }) => {
     await makeBrand(page, open, 'Tutorial Tea');
     const text = await page.locator('.wz-nexts').innerText();
-    assert.match(text, /Stock: photos, video and music you do not have/);
-    assert.match(text, /Pexels, Pixabay, Freesound/);
+    assert.match(text, /Stock: your own footage and stock, used automatically/);
+    assert.match(text, /Claude searches them by itself whenever it builds a post/);
+    assert.match(text, /You never have to pick files/);
+    assert.match(text, /Pexels, Pixabay and Freesound/);
     assert.match(text, /Nordle never buys or signs in anywhere/);
     assert.match(text, /The Library: every brand and every post/);
     assert.match(text, /Everything stays on this computer/);

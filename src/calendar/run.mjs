@@ -16,6 +16,7 @@ import { join, resolve } from 'node:path';
 import { ROOT } from '../../tools/validate.mjs';
 import { acquireRunLock } from './lock.mjs';
 import { buildPrompt, proposePrompt } from './prompts.mjs';
+import { stockBrief } from '../stock/index.mjs';
 import { CalendarError, linkDoc, listProjects, loadProject, mutateCalendar, runnableItems } from './service.mjs';
 import { monthReport } from './plan.mjs';
 import { addMonths, monthOf } from './dates.mjs';
@@ -243,7 +244,7 @@ export async function runDue({
 
   if (dryRun) {
     result.dryRun = queue.slice(0, limit).map(({ item, mode }) => {
-      const prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot });
+      const prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
       return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD })], promptChars: prompt.length, prompt };
     });
     return result;
@@ -276,7 +277,7 @@ export async function runDue({
 
       let prompt, args, run, verdict;
       try {
-        prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot });
+        prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
         args = claudeArgs({ mcpFile, maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD });
         const env = { ...process.env, NORDLE_AGENT_RUN: '1' };
         run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env, prompt, timeoutMs, signal });

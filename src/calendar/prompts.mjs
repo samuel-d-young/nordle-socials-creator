@@ -228,7 +228,23 @@ const SIZE_FOR = { reel: 'ig-reel-9x16', story: 'ig-story-9x16', carousel: 'ig-f
  * The prompt that asks Claude to build one calendar item into a finished post.
  * mode 'build' (an approved idea) or 'revise' (the owner sent the post back; default chosen from the item's status).
  */
-export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT } = {}) {
+/**
+ * What Claude is told about the owner's media libraries (Stock window): it uses them itself while it builds, own folders first, so the owner never has to pick files.
+ * Nothing for a post that uses no media (a motion-graphics reel) or when there are none.
+ */
+export function stockLines(stock, item) {
+  if (!stock || (!stock.own?.length && !stock.online?.length)) return [];
+  if (item?.format === 'reel' && ['motion', 'voiceover'].includes(item.reel?.style)) return [];
+  const kinds = (l) => (l.kinds ?? []).join(', ');
+  const out = ['', "## The owner's media libraries (use them yourself)", ''];
+  out.push('The owner has set up libraries in the Stock window. Search them yourself while you build; do not ask which files to use.');
+  for (const l of stock.own ?? []) out.push(`- OWN FOLDER, use first: "${l.name}" (\`${l.id}\`, ${kinds(l)}), the owner's own footage and stock.`);
+  for (const l of stock.online ?? []) out.push(`- Online, only for a shot the owner's own material cannot cover: "${l.name}" (\`${l.id}\`, ${kinds(l)})${l.license ? `, licence: ${l.license}` : ''}.`);
+  out.push(`Search with \`nordle_stock_search\` (library, kind, words from the idea) and bring a file in with \`nordle_stock_get\`; it lands in the project under \`assets/stock/\` with its licence written down. A file brought in is catalogued as "not looked at yet": look at it (a still or a frame) and write what it really shows into the catalog before you put it on a post, and never use one you have not looked at. Prefer the owner's own footage and photos in the project catalogs, then their own folders, then online libraries.`);
+  return out;
+}
+
+export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT, stock = null } = {}) {
   const p = loadProject(projectDir);
   const item = p.cal.items.find((i) => i.id === itemId);
   if (!item) throw new CalendarError(404, `There is no calendar item "${itemId}".`);
@@ -263,6 +279,7 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
     out.push('', '### What the owner asked to change', '', ...(open.length ? open.map((c) => `- ${c}`) : ['- (no written comment: read the open pins with nordle_get_feedback)']));
     out.push('Also call `nordle_get_feedback` for the pins and comments on the document, answer each with `nordle_reply`, and `nordle_resolve` the ones you fixed.');
   }
+  out.push(...stockLines(stock, item));
   out.push('', '## Read first', '');
   out.push('- `nordle_get_guide` (once), `nordle_get_brand`, and in the project folder: brand.json, facts.json, `assets/catalog.json` and `sources/catalog.json` (what each photo and clip really shows), STRATEGY.md if present.');
   out.push('- Voice: ' + brandLines(p.brand, p.facts).slice(0, 5).join(' | '));

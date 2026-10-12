@@ -61,6 +61,8 @@ import { suggestForCampaign } from '../../calendar/suggest-campaign.mjs';
 import { jobStatus, startJob } from '../../calendar/jobs.mjs';
 import { runDue, runPropose } from '../../calendar/run.mjs';
 import { buildPrompt, proposePrompt } from '../../calendar/prompts.mjs';
+import { stockBrief } from '../../stock/index.mjs';
+import { basename } from 'node:path';
 
 const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : undefined);
 
@@ -143,7 +145,7 @@ export default {
         const kind = q.get('kind') ?? (q.get('item') ? 'build' : 'propose');
         if (kind === 'build') {
           if (!q.get('item')) throw new CalendarError(400, 'Say which item (?item=<id>).');
-          return sendJson(res, 200, { kind, prompt: buildPrompt(dir, q.get('item'), { mode: q.get('revise') ? 'revise' : undefined }) });
+          return sendJson(res, 200, { kind, prompt: buildPrompt(dir, q.get('item'), { mode: q.get('revise') ? 'revise' : undefined, stock: stockBrief(basename(dir)) }) });
         }
         if (kind !== 'propose') throw new CalendarError(400, 'kind is propose or build');
         return sendJson(res, 200, { kind, prompt: proposePrompt(dir, { months: list(q.get('month')) }) });

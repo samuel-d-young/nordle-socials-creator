@@ -416,6 +416,7 @@ export async function openStock({ project = '', tab = '' } = {}) {
         h('option', { value: '' }, 'Choose a site…'), choices.map(([id, name]) => h('option', { value: id }, name))));
     const noKey = STOCK_NO_KEY[st.noKey];
     el.libsPanel.replaceChildren(...[
+      h('p', { class: 'sch-help stk-auto', 'data-state': 'stock-auto' }, h('b', {}, 'Used automatically. '), 'Once a library is added here, Claude searches it by itself whenever it builds a post, so you never have to pick files. Your own folders come first (your footage and stock), then free online libraries, and only for a shot your own material cannot cover. Every file it uses is copied into the brand with its licence written down.'),
       h('p', { class: 'sch-help stk-intro' }, 'Each library is searched with your own key, kept on this computer. Nordle never buys anything and never signs in to a site for you; every file it brings in has its licence written down.'),
       picker,
       noKey ? h('section', { class: 'stk-nokey', 'data-section': 'stock-nokey' }, guideBlock(noKey, h('div', { class: 'stk-acts' }, btn('Add a folder instead', { primary: true, act: 'stock-nokey-folder', onclick: () => { st.noKey = ''; redrawLibs(); el.libsPanel.querySelector('[data-field="stock-folder-path"]')?.focus(); } }), btn('Close', { quiet: true, onclick: () => { st.noKey = ''; redrawLibs(); } })))) : null,

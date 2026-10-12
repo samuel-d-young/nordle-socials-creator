@@ -9,6 +9,7 @@ import { FORMATS, ideaLint, lintCalendar, spreadSlots, needFor, monthCounts, quo
 import { addMonths, isDate, isMonth, monthEnd, monthOf, monthStart, weekdayName } from '../calendar/dates.mjs';
 import { occasionsBetween } from '../calendar/occasions.mjs';
 import { buildPrompt, proposePrompt } from '../calendar/prompts.mjs';
+import { stockBrief } from '../stock/index.mjs';
 import { runAll, runDue, runPropose } from '../calendar/run.mjs';
 
 const out = (s = '') => console.log(s);
@@ -381,7 +382,7 @@ export default {
           const proj = resolveProject(pos[0]);
           const p = loadProject(proj.dir);
           const day = today(flags, p);
-          if (pos[1]) out(buildPrompt(proj.dir, pos[1], { today: day, mode: flags.revise ? 'revise' : undefined }));
+          if (pos[1]) out(buildPrompt(proj.dir, pos[1], { today: day, mode: flags.revise ? 'revise' : undefined, stock: stockBrief(proj.id) }));
           else out(proposePrompt(proj.dir, { today: day, months: flags.month && flags.month !== true ? String(flags.month).split(',') : undefined }));
           return 0;
         }

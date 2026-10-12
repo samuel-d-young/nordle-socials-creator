@@ -104,6 +104,20 @@ export function checkBrandAllowed(id, project, settings = loadStock()) {
   }
 }
 
+/**
+ * The libraries Claude may search on its own for a brand while it builds: added, ready (a folder that is set, or a key that is saved) and allowed for that
+ * brand, and able to bring a file in. Own folders (the owner's own footage and stock) are listed apart from online libraries. Never a key.
+ * Returns null when there is none or the settings cannot be read, so a prompt simply leaves the section out.
+ */
+export function stockBrief(project, settings) {
+  try {
+    const libs = listLibraries(settings ?? loadStock()).filter((l) => l.added && l.configured && l.canDownload && (!l.brands.length || l.brands.includes(String(project))));
+    const own = libs.filter((l) => l.type === 'folder').map((l) => ({ id: l.id, name: l.name, kinds: l.kinds, path: l.path }));
+    const online = libs.filter((l) => l.type !== 'folder').map((l) => ({ id: l.id, name: l.name, kinds: l.downloadKinds, license: l.license ?? null }));
+    return own.length || online.length ? { own, online } : null;
+  } catch { return null; }
+}
+
 /** A library ready to search, or throws a plain sentence about what is missing. */
 export function getLibrary(id, settings = loadStock()) {
   const e = settings.libraries[id];

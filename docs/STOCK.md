@@ -16,6 +16,10 @@ written down. Code: `src/stock/*`, command `node nordle.mjs stock`, API `/api/st
 3. **As code.** A file in `src/stock/libraries/` that default-exports `{ id, name, kinds, search(), lookup(), download() }`, for an API that needs
    more than data can say (a login flow, signed requests). `src/stock/libraries/_example.mjs` is the template and documents the contract.
 
+## Claude uses them automatically
+
+A library that is added and ready (a folder that is set, or a key that is saved) and allowed for the brand is listed in the build prompt (`stockBrief` in `src/stock/index.mjs`, `stockLines` in `src/calendar/prompts.mjs`). Claude searches the owner's own folders first, then online libraries only for a shot their own material cannot cover, brings files in with `nordle_stock_get`, and must look at each one (it arrives catalogued "not looked at yet") before using it. Nothing is added for a motion-graphics reel. The owner never picks files. Test: `tests/stock-auto.test.mjs`.
+
 ## Use
 
 ```
