@@ -18,7 +18,7 @@ screenshot or write ideas, and about 1 to 2 dollars to build one post. Nordle ca
 Install Nordle for me, then show me it works.
 
 Nordle is a local social-media studio that you (Claude) and I use together: you plan the month, design carousels, graphics and
-reels (cut from my own footage), write the captions, and check your own work; I look at the results in a browser page and approve,
+reels (cut from my own footage, or made only of motion graphics, or motion graphics timed to a voice-over I record), write the captions, and check your own work; I look at the results in a browser page and approve,
 ask for changes or reject. It runs only on my computer. It was created by Samuel Young and is free to use under CC BY 4.0 (it asks for credit to him):
 https://github.com/samuel-d-young/nordle-socials-creator
 
@@ -113,12 +113,15 @@ Part 2, try it (use the nordle_* tools and the Studio in the browser; read the g
    as a style guide, say what field the business is in, and (if I have them) add a screenshot of a Canva Brand Kit and press "Read my screenshot", and two or three of my own finished posts under "Train it on your own posts" (press "Read my posts"). Tell me whether every colour and font in the screenshot came through, and whether the colours in the posts are the ones the brand kit reads as background, headline and accent.
    Use made-up details if I do not want to share real ones.
 3. On the Create page (key `n`): make a campaign, show me its options, tick some and "Add as ideas, schedule later"; then pick "Decide for me" and a
-   style for a normal month and add a few. Say what was confusing.
+   style for a normal month and add a few. In the Reels row try each "Made from" choice (Auto, Cut from footage, Motion graphics only, Motion graphics with a
+   voice-over), what a reel uses and its length, and write something in the extra-info box; check it shows on the post (Edit, and the post's details). Say what was confusing.
 4. Plan three post ideas for next month, wait for me to approve them in the Studio, then build one carousel and look at every page as a picture.
    Run the checks and critique, fix what they find, and tell me what you were unsure about. Before any step that starts Claude on its own
    ("Ask Claude now", "Build it now"), tell me it uses my Claude usage, and only do it if I say yes; if it does run, note the time, the turns and the cost it shows.
-5. Use "Request changes" once with a comment. If it says Claude Code is not signed in, tell me and note it for the report.
-6. If ffmpeg is installed: use "Edit videos you already have" on the Create page with one short video of mine (or one you make with ffmpeg), open it in
+5. Use "Request changes" once with a comment. If Nordle says Claude is not signed in, press its "Sign in to Claude" button (nobody should have to type a command), approve in the browser, and tell me whether it carried on by itself; note anything confusing for the report.
+6. If ffmpeg is installed and I have no footage handy: make one "Motion graphics only" reel from the Create page (Ask Claude now, after telling me it uses my usage), look at
+   its sheet, and tell me if it reads as designed or generated. Do NOT make up a voice-over: a voice-over reel needs my own recording with word timings, so just say
+   whether Nordle asks me for one clearly. Then, if ffmpeg is installed: use "Edit videos you already have" on the Create page with one short video of mine (or one you make with ffmpeg), open it in
    the video editor, click a title on the picture, double-click it and change its words, play it, split a clip (S), delete one, undo (Command+Z on a Mac,
    Ctrl+Z elsewhere), and say whether the picture and sound stay in step.
 7. Check the small things: the "Nordle by Samuel Young" credit in the left bar, and whether the Studio shows a notice about an update.
@@ -159,6 +162,19 @@ what you were unsure about.
 ````text
 Cut the footage in [folder] into a 25-second reel with captions and music. Show me the plan first, then the cut, and check that
 nobody is cut off mid-sentence and the B-roll fits what is being said.
+````
+
+````text
+Make a 20-second reel of only motion graphics (no footage) about [topic] in my brand: big type, one idea per scene, a closing card. Show me the sheet.
+````
+
+````text
+I have a voice-over recording: [file]. Make a reel of motion graphics timed to it, so each scene changes on the words it shows. Use my recording and its
+word timings only; if there are no word timings, tell me what you need.
+````
+
+````text
+Decide for me: [topic] as a reel. Choose whether it is cut from footage or made of motion graphics from what I really have, and tell me why.
 ````
 
 ````text
