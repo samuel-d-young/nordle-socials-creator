@@ -9,7 +9,7 @@
 import { api } from './api.js';
 import { h, icon, preserveFocus } from './dom.js';
 import { S } from './studio-store.js';
-import { askConfirm, plural } from './studio-ui.js';
+import { askConfirm, folderPicker, plural } from './studio-ui.js';
 import { STOCK_GUIDES, STOCK_NO_KEY, guideBlock } from './platform-guides.js';
 
 const token = document.querySelector('meta[name="nordle-token"]')?.content ?? '';
@@ -395,7 +395,7 @@ export async function openStock({ project = '', tab = '' } = {}) {
       h('div', { class: 'stk-add' },
         h('h4', {}, 'Add a folder'),
         h('div', { class: 'stk-add-grid' },
-          h('label', {}, h('span', { class: 'lbl-i' }, 'Folder (the full path)'), f.path),
+          h('label', {}, h('span', { class: 'lbl-i' }, 'Folder (the full path)'), folderPicker(f.path, { title: 'Choose the folder of stock files', field: 'stock-pick-folder' })),
           h('label', {}, h('span', { class: 'lbl-i' }, 'Name'), f.name),
           h('fieldset', { class: 'stk-kinds' }, h('legend', { class: 'lbl-i' }, 'What is in it'),
             KIND_ORDER.map((k) => h('label', { class: 'acc-strip' }, f.kinds[k], KIND_MANY[k]))),

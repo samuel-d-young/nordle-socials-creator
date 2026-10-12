@@ -5,7 +5,9 @@
 import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { load } from './studio-store.js';
-import { notify } from './studio-ui.js';
+import { folderPicker, notify } from './studio-ui.js';
+
+const MAX_FOLDERS = 8;   // the same limit the server's scan applies (src/brand/scan.mjs)
 
 function modal(title, { cls = 'wide' } = {}) {
   const body = h('div', { class: 'db' });
@@ -217,11 +219,11 @@ function guideFromDraft(draft, name) {
 /** Add a brand in a few steps. `onCreated(id)` runs once it exists (the Studio switches to it). */
 export function openAddBrand({ onCreated, openPublishing } = {}) {
   const m = modal('Add a brand');
-  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', folder: '', bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
+  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
   const STEPS = () => (st.mode === 'auto' ? ['The brand', 'Look for its style', 'Check it', 'Done'] : ['The brand', 'Its style', 'Done']);
   const stepOf = () => (st.mode === 'manual' && st.step >= 3 ? st.step - 1 : st.step);
   const bar = () => h('ol', { class: 'wz-steps', 'aria-label': 'Steps' }, STEPS().map((t, i) => h('li', { class: i + 1 === stepOf() ? 'on' : i + 1 < stepOf() ? 'done' : '' }, h('span', { class: 'wz-n' }, i + 1 < stepOf() ? icon('check', 12) : String(i + 1)), t)));
-  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.bio.trim() || st.captions.trim());
+  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.folders.length || st.files.length || st.bio.trim() || st.captions.trim());
   const syncScan = () => { const b = m.foot.querySelector('[data-act="wz-scan"]'); if (b) b.disabled = st.scanning || !hasInput(); };   // the Look button wakes up as soon as something is filled in
   const input = (key, ph, extra = {}) => { const el = h('input', { class: 'field', value: st[key], placeholder: ph, 'data-field': `wz-${key}`, ...extra }); el.addEventListener('input', () => { st[key] = el.value; syncScan(); }); return el; };
   const field = (label, control, hint) => h('label', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
@@ -238,12 +240,73 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
         choice('manual', 'I will set it up myself', 'Start from a plain default and choose the colours, fonts and wording yourself.'))];
   }
 
+  const FILE_OK = /\.(png|jpe?g|webp|gif|svg|ttf|otf|woff2?|md|markdown|txt|css|html?|json|pdf|docx?|pages|key|pptx)$/i;
+  const size = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+  /** Send chosen or dropped files to the server one at a time (they wait there until the brand is made). */
+  async function addFiles(list) {
+    const all = [...list];
+    const fit = all.filter((f) => FILE_OK.test(f.name) && f.size > 0 && f.size <= 20 * 1024 * 1024 && !f.name.startsWith('.'));
+    const skipped = all.length - fit.length;
+    let failed = '';
+    for (const [i, file] of fit.entries()) {
+      st.uploading = `Adding ${i + 1} of ${fit.length}: ${file.name}`; draw();
+      try {
+        const r = await api.uploadTo('/brand/upload', file, { 'x-upload-session': st.session });
+        st.files.push({ name: r.name, size: r.size });
+      } catch (e) { failed = e.message; break; }
+    }
+    st.uploading = '';
+    if (failed) notify(failed, { kind: 'error' });
+    else if (skipped) notify(`${skipped} file${skipped === 1 ? ' was' : 's were'} left out: only pictures, fonts and written style guides (up to 20 MB each) can be used.`, { kind: 'info' });
+    draw();
+  }
+  /** Files and folders from this computer: pictures, fonts, and a written style guide. Picked with the buttons or dropped on the box. */
+  function files() {
+    const pick = (folder) => { const el = h('input', { type: 'file', multiple: true, hidden: true, ...(folder ? { webkitdirectory: true } : {}), 'data-field': folder ? 'wz-folder-upload' : 'wz-file-upload', onchange: () => { const list = [...el.files]; el.value = ''; addFiles(list); } }); return el; };
+    const filesIn = pick(false), folderIn = pick(true);
+    const drop = h('div', { class: 'pick-drop', 'data-field': 'wz-drop', tabindex: '0', 'aria-label': 'Add files: drop them here, or use the buttons' },
+      h('span', { class: 'muted' }, 'Drop files here, or'),
+      h('button', { class: 'btn', type: 'button', 'data-act': 'wz-add-files', disabled: !!st.uploading, onclick: () => filesIn.click() }, 'Add files…'),
+      h('button', { class: 'btn', type: 'button', 'data-act': 'wz-add-folder-upload', disabled: !!st.uploading, onclick: () => folderIn.click() }, 'Add a folder…'),
+      filesIn, folderIn);
+    for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+    for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); });
+    drop.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+    return h('span', { class: 'pick-folders' },
+      drop,
+      st.uploading ? h('span', { class: 'muted bg-hint', role: 'status' }, st.uploading) : null,
+      st.files.length ? h('ul', { class: 'pick-list', 'data-field': 'wz-files', 'aria-label': 'Files added' }, st.files.map((f) => h('li', {},
+        h('span', { class: 'pick-path', title: f.name }, f.name), h('span', { class: 'muted' }, size(f.size)),
+        h('button', { class: 'btn quiet', type: 'button', 'data-act': 'wz-remove-file', 'aria-label': `Remove ${f.name}`, onclick: () => { st.files = st.files.filter((x) => x !== f); draw(); } }, 'Remove')))) : null);
+  }
+
+  /** The folders to look in: the ones already added (each with Remove), then a box to paste another path, Add, and Choose… (the system's folder window). */
+  function folders() {
+    const addFolder = (path) => {
+      const p = String(path ?? '').trim();
+      if (!p || st.folders.includes(p)) return false;
+      if (st.folders.length >= MAX_FOLDERS) { notify(`Up to ${MAX_FOLDERS} folders. Remove one to add another.`, { kind: 'error' }); return false; }
+      st.folders.push(p); st.folder = ''; draw(); return true;
+    };
+    const typed = input('folder', 'Paste a folder path, or press Choose');
+    typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addFolder(typed.value); } });
+    const add = h('button', { class: 'btn', type: 'button', 'data-act': 'wz-add-folder', onclick: () => addFolder(typed.value) }, 'Add');
+    const row = folderPicker(typed, { title: 'Choose a folder with the brand’s logo, photos or fonts', field: 'wz-pick-folder', onPick: addFolder });
+    row.querySelector('.btn').before(add);
+    return h('span', { class: 'pick-folders' },
+      st.folders.length ? h('ul', { class: 'pick-list', 'data-field': 'wz-folders', 'aria-label': 'Folders to look in' }, st.folders.map((f) => h('li', {},
+        h('span', { class: 'pick-path', title: f }, f),
+        h('button', { class: 'btn quiet', type: 'button', 'data-act': 'wz-remove-folder', 'aria-label': `Remove ${f}`, onclick: () => { st.folders = st.folders.filter((x) => x !== f); draw(); } }, 'Remove')))) : null,
+      row);
+  }
+
   function step2auto() {
     const found = st.scan;
     return [h('p', { class: 'wz-lead' }, 'Give Nordle somewhere to look. Fill in any of these: more gives a better guess.'),
       field('Website', input('website', 'https://littlegannet.example'), 'Colours, fonts and the share picture come from the page itself.'),
       field('Instagram', input('instagram', '@yourbrand or the page address'), 'Instagram often asks for a sign-in; if it will not show, paste the bio and captions below.'),
-      field('A folder on this computer', input('folder', 'D:/Brand/Logos'), 'Logos, photos and font files. A file with “logo” in its name gives the best colours.'),
+      field('Files (a style guide, a logo, fonts, photos)', files(), 'A written style guide (Markdown, text, CSS or HTML) is read for colours, fonts, tone and phrases to avoid. A PDF is kept with the brand but cannot be read yet. Added files stay with the brand.'),
+      field('Folders on this computer', folders(), 'Logos, photos and font files, from one folder or several. A file with “logo” in its name gives the best colours.'),
       field('Bio (optional)', (() => { const t = h('textarea', { class: 'field', rows: 2, 'data-field': 'wz-bio' }); t.value = st.bio; t.addEventListener('input', () => { st.bio = t.value; syncScan(); }); return t; })()),
       field('A few of its captions (optional)', (() => { const t = h('textarea', { class: 'field', rows: 4, placeholder: 'Paste three or four recent captions. Nordle reads the usual hashtags and style.', 'data-field': 'wz-captions' }); t.value = st.captions; t.addEventListener('input', () => { st.captions = t.value; syncScan(); }); return t; })()),
       st.scanning ? h('p', { class: 'wz-busy', role: 'status' }, h('i', { class: 'cmt-spin', 'aria-hidden': 'true' }), 'Looking… this can take about ten seconds.') : null,
@@ -257,7 +320,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
   async function doScan() {
     st.scanning = true; draw();
     try {
-      st.scan = await api.post('/brand/scan', { name: st.name, website: st.website, instagram: st.instagram, folder: st.folder, bio: st.bio, captions: st.captions });
+      st.scan = await api.post('/brand/scan', { name: st.name, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, bio: st.bio, captions: st.captions });
       st.guide = guideFromDraft(st.scan.draft, st.name); st.editor = null;
     } catch (e) { st.scan = { found: [], problems: [problem(e)], palette: [], draft: {} }; st.guide = guideFromDraft({}, st.name); st.editor = null; }
     st.scanning = false; draw();
@@ -274,7 +337,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
     try { patch = st.editor.read(); } catch (e) { notify(e.message, { kind: 'error' }); return; }
     st.creating = true; draw();
     try {
-      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: patch });
+      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: patch, files: st.files.map((f) => f.name), uploadSession: st.session });
       st.id = r.id;
       try { await load({ force: true }); } catch { /* the Studio finds it on its next refresh */ }
       onCreated?.(r.id);

@@ -183,7 +183,7 @@ export function createNordleServer(opts) {
     if (seg[0] === 'meta' && method === 'GET') return sendJson(res, 200, { app: 'nordle', version: '0.1.0', port, role });
 
     // Feature modules in src/server/routes/*.mjs plug in here (see routes/index.mjs for the shape of ctx).
-    const routeCtx = { req, res, url, seg, method, role, human, store, pool, origin, readJsonBody, sendJson, sendFile, HttpError, need, needHuman, needAgent, ROOT, reviser: opts.reviser ?? null, autoScheduler: opts.autoScheduler ?? null };
+    const routeCtx = { req, res, url, seg, method, role, human, store, pool, origin, readJsonBody, readBody, sendJson, sendFile, HttpError, need, needHuman, needAgent, ROOT, reviser: opts.reviser ?? null, pickFolder: opts.pickFolder ?? null, autoScheduler: opts.autoScheduler ?? null };
     for (const r of ROUTES.filter((x) => x.scope === 'root' && x.key === seg[0])) {
       if ((await r.handle(routeCtx)) !== false) return;
     }

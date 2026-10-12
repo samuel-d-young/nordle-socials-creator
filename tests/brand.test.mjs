@@ -2,11 +2,12 @@
 // and adding a brand. Who may do what: Claude's token may read a guide; changing one, scanning and creating are the owner's.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AGENT, closeBrowser } from './helpers.mjs';
 import { studio, built } from './studio-helpers.mjs';
-import { scanBrand, scanCaptions, handleOf } from '../src/brand/scan.mjs';
+import { scanBrand, scanCaptions, handleOf, MAX_FOLDERS } from '../src/brand/scan.mjs';
 import { applyGuide, toGuide, newBrand, GuideError } from '../src/brand/guide.mjs';
 
 after(closeBrowser);
@@ -18,6 +19,18 @@ const fakeFetch = async (url) => {
   if (u.startsWith('https://harbour.example')) return new Response(SITE, { status: 200, headers: { 'content-type': 'text/html' } });
   return new Response('', { status: 404 });
 };
+
+test('scanBrand reads several folders and puts what they say together; a missing one is named; no more than eight are read', async () => {
+  const mk = () => mkdtempSync(join(tmpdir(), 'nordle-scan-folder-'));
+  const [a, b] = [mk(), mk()];
+  const gone = join(tmpdir(), 'nordle-no-such-folder-here');
+  const r = await scanBrand({ name: 'Two Folders', folders: [a, b, gone, a], folder: b, fetchImpl: fakeFetch });
+  assert.equal(r.found.filter((t) => t.startsWith(a)).length, 1, 'each folder is read once and named');
+  assert.ok(r.found.some((t) => t.startsWith(b)));
+  assert.ok(r.problems.some((t) => t.includes('was not found') && t.includes(gone)));
+  const many = await scanBrand({ folders: Array.from({ length: 12 }, (_, i) => join(tmpdir(), `nordle-no-such-${i}`)), fetchImpl: fakeFetch });
+  assert.equal(many.problems.filter((t) => t.includes('was not found')).length, MAX_FOLDERS);
+});
 
 test('toGuide shows the five core colours first and keeps other colours after them', () => {
   const g = toGuide({ id: 'b', name: 'B', colors: { ink: '#111111', paper: '#FFFFFF', accent: '#FF0000', accentDark: '#AA0000', muted: '#777777', sky: '#00AAFF' }, fonts: { display: { family: 'A', source: 'google' }, body: { family: 'B', source: 'system' } } });

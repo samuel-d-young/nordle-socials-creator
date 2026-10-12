@@ -29,6 +29,10 @@ export const api = {
   async upload(project, file) {
     return request('POST', `/projects/${project}/assets`, file, { 'content-type': 'application/octet-stream', 'x-filename': encodeURIComponent(file.name) });
   },
+  /** Send one file as raw bytes to an upload route outside a project (the brand wizard's files). */
+  uploadTo(path, file, headers = {}) {
+    return request('POST', path, file, { 'content-type': 'application/octet-stream', 'x-filename': encodeURIComponent(file.name), ...headers });
+  },
   /** Live events for one document. Returns a function that stops listening. */
   events(project, doc, onEvent, onState) {
     const es = new EventSource(`/api/events?project=${encodeURIComponent(project)}&doc=${encodeURIComponent(doc)}&t=${encodeURIComponent(token)}`);

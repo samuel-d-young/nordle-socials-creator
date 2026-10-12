@@ -3,11 +3,12 @@
 // pasted captions and the bio are the dependable way in). Nothing is saved here: the result is a DRAFT the person reviews and edits.
 // Colours are worked out from the pictures and the CSS themselves, never invented; fonts are only named when the files or the page say so.
 
-import { existsSync, readdirSync, statSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { binary } from '../video/ffmpeg.mjs';
+import { UNREADABLE_DOC_EXT, readGuideFile } from './guide-text.mjs';
 
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const FONT = new Set(['.ttf', '.otf', '.woff', '.woff2']);
@@ -48,26 +49,90 @@ export function colorsFromPalette(palette) {
   const accentDark = fromHsl({ ...hsl(accent), l: Math.max(0.12, hsl(accent).l * 0.72) });
   if (!light.length) notes.push('No light background colour found: a soft off-white was used.');
   if (!vivid.length) notes.push('No strong colour found: the most common mid-tone was used as the accent.');
-  return { colors: { ink: toHex(ink), paper: toHex(paper), accent: toHex(accent), accentDark: toHex(accentDark), muted: toHex(mix(ink, paper, 0.55)) }, notes };
+  // the brand's other colours: distinct, still-weighty ones the five above do not already cover (a second brand colour, a highlight)
+  const taken = [paper, accent, ink, accentDark];
+  const extras = items.filter((c) => c.w >= Math.max(3, items[0].w * 0.04) && c.s > 0.18 && c.l > 0.12 && c.l < 0.92 && taken.every((t) => dist(t, c.rgb) > 60));
+  const more = {};
+  for (const name of ['secondary', 'tertiary', 'highlight']) {
+    const c = extras.find((e) => taken.every((t) => dist(t, e.rgb) > 60));
+    if (!c) break;
+    more[name] = toHex(c.rgb); taken.push(c.rgb);
+  }
+  return { colors: { ink: toHex(ink), paper: toHex(paper), accent: toHex(accent), accentDark: toHex(accentDark), muted: toHex(mix(ink, paper, 0.55)), ...more }, notes };
 }
 
-/** Dominant colours of picture files, as Map(hex -> weight). Uses ffmpeg (already needed by Nordle); transparent pixels are ignored. */
+/**
+ * Dominant colours of picture files, as Map(hex -> weight). Uses ffmpeg (already needed by Nordle); transparent pixels are ignored.
+ * Pixels are grouped into coarse bins to find what is common, but each group is reported as the exact colour most often seen in it, so a logo's
+ * #1B6CA8 comes back as #1B6CA8 and not as the middle of its bin. The picture is sampled, not blended, so flat logo colours stay exact.
+ */
 export function paletteOf(files, { weight = 1 } = {}) {
   const out = new Map();
   for (const file of files) {
     let r;
-    try { r = spawnSync(binary('ffmpeg'), ['-v', 'error', '-i', file, '-frames:v', '1', '-vf', 'scale=48:48:flags=area,format=rgba', '-f', 'rawvideo', '-'], { maxBuffer: 48 * 48 * 4 + 1024, windowsHide: true }); } catch { continue; }
+    try { r = spawnSync(binary('ffmpeg'), ['-v', 'error', '-i', file, '-frames:v', '1', '-vf', 'scale=96:96:flags=neighbor,format=rgba', '-f', 'rawvideo', '-'], { maxBuffer: 96 * 96 * 4 + 1024, windowsHide: true }); } catch { continue; }
     if (r.status !== 0 || !r.stdout?.length) continue;
     const px = r.stdout;
+    const bins = new Map();                       // bin -> Map(exact hex -> count)
     for (let i = 0; i + 3 < px.length; i += 4) {
       if (px[i + 3] < 128) continue;
-      const q = (v) => (v >> 4) * 16 + 8;
-      const hex = toHex([q(px[i]), q(px[i + 1]), q(px[i + 2])]);
-      out.set(hex, (out.get(hex) ?? 0) + weight);
+      const bin = ((px[i] >> 4) << 8) | ((px[i + 1] >> 4) << 4) | (px[i + 2] >> 4);
+      const exact = toHex([px[i], px[i + 1], px[i + 2]]);
+      const m = bins.get(bin) ?? bins.set(bin, new Map()).get(bin);
+      m.set(exact, (m.get(exact) ?? 0) + 1);
+    }
+    for (const m of bins.values()) {
+      let total = 0, best = null, bestN = 0;
+      for (const [hex, n] of m) { total += n; if (n > bestN) { best = hex; bestN = n; } }
+      out.set(best, (out.get(best) ?? 0) + total * weight);
     }
   }
   return out;
 }
+
+/** Colours written in an SVG (fill, stroke, stop-color, style): Map(hex -> weight). */
+export function svgPalette(text, weight = 1) {
+  const out = new Map();
+  const body = String(text ?? '').slice(0, 400_000);
+  for (const m of body.matchAll(/(?:fill|stroke|stop-color|flood-color|color)\s*[:=]\s*["']?\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\b/g)) { const h = toHex(fromHex(m[1])); out.set(h, (out.get(h) ?? 0) + weight); }
+  for (const m of body.matchAll(/(?:fill|stroke|stop-color)\s*[:=]\s*["']?\s*(rgba?\([^)]*\))/gi)) { const h = parseColour(m[1]); if (h) out.set(h, (out.get(h) ?? 0) + weight); }
+  return out;
+}
+
+/** A CSS colour (#abc, #aabbcc, rgb(), rgba(), hsl(), hsla()) as #RRGGBB; null when it is not one or is mostly see-through. */
+export function parseColour(raw) {
+  const v = String(raw ?? '').trim();
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(v);
+  if (m) { const h = m[1].length === 8 ? m[1].slice(0, 6) : m[1]; if (m[1].length === 8 && parseInt(m[1].slice(6), 16) < 128) return null; return toHex(fromHex(`#${h}`)); }
+  m = /^rgba?\(\s*([\d.]+%?)[\s,]+([\d.]+%?)[\s,]+([\d.]+%?)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/i.exec(v);
+  if (m) {
+    const ch = (x) => (x.endsWith('%') ? (parseFloat(x) / 100) * 255 : parseFloat(x));
+    const alpha = m[4] === undefined ? 1 : (m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+    return alpha < 0.5 ? null : toHex([ch(m[1]), ch(m[2]), ch(m[3])]);
+  }
+  m = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(%?)\s+([\d.]+)(?:deg)?(?:\s*\/\s*([\d.]+%?))?\s*\)$/i.exec(v);
+  if (m) {
+    const alpha = m[6] === undefined ? 1 : (m[6].endsWith('%') ? parseFloat(m[6]) / 100 : parseFloat(m[6]));
+    if (alpha < 0.5) return null;
+    const L = m[2] ? parseFloat(m[1]) / 100 : parseFloat(m[1]), C = m[4] ? (parseFloat(m[3]) / 100) * 0.4 : parseFloat(m[3]), H = (parseFloat(m[5]) * Math.PI) / 180;
+    const a = C * Math.cos(H), b = C * Math.sin(H);
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, mm = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, ss = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    const lin = [4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * ss, -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * ss, -0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * ss];
+    const gamma = (x) => { const c = Math.min(1, Math.max(0, x)); return (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055) * 255; };
+    return toHex(lin.map(gamma));
+  }
+  m = /^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/i.exec(v);
+  if (m) {
+    const alpha = m[4] === undefined ? 1 : (m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+    if (alpha < 0.5) return null;
+    const hh = (parseFloat(m[1]) % 360 + 360) % 360 / 360, ss = parseFloat(m[2]) / 100, ll = parseFloat(m[3]) / 100;
+    const q = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss, pp = 2 * ll - q;
+    const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? pp + (q - pp) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? pp + (q - pp) * (2 / 3 - t) * 6 : pp; };
+    return toHex([f(hh + 1 / 3) * 255, f(hh) * 255, f(hh - 1 / 3) * 255]);
+  }
+  return null;
+}
+
 const addPalette = (into, from) => { for (const [k, v] of from) into.set(k, (into.get(k) ?? 0) + v); return into; };
 
 // ---- a folder --------------------------------------------------------------------------------------------------------------------
@@ -91,11 +156,16 @@ export function familyOf(file) {
 }
 
 export function scanFolder(folder) {
-  const found = [], problems = [];
-  if (!folder) return { found, problems, palette: new Map(), fonts: [] };
-  if (!existsSync(folder) || !statSync(folder).isDirectory()) return { found, problems: [`The folder "${folder}" was not found.`], palette: new Map(), fonts: [] };
+  if (!folder) return { found: [], problems: [], palette: new Map(), fonts: [], docs: [] };
+  if (!existsSync(folder) || !statSync(folder).isDirectory()) return { found: [], problems: [`The folder "${folder}" was not found.`], palette: new Map(), fonts: [], docs: [] };
   const files = [];
   walk(folder, 0, files);
+  return scanFileList(files, { where: 'the folder' });
+}
+
+/** Read a set of files (from a folder, or ones the person added): pictures for colours, font files for fonts, written style guides for what they say. */
+export function scanFileList(files, { where = 'the files you added' } = {}) {
+  const found = [], problems = [];
   const images = files.filter((f) => IMG.has(extname(f).toLowerCase()));
   const fontFiles = files.filter((f) => FONT.has(extname(f).toLowerCase()));
   const logos = images.filter((f) => /logo|brand|mark|wordmark|palette|style/i.test(basename(f)));
@@ -103,12 +173,27 @@ export function scanFolder(folder) {
   const palette = new Map();
   if (logos.length) addPalette(palette, paletteOf(logos.slice(0, 5), { weight: 4 }));
   if (rest.length) addPalette(palette, paletteOf(rest, { weight: 1 }));
-  found.push(`Looked through ${files.length} files in the folder: ${images.length} pictures${logos.length ? ` (${logos.length} look like logos)` : ''}, ${fontFiles.length} font files.`);
-  if (!images.length) problems.push('There are no pictures in that folder to take colours from.');
-  else if (!logos.length) found.push('No file is named like a logo, so colours came from the pictures themselves. A logo gives better colours: name it with "logo" in the file name.');
-  const fonts = [...new Set(fontFiles.map(familyOf).filter(Boolean))].slice(0, 4);
-  if (fonts.length) found.push(`Fonts in the folder: ${fonts.join(', ')}.`);
-  return { found, problems, palette, fonts, logos: logos.slice(0, 3) };
+  const svgs = files.filter((f) => /\.svg$/i.test(f)).slice(0, 8);
+  for (const f of svgs) { try { addPalette(palette, svgPalette(readFileSync(f, 'utf8'), /logo|brand|mark|wordmark/i.test(basename(f)) ? 400 : 60)); } catch { /* unreadable svg */ } }
+  if (svgs.length) found.push(`Read the colours in ${svgs.length} SVG file${svgs.length === 1 ? '' : 's'}.`);
+  found.push(`Looked through ${files.length} files in ${where}: ${images.length} pictures${logos.length ? ` (${logos.length} look like logos)` : ''}, ${fontFiles.length} font files.`);
+  // written style guides: any text file, but in a big folder only the ones named like a guide
+  const textFiles = files.filter((f) => /\.(md|markdown|txt|css|html?|json)$/i.test(f)).filter((f) => files.length <= 12 || /style|brand|guide|voice|tone|identity|colou?r|typo/i.test(basename(f))).slice(0, 6);
+  const docs = textFiles.map(readGuideFile).filter((d) => d && (d.colours.size || d.fonts.display || d.fonts.body || d.fonts.other.length || d.tone.length || d.banned.length));
+  for (const d of docs) {
+    for (const [k, v] of d.colours) palette.set(k, (palette.get(k) ?? 0) + v);
+    const named = [...new Set([d.fonts.display, d.fonts.body, ...d.fonts.other].filter(Boolean))];
+    const bits = [d.colours.size ? `${d.colours.size} colours` : null, named.length ? `fonts (${named.slice(0, 3).join(', ')})` : null, d.tone.length ? `tone (${d.tone.slice(0, 4).join(', ')})` : null, d.banned.length ? `${d.banned.length} phrases to avoid` : null].filter(Boolean);
+    found.push(`Read the style guide "${d.name}": ${bits.join('; ')}.`);
+  }
+  for (const f of files.filter((x) => UNREADABLE_DOC_EXT.has(extname(x).toLowerCase()))) problems.push(`"${basename(f)}" is a ${extname(f).slice(1).toUpperCase()} file, which Nordle cannot read yet. It is kept with the brand: paste its colours, fonts and tone into the boxes instead.`);
+  if (!images.length && !docs.length && !svgs.length) problems.push(`There are no pictures or readable style guides in ${where} to take colours from.`);
+  else if (images.length && !logos.length) found.push('No file is named like a logo, so colours came from the pictures themselves. A logo gives better colours: name it with "logo" in the file name.');
+  const fileFonts = [...new Set(fontFiles.map(familyOf).filter(Boolean))].slice(0, 4);
+  if (fileFonts.length) found.push(`Fonts in ${where}: ${fileFonts.join(', ')}.`);
+  const guideFonts = docs.flatMap((d) => [d.fonts.display, d.fonts.body, ...d.fonts.other]).filter(Boolean);
+  const fonts = [...new Set([...fileFonts, ...guideFonts])].slice(0, 4);
+  return { found, problems, palette, fonts, fileFonts, docs, logos: logos.slice(0, 3) };
 }
 
 // ---- web pages ---------------------------------------------------------------------------------------------------------------------
@@ -153,20 +238,52 @@ const decodeEntities = (s) => s.replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fr
 /** Colours and fonts a page's CSS says it uses. Returns { palette: Map, fonts: {display, body} }. */
 export function cssFacts(css) {
   const palette = new Map();
-  const add = (hex, w) => { const h = toHex(fromHex(hex)); palette.set(h, (palette.get(h) ?? 0) + w); };
-  for (const m of css.matchAll(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g)) add(`#${m[1]}`, 1);
-  for (const m of css.matchAll(/--[a-z0-9-]*(?:primary|brand|accent|main|theme|heading|button)[a-z0-9-]*\s*:\s*(#[0-9a-fA-F]{3,6})\b/gi)) add(m[1], 12);
+  const add = (hex, w) => { if (!hex) return; const h = toHex(fromHex(hex)); palette.set(h, (palette.get(h) ?? 0) + w); };
+  const text = String(css ?? '');
+  // every colour written anywhere counts a little; the places that do a job count more
+  const seen = new Map();
+  for (const m of text.matchAll(/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\)/g)) { const c = parseColour(m[0]); if (c) seen.set(c, (seen.get(c) ?? 0) + 1); }
+  for (const [c, n] of seen) add(c, Math.min(4, Math.log2(n + 1)));
+  const rules = [...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].replace(/\/\*[\s\S]*?\*\//g, '').split(';').pop().trim(), decls: [...m[2].matchAll(/([a-z-]+|--[\w-]+)\s*:\s*([^;}]+)/gi)].map((d) => [d[1].toLowerCase(), d[2].trim()]) }));
+  const vars = new Map();
+  for (const r of rules) for (const [k, v] of r.decls) if (k.startsWith('--')) vars.set(k, v);
+  const resolve = (v, depth = 0) => { const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*([^)]*))?\)$/i.exec(String(v).trim()); return m && depth < 4 ? resolve(vars.get(m[1]) ?? m[2] ?? '', depth + 1) : String(v).trim(); };
+  const NAMED = /primary|brand|accent|main|theme|heading|button|secondary|cta|link|highlight|colou?r-?\d|logo/i;
+  for (const [k, v] of vars) { const c = parseColour(resolve(v)); if (c) add(c, NAMED.test(k) ? 12 : /colou?r|bg|background|text|ink|paper|surface/i.test(k) ? 6 : 0); }
+  const DOES_A_JOB = /(^|[\s,>.#])(h[1-4]|a|button|nav|header|footer|btn|button|cta|hero|primary|accent|brand|logo|badge)\b/i;
+  for (const r of rules) for (const [k, v0] of r.decls) {
+    if (k.startsWith('--')) continue;
+    const c = parseColour(resolve(v0.split(/\s+/).find((t) => /^(#|rgb|hsl|var)/i.test(t)) ?? v0));
+    if (!c) continue;
+    if (/^(body|html|:root)\b/.test(r.sel) && /^background(-color)?$/.test(k)) add(c, 8);
+    else if (/^(body|html|:root|p)\b/.test(r.sel) && k === 'color') add(c, 8);
+    else if (DOES_A_JOB.test(r.sel) && /^(color|background(-color)?|border(-color)?|fill)$/.test(k)) add(c, 5);
+  }
+  // fonts: through var(--font-x), @font-face (a font the site ships itself), and what headings and the body use
   const count = { display: new Map(), body: new Map() };
-  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const fam = /font-family\s*:\s*([^;}]+)/i.exec(m[2]);
+  const faces = new Set();
+  const first = (raw) => { const f = resolve(raw).split(',')[0].trim().replace(/^["']|["']$/g, '').replace(/!important/i, '').trim(); return f && !GENERIC.has(f.toLowerCase()) && !f.startsWith('var(') ? f : null; };
+  for (const r of rules) {
+    const fam = r.decls.find(([k]) => k === 'font-family');
     if (!fam) continue;
-    const first = fam[1].split(',')[0].trim().replace(/^["']|["']$/g, '').replace(/!important/i, '').trim();
-    if (!first || GENERIC.has(first.toLowerCase()) || first.startsWith('var(')) continue;
-    const bucket = /\bh[1-3]\b|heading|title|display|hero/i.test(m[1]) ? count.display : count.body;
-    bucket.set(first, (bucket.get(first) ?? 0) + 1);
+    const name = first(fam[1]);
+    if (!name) continue;
+    if (/^@font-face/i.test(r.sel)) { faces.add(name); continue; }
+    const bucket = /\bh[1-4]\b|heading|title|display|hero|headline/i.test(r.sel) ? count.display : count.body;
+    const weight = /^(body|html|:root|\*)$/i.test(r.sel) || /\bh1\b/i.test(r.sel) ? 3 : 1;
+    bucket.set(name, (bucket.get(name) ?? 0) + weight);
+  }
+  for (const [k, v] of vars) {
+    if (!/^--(font|type|typeface|ff)[\w-]*/i.test(k)) continue;
+    const name = first(v);
+    if (!name) continue;
+    const bucket = /head|display|title|serif-?display/i.test(k) ? count.display : /body|text|base|sans|copy|paragraph/i.test(k) ? count.body : null;
+    if (bucket) bucket.set(name, (bucket.get(name) ?? 0) + 4);
   }
   const top = (m) => [...m].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  return { palette, fonts: { display: top(count.display), body: top(count.body) } };
+  const display = top(count.display), body = top(count.body);
+  const shipped = [...faces];
+  return { palette, fonts: { display: display ?? shipped[0] ?? null, body: body ?? shipped.find((f) => f !== display) ?? null }, shipped };
 }
 const googleFonts = (html) => [...html.matchAll(/fonts\.googleapis\.com\/css2?\?([^"'<>\s]+)/gi)].flatMap((m) => [...m[1].matchAll(/family=([^&:;"']+)/g)].map((f) => decodeURIComponent(f[1].replace(/\+/g, ' '))));
 
@@ -179,17 +296,43 @@ export async function scanWebsite(url, { fetchImpl }) {
   out.meta = meta;
   found.push(`Read ${page.url}${meta['og:site_name'] || meta.title ? `: "${meta['og:site_name'] ?? meta.title}"` : ''}.`);
   let css = [...page.text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
-  const links = [...page.text.matchAll(/<link\b[^>]*rel\s*=\s*["']?stylesheet[^>]*>/gi)].map((m) => attr(m[0], 'href')).filter(Boolean).slice(0, 3);
-  for (const href of links) {
-    try { css += `\n${(await getText(new URL(href, page.url).href, { fetchImpl, max: MAX_CSS })).text}`; } catch { /* a stylesheet that will not load is skipped */ }
-  }
+  const links = [...page.text.matchAll(/<link\b[^>]*rel\s*=\s*["']?stylesheet[^>]*>/gi)].map((m) => attr(m[0], 'href')).filter(Boolean).filter((h) => !/fonts\.googleapis\.com/i.test(h)).slice(0, 8);
+  const seenCss = new Set();
+  const loadCss = async (href, depth = 0) => {
+    let abs; try { abs = new URL(href, page.url).href; } catch { return; }
+    if (seenCss.has(abs) || seenCss.size >= 10) return;
+    seenCss.add(abs);
+    try {
+      const got = (await getText(abs, { fetchImpl, max: MAX_CSS })).text;
+      css += `\n${got}`;
+      if (depth < 1) for (const m of got.matchAll(/@import\s+(?:url\()?["']?([^"')\s;]+)/gi)) if (!/fonts\.googleapis\.com/i.test(m[1])) await loadCss(new URL(m[1], abs).href, depth + 1);
+    } catch { /* a stylesheet that will not load is skipped */ }
+  };
+  for (const href of links) await loadCss(href);
   const facts = cssFacts(css);
   addPalette(out.palette, facts.palette);
   if (meta['theme-color'] && /^#[0-9a-f]{3,6}$/i.test(meta['theme-color'])) { out.palette.set(toHex(fromHex(meta['theme-color'])), (out.palette.get(toHex(fromHex(meta['theme-color']))) ?? 0) + 40); found.push(`The site's own theme colour is ${meta['theme-color']}.`); }
   const gf = googleFonts(page.text + css);
   out.fonts = { display: facts.fonts.display ?? gf[0] ?? null, body: facts.fonts.body ?? gf[1] ?? gf[0] ?? null };
   if (out.fonts.display || out.fonts.body) found.push(`Fonts used on the site: ${[...new Set([out.fonts.display, out.fonts.body].filter(Boolean))].join(', ')}.`);
-  if (!out.palette.size) problems.push('No colours were found in the site\'s styles.');
+  if (facts.shipped?.length) found.push(`Fonts the site ships itself: ${facts.shipped.slice(0, 4).join(', ')}.`);
+  if (!out.palette.size) problems.push('No colours were found in the site\'s styles. Sites that draw themselves with JavaScript, or load their styles late, cannot be read this way: add the logo as a file instead.');
+  // the logo (and the site's icon) are the truest brand colours on the page
+  const imgTags = [...page.text.matchAll(/<img\b[^>]*>/gi)].map((m) => m[0]);
+  const logoTag = imgTags.find((t) => /logo/i.test(t));
+  const iconTag = [...page.text.matchAll(/<link\b[^>]*rel\s*=\s*["']?(?:apple-touch-icon|icon|shortcut icon)[^>]*>/gi)].map((m) => m[0])[0];
+  for (const [label, tag, w] of [['logo', logoTag, 8], ['icon', iconTag, 3]]) {
+    const src = tag && (attr(tag, label === 'logo' ? 'src' : 'href') ?? attr(tag, 'data-src'));
+    if (!src || src.startsWith('data:')) continue;
+    let abs; try { abs = new URL(src, page.url).href; } catch { continue; }
+    const got = await getImage(abs, { fetchImpl });
+    if (!got) continue;
+    const head = got.subarray(0, 400).toString('utf8');
+    let pal = new Map();
+    if (/<svg[\s>]/i.test(head) || /\.svg(\?|$)/i.test(abs)) pal = svgPalette(got.toString('utf8'), w * 10);
+    else { const dir2 = mkdtempSync(join(tmpdir(), 'nordle-scan-')); try { const f = join(dir2, 'img'); writeFileSync(f, got); pal = paletteOf([f], { weight: w }); } finally { rmSync(dir2, { recursive: true, force: true }); } }
+    if (pal.size) { addPalette(out.palette, pal); found.push(`Colours were also taken from the site's ${label}.`); }
+  }
   const img = meta['og:image'] ? await getImage(new URL(meta['og:image'], page.url).href, { fetchImpl }) : null;
   if (img) {
     const dir = mkdtempSync(join(tmpdir(), 'nordle-scan-'));
@@ -245,6 +388,11 @@ export function scanCaptions(text) {
  * @param {{name?:string, website?:string, instagram?:string, folder?:string, captions?:string, bio?:string, fetchImpl?:Function}} input
  * @returns {Promise<{draft:object, found:string[], problems:string[], hashtags:string[], palette:string[]}>}
  */
+/** The most folders one scan reads. */
+export const MAX_FOLDERS = 8;
+/** The most added files one scan reads. */
+export const MAX_UPLOADS = 60;
+
 export async function scanBrand(input = {}) {
   const fetchImpl = input.fetchImpl ?? globalThis.fetch;
   const found = [], problems = [];
@@ -252,10 +400,28 @@ export async function scanBrand(input = {}) {
   let fonts = { display: null, body: null };
   const meta = {};
 
-  const folder = scanFolder(String(input.folder ?? '').trim());
-  found.push(...folder.found); problems.push(...folder.problems);
-  addPalette(palette, folder.palette);
-  if (folder.fonts.length) fonts = { display: folder.fonts[0], body: folder.fonts[1] ?? folder.fonts[0] };
+  // one folder (`folder`) or several (`folders`): each is read in turn and what they hold is put together
+  const folderList = [...new Set([...(Array.isArray(input.folders) ? input.folders : []), input.folder].map((f) => String(f ?? '').trim()).filter(Boolean))].slice(0, MAX_FOLDERS);
+  const folderFonts = [];
+  const guideDocs = [];
+  const uploaded = Array.isArray(input.uploads) ? input.uploads.filter((f) => typeof f === 'string' && existsSync(f)).slice(0, MAX_UPLOADS) : [];
+  const sources = [...folderList.map((path) => ({ path, one: scanFolder(path) })), ...(uploaded.length ? [{ path: 'the files you added', one: scanFileList(uploaded, { where: 'the files you added' }) }] : [])];
+  for (const { path, one } of sources) {
+    found.push(...(sources.length > 1 ? one.found.map((t, i) => (i === 0 ? `${path}: ${t}` : t)) : one.found));
+    problems.push(...one.problems);
+    addPalette(palette, one.palette);
+    folderFonts.push(...(one.fileFonts ?? one.fonts));
+    guideDocs.push(...(one.docs ?? []));
+  }
+  if (folderFonts.length) fonts = { display: folderFonts[0], body: folderFonts[1] ?? folderFonts[0] };
+  else {   // no font files: take the fonts a written style guide names
+    const named = guideDocs.flatMap((d) => [d.fonts.display, d.fonts.body, ...d.fonts.other]).filter(Boolean);
+    const display = guideDocs.map((d) => d.fonts.display).find(Boolean) ?? named[0] ?? null;
+    const body = guideDocs.map((d) => d.fonts.body).find(Boolean) ?? named.find((f) => f !== display) ?? display;
+    if (display || body) fonts = { display, body };
+  }
+  const guideTone = [...new Set(guideDocs.flatMap((d) => d.tone))].slice(0, 8);
+  const guideBanned = [...new Set(guideDocs.flatMap((d) => d.banned))].slice(0, 12);
 
   if (String(input.website ?? '').trim()) {
     let url = String(input.website).trim();
@@ -286,8 +452,8 @@ export async function scanBrand(input = {}) {
   const draft = {
     ...(name ? { name } : {}),
     ...(colors ? { colors } : {}),
-    ...((fonts.display || fonts.body) ? { fonts: { ...(fonts.display ? { display: { family: fonts.display, source: folder.fonts.includes(fonts.display) ? 'system' : 'google' } } : {}), ...(fonts.body ? { body: { family: fonts.body, source: folder.fonts.includes(fonts.body) ? 'system' : 'google' } } : {}) } } : {}),
-    voice: { tone: [caps.hints.emojiHeavy ? 'playful, with emoji' : null, caps.hints.exclaims ? 'upbeat' : null].filter(Boolean), bannedPhrases: [] },
+    ...((fonts.display || fonts.body) ? { fonts: { ...(fonts.display ? { display: { family: fonts.display, source: folderFonts.includes(fonts.display) ? 'system' : 'google' } } : {}), ...(fonts.body ? { body: { family: fonts.body, source: folderFonts.includes(fonts.body) ? 'system' : 'google' } } : {}) } } : {}),
+    voice: { tone: [...guideTone, caps.hints.emojiHeavy ? 'playful, with emoji' : null, caps.hints.exclaims ? 'upbeat' : null].filter(Boolean), bannedPhrases: guideBanned },
     links: { ...(handle ? { handle: `@${handle}` } : {}), ...(String(input.website ?? '').trim() ? { website: /^https?:\/\//i.test(String(input.website).trim()) ? String(input.website).trim() : `https://${String(input.website).trim()}` } : {}) },
     ...(noteParts.length ? { note: noteParts.join('\n') } : {}),
   };

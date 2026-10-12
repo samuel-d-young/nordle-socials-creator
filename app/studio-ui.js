@@ -1,5 +1,6 @@
 // Small pieces the Studio views share: status marks, format glyphs, thumbnails, key caps, empty states, notices, tooltips.
 
+import { api } from './api.js';
 import { h, icon, dialog } from './dom.js';
 import { S, project } from './studio-store.js';
 
@@ -207,3 +208,26 @@ export function cycleThemeGlobal() {
   setTheme(order[(order.indexOf(themeMode()) + 1) % 3]);
 }
 export { S };
+
+/**
+ * A text input for a folder path with a "Choose…" button beside it that opens the system's folder window (the server shows it on this computer: a web
+ * page cannot learn a folder's full path). Typing or pasting still works. `onChange` runs when a folder is chosen; `onPick(path)`, if given, takes the
+ * path instead of the box (a list of folders).
+ * @returns {HTMLElement} a wrapper holding `input` and the button; the input is also on `.input`.
+ */
+export function folderPicker(input, { title = 'Choose a folder', field = 'choose-folder', onChange, onPick } = {}) {
+  const hint = h('span', { class: 'muted bg-hint pick-note', role: 'status', hidden: true });
+  const button = h('button', { class: 'btn', type: 'button', 'data-act': field, 'aria-label': `${title} (opens a folder window)` }, 'Choose…');
+  button.addEventListener('click', async () => {
+    button.disabled = true; button.textContent = 'Waiting…'; hint.hidden = false; hint.textContent = 'A folder window is open on this computer. It may be behind this one.';
+    try {
+      const r = await api.post('/brand/pick-folder', { title });
+      if (r.path) { if (onPick) onPick(r.path); else { input.value = r.path; input.dispatchEvent(new Event('input', { bubbles: true })); } onChange?.(r.path); hint.hidden = true; }
+      else hint.textContent = r.message || 'No folder chosen.';
+    } catch (e) { hint.textContent = e.message || 'The folder window could not be opened. Type or paste the path instead.'; }
+    finally { button.disabled = false; button.textContent = 'Choose…'; }
+  });
+  const wrap = h('span', { class: 'pick-row' }, input, button, hint);
+  wrap.input = input;
+  return wrap;
+}
