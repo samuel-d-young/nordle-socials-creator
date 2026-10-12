@@ -37,5 +37,8 @@ export function summarise(res) {
 
 export const jobStatus = (dir) => ({ running: running.has(dir) ? { ...running.get(dir) } : null, last: finished.get(dir) ?? null });
 
+/** Is Claude working on anything right now, in any project? (Signing out in the middle of a job would make it fail.) */
+export const anyJobRunning = () => running.size > 0;
+
 /** Forget everything (tests). */
 export function clearJobs() { running.clear(); finished.clear(); }

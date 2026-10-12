@@ -6,7 +6,7 @@ import { EventEmitter } from 'node:events';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cancelLogin, loginState, resetLogin, startLogin } from '../src/calendar/claude-login.mjs';
+import { cancelLogin, loginState, logoutClaude, resetLogin, startLogin } from '../src/calendar/claude-login.mjs';
 import { AGENT, closeBrowser } from './helpers.mjs';
 import { studio, studioPage, TODAY } from './studio-helpers.mjs';
 
@@ -114,5 +114,74 @@ test('Add a brand: signed out, Read my screenshot offers Sign in; after signing 
     claudeStatusFn: () => ({ found: true, path: '/x/claude', signedIn: isSigned }),
     claudeLoginFns: { start: () => { started += 1; return { state: 'waiting', url: 'https://claude.ai/x' }; }, cancel: () => ({ state: 'cancelled' }), state: () => ({ state: isSigned ? 'done' : 'waiting', url: 'https://claude.ai/x' }) },
     brandReader: async () => { read += 1; return { colors: [{ name: 'Ocean', hex: '#1B6CA8' }], fonts: { heading: 'Lora' } }; },
+  });
+});
+
+// ---- signing out, and switching to another account --------------------------------------------------------------------------------------------------------
+
+test('logoutClaude runs `claude auth logout`, stops a waiting sign-in, and is done only when Claude Code says it is signed out', () => {
+  const calls = [];
+  let signedIn = true;
+  const run = (cmd, args) => { calls.push([cmd, args]); if (args.join(' ') === 'auth logout') signedIn = false; return { status: 0 }; };
+  const status = () => ({ found: true, path: FOUND.path, signedIn });
+  const g = fakeLogin();
+  startLogin({ spawn: g.spawn, found: FOUND, status: () => ({ found: true, signedIn: false }) });
+  const r = logoutClaude({ run, found: FOUND, status });
+  assert.deepEqual(r, { ok: true, signedOut: true });
+  assert.deepEqual(calls, [['/x/claude', ['auth', 'logout']]]);
+  assert.equal(g.calls[0].child.killed, true, 'a sign-in that was waiting is stopped');
+  assert.equal(loginState().state, 'idle');
+  // the program says it worked but the login is still there
+  const stuck = logoutClaude({ run: () => ({ status: 0 }), found: FOUND, status: () => ({ found: true, signedIn: true }) });
+  assert.equal(stuck.ok, false);
+  assert.match(stuck.error, /still says it is signed in/);
+  assert.match(logoutClaude({ run: () => ({ error: new Error('boom') }), found: FOUND, status }).error, /could not sign out: boom/);
+  assert.match(logoutClaude({ found: { path: null }, status }).error, /not installed/);
+});
+
+test('the sign-out route: owner only, refused while Claude is working, the account email is the owner\'s to see and never Claude\'s', async () => {
+  let signedIn = true, busy = false;
+  const fns = { start: () => ({ state: 'waiting' }), cancel: () => ({ state: 'cancelled' }), state: () => ({ state: 'idle' }), logout: () => { signedIn = false; return { ok: true }; }, busy: () => busy };
+  await studio(async ({ call }) => {
+    assert.equal((await call('/claude', 'GET')).body.account, 'owner@example.test', 'the owner sees whose account it is');
+    assert.equal((await call('/claude', 'GET', undefined, AGENT)).body.account, undefined, 'Claude does not');
+    assert.equal((await call('/claude/logout', 'POST', {}, AGENT)).status, 403, 'Claude cannot sign itself out');
+    busy = true;
+    const refused = await call('/claude/logout', 'POST', {});
+    assert.equal(refused.status, 409);
+    assert.match(refused.body.errors[0].message, /working on something/);
+    assert.equal(signedIn, true, 'nothing was signed out');
+    busy = false;
+    const ok = await call('/claude/logout', 'POST', {});
+    assert.deepEqual([ok.status, ok.body.signedIn], [200, false]);
+    assert.equal(signedIn, false);
+  }, { claudeStatusFn: () => ({ found: true, path: '/x/claude', signedIn, ...(signedIn ? { account: 'owner@example.test' } : {}) }), claudeLoginFns: fns });
+});
+
+test('Claude account window: shows who is signed in, Switch account signs out and offers the sign-in, and the banner follows', async () => {
+  let signedIn = true, loggedOut = 0, started = 0;
+  await studioPage(async ({ page, open }) => {
+    await open(`#/s/month?today=${TODAY}`);
+    await page.waitForSelector('[data-act="open-claude-account"]');
+    assert.equal(await page.locator('.claude-bar:not(.hidden)').count(), 0, 'signed in: no banner');
+    await page.locator('[data-act="open-claude-account"]').click();
+    await page.waitForSelector('[data-state="claude-signed-in"]');
+    assert.equal(await page.locator('[data-field="claude-email"]').innerText(), 'owner@example.test');
+    await page.locator('[data-act="claude-switch"]').click();
+    await page.waitForSelector('[data-state="claude-signed-out"]');
+    assert.equal(loggedOut, 1);
+    assert.match(await page.locator('[data-state="claude-signed-out"]').innerText(), /Now sign in with the other account/);
+    await page.waitForSelector('dialog [data-act="claude-signin"]');
+    await page.waitForSelector('.claude-bar:not(.hidden)', { timeout: 15000 });
+    assert.match(await page.locator('.claude-bar').innerText(), /not signed in/);
+    await page.locator('dialog [data-act="claude-signin"]').click();
+    await page.waitForSelector('dialog [data-state="signin-waiting"]');
+    assert.equal(started, 1);
+    signedIn = true;   // the owner approved with the other account in the browser
+    await page.waitForSelector('dialog [data-state="claude-signed-in"]', { timeout: 30000 });
+    await page.waitForSelector('.claude-bar.hidden', { state: 'attached', timeout: 15000 });
+  }, {
+    claudeStatusFn: () => ({ found: true, path: '/x/claude', signedIn, ...(signedIn ? { account: 'owner@example.test' } : {}) }),
+    claudeLoginFns: { start: () => { started += 1; return { state: 'waiting', url: 'https://claude.ai/x' }; }, cancel: () => ({ state: 'cancelled' }), state: () => ({ state: signedIn ? 'done' : 'waiting' }), logout: () => { signedIn = false; loggedOut += 1; return { ok: true }; }, busy: () => false },
   });
 });

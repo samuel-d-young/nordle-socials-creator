@@ -124,7 +124,7 @@ Part 2, try it (use the nordle_* tools and the Studio in the browser; read the g
    whether Nordle asks me for one clearly. Then, if ffmpeg is installed: use "Edit videos you already have" on the Create page with one short video of mine (or one you make with ffmpeg), open it in
    the video editor, click a title on the picture, double-click it and change its words, play it, split a clip (S), delete one, undo (Command+Z on a Mac,
    Ctrl+Z elsewhere), and say whether the picture and sound stay in step.
-7. Check the small things: the "Nordle by Samuel Young" credit in the left bar, and whether the Studio shows a notice about an update.
+7. Check the small things: the "Claude account" window in the left bar (it shows who Claude is signed in as, with Switch account and Sign out; do NOT actually sign out unless I say so), the "Nordle by Samuel Young" credit in the left bar, and whether the Studio shows a notice about an update.
 8. Export or schedule nothing outside this computer. Do not enter any real key or password.
 
 Part 3, report. Write `nordle-test-report.md` in a folder outside the Nordle folder, with:

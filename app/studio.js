@@ -1,6 +1,7 @@
 // The Studio: Nordle's front door. Owns the page frame (rail, masthead, filters, views, detail sheet), the URL, the keyboard and
 // the refresh. The views themselves live in studio-month / wall / list / queue / plan; the post's page in studio-detail.
 
+import { openClaudeAccount } from './studio-claude.js';
 import { h, icon, dialog } from './dom.js';
 import {
   S, VIEWS, STATUS_GROUPS, addMonths, brandCounts, buildQueue, dateFmt, figures, inBrand, load, matches, months, monthOf, patchPost, project, subscribe, update, visible,
@@ -255,6 +256,7 @@ function renderRail() {
       h('button', { class: 'rf', type: 'button', onclick: () => openConnect('buffer'), title: hostingNote() || 'Publishing: platforms, accounts and where your pictures and video are hosted' }, icon('calendarSend', 15), h('span', {}, 'Publishing'),
         hostingNote() ? h('span', { class: 'rf-n rf-ok', 'data-state': 'hosting-ready', title: hostingNote() }, 'Hosting on') : null),
       h('button', { class: 'rf', type: 'button', 'data-act': 'open-stock', onclick: () => openStock({ project: S.brand !== 'all' ? S.brand : '' }), title: 'Stock libraries: add a library and its key, and search photos, video, music and sound effects' }, icon('film', 15), h('span', {}, 'Stock')),
+      h('button', { class: 'rf', type: 'button', 'data-act': 'open-claude-account', onclick: openClaudeAccount, title: 'The Claude account Nordle uses: see who it is, sign out, or switch to another' }, icon('sparkle', 15), h('span', {}, 'Claude account')),
       h('a', { class: 'rf', href: '#/projects' }, icon('home', 15), h('span', {}, 'Library')),
       h('a', { class: 'rf rf-credit', href: 'https://github.com/samuel-d-young/nordle-socials-creator', target: '_blank', rel: 'noopener', title: 'Nordle was created by Samuel Young and is free to use under CC BY 4.0. Credit him if you share it or build on it.' }, h('span', {}, 'Nordle by Samuel Young'))));
 }
@@ -754,4 +756,4 @@ async function checkClaude() {
     claudeSignIn({ onReady: () => { el.claude.classList.add('hidden'); notify('Signed in. Nordle can use Claude now.', { kind: 'ok' }); } }));
   el.claude.classList.remove('hidden');
 }
-export function startUpdateChecks() { checkClaude(); checkUpdate(); clearInterval(updateTimer); updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkUpdate(); }, 6 * 3600 * 1000); }
+export function startUpdateChecks() { window.addEventListener('nordle:claude', checkClaude); checkClaude(); checkUpdate(); clearInterval(updateTimer); updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkUpdate(); }, 6 * 3600 * 1000); }

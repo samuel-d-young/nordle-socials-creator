@@ -2,7 +2,7 @@
 // Nordle cannot approve for you, but it can do everything else: start `claude auth login` itself, let the browser open, show the link in case it does not, and notice
 // the moment you are signed in. One click in the Studio; nothing to type. Only one sign-in runs at a time, and it gives up after ten minutes.
 
-import { spawn as nodeSpawn } from 'node:child_process';
+import { spawn as nodeSpawn, spawnSync } from 'node:child_process';
 import { claudeFound, claudeStatus } from './claude-bin.mjs';
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -55,6 +55,23 @@ export function cancelLogin() {
   last = { state: 'cancelled' };
   current = null;
   return { state: 'cancelled' };
+}
+
+/**
+ * Sign out of Claude Code on this computer (`claude auth logout`), so a different account can sign in. Stops a sign-in that is waiting first.
+ * It only removes this copy's saved login; nothing at Anthropic is deleted. Success is Claude Code saying it is signed out afterwards.
+ * @param {{ run?: Function, found?: object, status?: Function }} [o]
+ * @returns {{ ok: boolean, signedOut?: boolean, error?: string }}
+ */
+export function logoutClaude({ run = spawnSync, found = claudeFound(), status = claudeStatus } = {}) {
+  if (!found.path) return { ok: false, error: 'Claude Code is not installed on this computer, so there is nothing to sign out of.' };
+  cancelLogin();
+  const r = run(found.path, ['auth', 'logout'], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...(/\.(cmd|bat)$/i.test(found.path) ? { shell: true } : {}) });
+  if (r.error) return { ok: false, error: `Claude Code could not sign out: ${r.error.message}` };
+  const now = status({ found });
+  if (now.signedIn === true) return { ok: false, error: 'Claude Code still says it is signed in. Try again, or run: claude auth logout' };
+  last = { state: 'idle' };
+  return { ok: true, signedOut: true };
 }
 
 /** Forget everything (tests). */
