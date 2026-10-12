@@ -321,6 +321,7 @@ function summarize(project, lane, item, docId, calendar) {
     approvedAt: approval && !approvalStale ? approval.date : null,
     approvalStale,
     build: buildOf(project, item, calendar),
+    campaign: item?.campaign ?? null,
     revising: !!(item && item.status === 'building' && item.doc),   // the designer is changing a post the owner sent back
     // the designer has made what the owner asked for and the post is back for another look ("Updated"); false once it is signed off again
     revised: !!(item && item.status === 'built' && needsReview && (item.feedback ?? []).some((f) => (f.by ?? 'owner') === 'owner' && f.resolved)),
@@ -367,6 +368,7 @@ export function collect(store, { today } = {}) {
       handle: brand.links?.handle ?? null,
       timezone: calendar?.timezone ?? null,
       hasCalendar: !!calendar,
+      campaigns: calendar?.campaigns ?? [],
       settings: {
         perMonth: calendar?.settings?.perMonth ?? null,
         pillars: calendar?.settings?.pillars ?? [],

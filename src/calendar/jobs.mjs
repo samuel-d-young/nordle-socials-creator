@@ -32,7 +32,7 @@ export function summarise(res) {
   if (!ran.length) return { outcome: 'nothing', error: res?.skipped ?? (res?.due?.length === 0 ? 'Nothing was due to build.' : 'Nothing needed doing.') };
   const first = ran[0];
   const error = first.error && SIGNED_OUT.test(first.error) ? SIGNED_OUT_MESSAGE : first.error;
-  return { outcome: first.outcome, ...(first.added ? { added: first.added.length } : {}), ...(error ? { error } : {}), runs: ran.length };
+  return { outcome: first.outcome, ...(first.added ? { added: first.added.length } : {}), ...(error ? { error } : {}), ...(first.turns ? { turns: first.turns } : {}), ...(typeof first.costUsd === 'number' ? { costUsd: Math.round(first.costUsd * 100) / 100 } : {}), runs: ran.length };
 }
 
 export const jobStatus = (dir) => ({ running: running.has(dir) ? { ...running.get(dir) } : null, last: finished.get(dir) ?? null });

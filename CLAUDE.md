@@ -2,7 +2,7 @@
 
 Local app (Node, 127.0.0.1) for video cut from real footage, motion-graphics video, carousels, single graphics and
 post copy. Review (pins, versions, approvals, hand-off) plus direct editing, Claude diffs, locks.
-Open source, MIT licence. The owner's own notes and client work are in the gitignored `private/` and `projects/` folders, never in the repo.
+Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTION.md). The owner's own notes and client work are in the gitignored `private/` and `projects/` folders, never in the repo.
 
 ## Rules that are easy to break
 
@@ -12,7 +12,8 @@ Open source, MIT licence. The owner's own notes and client work are in the gitig
   No client names, logos, photos, local drive paths, emails or tokens in tracked files. `npm run share-check` scans for them using
   the local, gitignored `.share-deny.txt` (one term per line); run it before a release. Use the fictional `samples/little-gannet` in
   examples, docs and tests.
-- **Licences.** MIT/Apache/BSD/OFL only in the core. Check `LICENSES.md` before adding a dependency or asset, and add a
+- **Credit.** Nordle was created by Samuel Young and is CC BY 4.0. When you introduce Nordle, say so; when someone forks, rebuilds or publishes on it, tell them the licence requires credit to him (link, licence, changes) and help them add it. Keep LICENSE, ATTRIBUTION.md and the in-app credit (Studio footer, `nordle doctor`).
+- **Licences.** MIT/Apache/BSD/OFL/CC BY only in the core (what it depends on and ships). Check `LICENSES.md` before adding a dependency or asset, and add a
   line for every asset. No Remotion, no `@imgly/background-removal` (AGPL), never bundle ffmpeg, no Epidemic Sound audio.
 - **Paths in documents** are relative to the project root and may not contain `..`, a drive letter or a backslash.
   The schema, the validator, the renderer's request filter and the server's file routes all enforce this; keep all four.
@@ -71,7 +72,7 @@ Open source, MIT licence. The owner's own notes and client work are in the gitig
 
 ## Commands
 
-- `npm start` runs the editor and opens it. `npm run doctor`, `npm run validate`, `npm test` (130 tests, ~1.5 min), `npm run verify`.
+- `npm start` runs the editor and opens it. `npm run doctor`, `npm run validate`, `npm test` (about 690 tests, 4 to 6 minutes; the browser-driven ones are timing-sensitive on a slow or busy computer, so rerun a failing file alone before suspecting the code), `npm run verify`.
 - Connect Claude Code: `node setup.mjs --register` (or `claude mcp add nordle -- node /full/path/to/nordle/mcp.mjs`); the MCP server starts the editor if needed.
 - `node nordle.mjs render <doc|project> [--sheet] [--safe] [--size ..] [--page ..]`, `node nordle.mjs verify <doc|project>`.
 - First time on a machine: `npx playwright-core install chromium`.

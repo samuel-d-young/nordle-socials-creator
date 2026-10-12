@@ -265,6 +265,7 @@ export async function videoStills(docFile, times, opts = {}) {
     const files = [];
     // overlays first (one page, in order), then the pictures in parallel
     const overlayFor = new Map();
+    const boxesFor = new Map();   // frame -> where each title, card and caption sits (only when asked: the Studio makes them clickable)
     for (const { f } of picks) {
       if (overlayFor.has(f) || !page) continue;
       const t = f / plan.fps;
@@ -272,6 +273,7 @@ export async function videoStills(docFile, times, opts = {}) {
       const file = join(tmp, `ov-${f}.png`);
       writeFileSync(file, await page.png(t));
       overlayFor.set(f, file);
+      if (opts.boxes) boxesFor.set(f, (await page.measure(t)).filter((b) => b.w >= 1 && b.h >= 1).map((b) => ({ id: b.id, type: b.type, x: b.x / plan.width, y: b.y / plan.height, w: b.w / plan.width, h: b.h / plan.height })));
     }
     await page?.close();
     await pool(picks, 4, async ({ t, f }, i) => {
@@ -284,7 +286,7 @@ export async function videoStills(docFile, times, opts = {}) {
       } else {
         await run(frameArgs(plan, seg, k, out, { overlayPng }), { label: `Frame at ${(f / plan.fps).toFixed(2)}s` });
       }
-      files[i] = { t, frame: f, time: f / plan.fps, path: out, w: plan.width, h: plan.height, shows: seg.clipId ?? 'black' };
+      files[i] = { t, frame: f, time: f / plan.fps, path: out, w: plan.width, h: plan.height, shows: seg.clipId ?? 'black', ...(opts.boxes ? { boxes: boxesFor.get(f) ?? [] } : {}) };
     });
     return { ok: true, files, issues: plan.issues.filter((x) => !x.blocking), doc: doc.id, outDir };
   } finally {

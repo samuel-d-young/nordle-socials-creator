@@ -81,3 +81,63 @@ export async function pickFolder({ title = 'Choose a folder', platform = process
   }
   throw new PickerError('There is no folder window on this computer (install zenity or kdialog), so type or paste the folder path instead.');
 }
+
+
+/**
+ * "Choose files": the same idea for several files at once (videos you already have). Resolves { paths: [...] } or { cancelled: true }.
+ * @param {{ title?: string, kind?: 'video', platform?: string, run?: typeof runProgram }} [o]
+ */
+export async function pickFiles({ title = 'Choose files', kind = 'video', platform = process.platform, run = runProgram } = {}) {
+  const label = String(title).slice(0, 120);
+  const exts = kind === 'video' ? ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mts', 'm2ts', 'mxf', 'mpg', 'mpeg'] : [];
+  const lines = (raw) => String(raw ?? '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (platform === 'win32') {
+    const filter = exts.length ? `Videos (${exts.map((e) => `*.${e}`).join(', ')})|${exts.map((e) => `*.${e}`).join(';')}|All files|*.*` : 'All files|*.*';
+    const script = [
+      'Add-Type -AssemblyName System.Windows.Forms',
+      '[System.Windows.Forms.Application]::EnableVisualStyles()',
+      '$o = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false; Opacity = 0; StartPosition = "CenterScreen"; Width = 1; Height = 1 }',
+      '$o.Show(); $o.Activate()',
+      `$f = New-Object System.Windows.Forms.OpenFileDialog -Property @{ Title = ${psQuote(label)}; Multiselect = $true; Filter = ${psQuote(filter)}; CheckFileExists = $true }`,
+      '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+      'if ($f.ShowDialog($o) -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write(($f.FileNames -join "`n")) }',
+      '$o.Close()',
+    ].join('; ');
+    const r = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-STA', '-Command', script]);
+    if (r.missing) throw new PickerError('Windows PowerShell could not be started, so there is no file window. Type or paste the file paths instead.');
+    const paths = lines(r.stdout);
+    if (paths.length) return { paths };
+    if (r.code && r.code !== 0) throw new PickerError('The file window could not be opened.');
+    return { cancelled: true };
+  }
+  if (platform === 'darwin') {
+    const types = kind === 'video' ? ' of type {"public.movie"}' : '';
+    const script = [
+      'tell application "System Events" to activate',
+      `set fs to choose file with prompt ${asQuote(label)}${types} with multiple selections allowed`,
+      'set out to ""',
+      'repeat with f in fs',
+      'set out to out & POSIX path of f & linefeed',
+      'end repeat',
+      'return out',
+    ];
+    const r = await run('osascript', script.flatMap((l) => ['-e', l]));
+    if (r.missing) throw new PickerError('macOS could not show the file window. Type or paste the file paths instead.');
+    const paths = lines(r.stdout);
+    if (paths.length) return { paths };
+    if (/-128|User canceled/i.test(r.stderr)) return { cancelled: true };
+    if (r.code && r.code !== 0) throw new PickerError('The file window could not be opened.');
+    return { cancelled: true };
+  }
+  const tries = [
+    ['zenity', ['--file-selection', '--multiple', '--separator=\n', `--title=${label}`, ...(exts.length ? [`--file-filter=Videos | ${exts.map((e) => `*.${e}`).join(' ')}`] : [])]],
+    ['kdialog', ['--getopenfilename', '.', exts.length ? `*.${exts.join(' *.')}|Videos` : '*', '--multiple', '--separate-output', '--title', label]],
+  ];
+  for (const [cmd, args] of tries) {
+    const r = await run(cmd, args);
+    if (r.missing) continue;
+    const paths = lines(r.stdout);
+    return paths.length ? { paths } : { cancelled: true };
+  }
+  throw new PickerError('There is no file window on this computer (install zenity or kdialog), so type or paste the file paths instead.');
+}

@@ -11,7 +11,10 @@ const FORMATS = ['reel', 'carousel', 'post', 'story'];
 const FORMAT_WORD = { reel: 'Reels', carousel: 'Carousels', post: 'Posts', story: 'Stories' };
 const COUNTS = [4, 8, 12];
 
-const st = { job: null, jobTimer: 0, brand: null, prompt: '', month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
+const vid = { paths: [], typed: '', size: 'ig-reel-9x16', mode: 'each', busy: false, note: '', done: null };
+const VID_SIZES = [['ig-reel-9x16', 'Reel (tall)'], ['ig-story-9x16', 'Story (tall)'], ['ig-feed-4x5', 'Feed (4:5)'], ['ig-feed-1x1', 'Feed (square)']];
+const base = (p) => p.split(/[\\/]/).pop();
+const st = { campaign: null, newCamp: null, job: null, jobTimer: 0, brand: null, prompt: '', month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
 
 function brandId() {
   if (S.brand && S.brand !== 'all') return S.brand;
@@ -25,6 +28,7 @@ async function suggest(redraw) {
   if (!id) return;
   st.loading = true; st.error = ''; st.added = null; redraw();
   const q = new URLSearchParams({ month: st.month ?? nextMonth(), learn: st.learn ? '1' : '0' });
+  if (st.campaign) q.set('campaign', st.campaign);
   if (st.decide) q.set('decide', '1'); else q.set('count', String(st.count));
   if (st.formats.size) q.set('formats', [...st.formats].join(','));
   if (st.styles.size) q.set('styles', [...st.styles].join(','));
@@ -42,7 +46,7 @@ async function askClaude(redraw) {
   if (!id) return;
   if (!st.result) await suggest(() => {});
   try {
-    await api.post(`/projects/${encodeURIComponent(id)}/calendar/run`, { action: 'propose', months: [st.month ?? nextMonth()], extra: st.result?.ask ?? st.prompt });
+    await api.post(`/projects/${encodeURIComponent(id)}/calendar/run`, { action: 'propose', months: [st.result?.month ?? st.month ?? nextMonth()], extra: st.result?.ask ?? st.prompt });
   } catch (e) { st.error = e.message; return redraw(); }
   watchJob(redraw);
 }
@@ -74,13 +78,67 @@ function jobPanel() {
   return h('div', { class: 'build-line', role: 'alert', 'data-state': 'failed' }, icon('alert', 14), h('span', { class: 'bad' }, l.error ?? 'Claude did not add any ideas.'));
 }
 
+/** Videos that already exist on this computer: choose them (the system's file window), and each becomes a post to edit. They are not copied. */
+async function chooseVideos(redraw) {
+  vid.busy = true; vid.note = 'A file window is open on this computer. It may be behind this one.'; redraw();
+  try {
+    const r = await api.post('/import/pick-files', { title: 'Choose the videos to edit' });
+    if (r.paths?.length) { for (const p of r.paths) if (!vid.paths.includes(p)) vid.paths.push(p); vid.note = ''; vid.done = null; }
+    else vid.note = r.message || 'No videos chosen.';
+  } catch (e) { vid.note = e.message; }
+  vid.busy = false; redraw();
+}
+async function bringIn(redraw) {
+  const id = brandId();
+  if (!id || !vid.paths.length) return;
+  vid.busy = true; vid.note = 'Looking at the videos…'; redraw();
+  try {
+    const r = await api.post('/import/videos', { project: id, paths: vid.paths, size: vid.size, mode: vid.mode });
+    vid.done = r.posts; vid.paths = []; vid.note = '';
+    await load({ force: true });
+    notify(`${plural(r.posts.length, 'video post')} ready to edit.`, { kind: 'ok' });
+  } catch (e) { vid.note = e.message; }
+  vid.busy = false; redraw();
+}
+
+function videosCard(pr, redraw) {
+  const addTyped = () => { const p = vid.typed.trim(); if (p && !vid.paths.includes(p)) { vid.paths.push(p); vid.typed = ''; vid.note = ''; redraw(); } };
+  const typed = h('input', { class: 'field', placeholder: 'Or paste the full path of a video', 'data-field': 'create-video-path', 'aria-label': 'Path of a video' });
+  typed.value = vid.typed;
+  typed.addEventListener('input', () => { vid.typed = typed.value; });
+  typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTyped(); } });
+  return h('section', { class: 'cr-card', 'aria-label': 'Edit videos you already have', 'data-section': 'videos' },
+    h('h3', { class: 'lbl' }, 'Edit videos you already have'),
+    h('p', { class: 'muted' }, 'The files stay where they are. Each one becomes a post with its picture and sound on the timeline: cut it, add titles and captions, and schedule it when you are ready.'),
+    h('div', { class: 'cr-go' },
+      h('button', { class: 'btn', type: 'button', 'data-act': 'create-pick-videos', disabled: vid.busy, onclick: () => chooseVideos(redraw) }, 'Choose videos…'),
+      typed, h('button', { class: 'btn', type: 'button', 'data-act': 'create-add-video-path', onclick: addTyped }, 'Add')),
+    vid.paths.length ? h('ul', { class: 'pick-list', 'data-field': 'create-videos', 'aria-label': 'Videos chosen' }, vid.paths.map((p) => h('li', {},
+      h('span', { class: 'pick-path', title: p }, base(p)), h('span', { class: 'muted' }, p.slice(0, p.length - base(p).length)),
+      h('button', { class: 'btn quiet', type: 'button', 'data-act': 'create-remove-video', 'aria-label': `Remove ${base(p)}`, onclick: () => { vid.paths = vid.paths.filter((x) => x !== p); redraw(); } }, 'Remove')))) : null,
+    h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Size'),
+      h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Size of the post' }, VID_SIZES.map(([sid, label]) => chip(label, vid.size === sid, () => { vid.size = sid; redraw(); }, { 'data-vsize': sid })))),
+    h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Make'),
+      h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'One post or several' },
+        chip('One post for each video', vid.mode === 'each', () => { vid.mode = 'each'; redraw(); }, { 'data-vmode': 'each' }),
+        chip('Join them into one', vid.mode === 'together', () => { vid.mode = 'together'; redraw(); }, { 'data-vmode': 'together' }))),
+    h('div', { class: 'cr-go' },
+      h('button', { class: 'btn primary start', type: 'button', 'data-act': 'create-import-videos', disabled: vid.busy || !vid.paths.length, onclick: () => bringIn(redraw) }, vid.busy ? 'Working…' : `Bring ${vid.paths.length === 1 ? 'it' : vid.paths.length ? 'them' : 'them'} into Nordle`),
+      vid.note ? h('span', { class: vid.busy ? 'muted' : 'bad', role: 'status', 'data-state': 'video-note' }, vid.note) : null),
+    vid.done ? h('ul', { class: 'cr-opts', 'data-state': 'videos-done' }, vid.done.map((p) => h('li', { class: 'cr-opt on' },
+      h('span', { class: 'cr-opt-main' }, h('span', { class: 'cr-opt-body' },
+        h('strong', { class: 'cr-title' }, p.title), h('span', { class: 'cr-idea' }, `${p.seconds} s · ${p.files.join(', ')}`),
+        h('span', { class: 'cr-why muted' }, `On the calendar for ${dateFmt.weekday(p.date)} ${dateFmt.dm(p.date)}, waiting for you. Move or schedule it whenever you like.`),
+        h('a', { class: 'btn go', href: `#/p/${encodeURIComponent(pr.id)}/${encodeURIComponent(p.docId)}`, 'data-act': 'open-video-editor' }, 'Open in the video editor')))))) : null);
+}
+
 async function addPicked(redraw, { approved }) {
   const id = brandId();
   const chosen = st.result.options.filter((o) => st.picked.has(o.id));
   if (!chosen.length) return;
   st.loading = true; redraw();
   try {
-    const items = chosen.map(({ date, time, format, title, idea, hook, pillar, occasion }) => ({ date, ...(time ? { time } : {}), format, title, idea, hook, ...(pillar ? { pillar } : {}), ...(occasion ? { occasion } : {}), status: approved ? 'approved' : 'idea' }));
+    const items = chosen.map(({ date, time, format, title, idea, hook, pillar, occasion, campaign }) => ({ date, ...(time ? { time } : {}), format, title, idea, hook, ...(pillar ? { pillar } : {}), ...(occasion ? { occasion } : {}), ...(campaign ? { campaign } : {}), status: approved ? 'approved' : 'idea' }));
     const r = await api.post(`/projects/${encodeURIComponent(id)}/calendar/items`, { items });
     const done = r.items?.length ?? 0, left = r.rejected?.length ?? 0;
     st.added = { done, left, note: left ? `${plural(left, 'option')} could not be added: ${r.rejected[0].errors?.[0]?.message ?? 'a check failed'}.` : '', approved };
@@ -110,15 +168,59 @@ function optionCard(o, redraw) {
         h('span', { class: 'cr-why muted' }, o.why))));
 }
 
+/** A campaign: a named push with a goal, dates, one message and one call to action. Posts are made for it first and scheduled later. */
+async function saveCampaign(pr, redraw) {
+  const f = st.newCamp;
+  if (!f.name.trim()) { st.error = 'Give the campaign a name.'; return redraw(); }
+  try {
+    const r = await api.post(`/projects/${encodeURIComponent(pr.id)}/calendar/campaigns`, { name: f.name, goal: f.goal, start: f.start || null, end: f.end || null, message: f.message, cta: f.cta });
+    await load({ force: true });
+    st.campaign = r.campaign.id; st.newCamp = null; st.result = null; st.error = '';
+  } catch (e) { st.error = e.message; }
+  redraw();
+}
+
+function campaignForm(pr, redraw) {
+  const f = st.newCamp;
+  const field = (key, label, ph, { type = 'text', rows } = {}) => {
+    const el = rows ? h('textarea', { class: 'field', rows, placeholder: ph, 'data-field': `camp-${key}`, 'aria-label': label }) : h('input', { class: 'field', type, placeholder: ph, 'data-field': `camp-${key}`, 'aria-label': label });
+    el.value = f[key] ?? '';
+    el.addEventListener('input', () => { f[key] = el.value; });
+    return h('label', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), el);
+  };
+  return h('section', { class: 'cr-card', 'aria-label': 'A new campaign', 'data-section': 'new-campaign' },
+    h('h3', { class: 'lbl' }, 'A new campaign'),
+    h('div', { class: 'bg-grid' }, field('name', 'Name', 'e.g. Spring open day'), field('cta', 'What it asks people to do', 'e.g. Book a place')),
+    field('goal', 'What it is for', 'e.g. Fill the open day and introduce the new team', { rows: 2 }),
+    h('div', { class: 'bg-grid' }, field('start', 'Starts', '', { type: 'date' }), field('end', 'Ends', '', { type: 'date' })),
+    field('message', 'The one thing it says', 'e.g. Come and see how we work', { rows: 2 }),
+    h('div', { class: 'cr-go' },
+      h('button', { class: 'btn primary', type: 'button', 'data-act': 'camp-save', onclick: () => saveCampaign(pr, redraw) }, 'Make the campaign'),
+      h('button', { class: 'btn quiet', type: 'button', 'data-act': 'camp-cancel', onclick: () => { st.newCamp = null; redraw(); } }, 'Cancel')));
+}
+
+function campaignRow(pr, redraw) {
+  const camps = pr.campaigns ?? [];
+  const posts = (c) => S.posts.filter((p) => p.project === pr.id && p.campaign === c.id);
+  const cur = camps.find((c) => c.id === st.campaign);
+  return h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Campaign'),
+    h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Campaign' },
+      chip('No campaign', !st.campaign, () => { st.campaign = null; st.result = null; redraw(); }, { 'data-act': 'camp-none' }),
+      camps.map((c) => chip(c.name, st.campaign === c.id, () => { st.campaign = c.id; st.result = null; redraw(); }, { 'data-campaign': c.id })),
+      chip('+ New campaign', !!st.newCamp, () => { st.newCamp = st.newCamp ?? { name: '', goal: '', start: '', end: '', message: '', cta: '' }; redraw(); }, { 'data-act': 'camp-new' })),
+    cur ? h('p', { class: 'muted cr-camp-note' }, [cur.goal, cur.start || cur.end ? `${cur.start ? dateFmt.dm(cur.start) : 'now'} to ${cur.end ? dateFmt.dm(cur.end) : 'open'}` : null, `${plural(posts(cur).length, 'post')} so far`].filter(Boolean).join(' · '), ' ', h('a', { href: `#/s/list?brand=${encodeURIComponent(pr.id)}&q=${encodeURIComponent(cur.name)}` }, 'See its posts')) : null);
+}
+
 function controls(pr, redraw) {
   const months = [0, 1, 2].map((i) => addMonths(monthOf(S.today), i + 1));
   const month = st.month ?? months[0];
   const learned = st.result?.learned;
   return h('section', { class: 'cr-card', 'aria-label': 'Choose what to make' },
     h('h3', { class: 'lbl' }, 'Or choose, and Nordle suggests'),
+    campaignRow(pr, redraw),
     S.brand === 'all' && S.projects.length > 1 ? h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Brand'),
       h('select', { class: 'field', 'data-field': 'create-brand', onchange: (e) => { st.brand = e.target.value; st.result = null; st.job = null; redraw(); } }, S.projects.map((p) => h('option', { value: p.id, selected: p.id === pr.id }, p.name)))) : null,
-    h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'For'),
+    st.campaign ? null : h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'For'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Month' }, months.map((m) => chip(dateFmt.monthYear(m), m === month, () => { st.month = m; st.result = null; redraw(); }, { 'data-month': m })))),
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'How many'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'How many posts' },
@@ -129,7 +231,7 @@ function controls(pr, redraw) {
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Kinds of post' },
         chip('A mix for me', st.formats.size === 0, () => { st.formats = new Set(); redraw(); }, { 'data-act': 'create-mix' }),
         FORMATS.map((f) => chip(FORMAT_WORD[f], st.formats.has(f), () => { if (st.formats.has(f)) st.formats.delete(f); else st.formats.add(f); redraw(); }, { 'data-format': f })))),
-    h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Style'),
+    st.campaign ? null : h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Style'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Style of post' },
         chip('Any style', st.styles.size === 0, () => { st.styles = new Set(); redraw(); }, { 'data-act': 'create-any-style' }),
         (st.result?.styles ?? STYLES_FALLBACK).map((s) => chip(s.label, st.styles.has(s.id), () => { if (st.styles.has(s.id)) st.styles.delete(s.id); else st.styles.add(s.id); redraw(); }, { 'data-style': s.id, title: s.hint })))),
@@ -173,8 +275,8 @@ export function renderCreate(root, ctx) {
     r.options.length ? h('ul', { class: 'cr-opts' }, r.options.map((o) => optionCard(o, redraw))) : h('p', { class: 'muted' }, st.added ? 'Those are all on the calendar. Choose again for more.' : 'Nothing to suggest with those choices. Try another style or kind.'),
     h('footer', { class: 'cr-foot' },
       h('span', { class: 'cr-count' }, `${picked.length} ticked`),
-      h('button', { class: 'btn go', type: 'button', 'data-act': 'create-add', disabled: !picked.length || st.loading, onclick: () => addPicked(redraw, { approved: true }), title: 'They go on the calendar approved: Claude builds each one as its date gets close' }, `Add ${picked.length || ''} to the calendar`.replace('  ', ' ')),
-      h('button', { class: 'btn', type: 'button', 'data-act': 'create-add-ideas', disabled: !picked.length || st.loading, onclick: () => addPicked(redraw, { approved: false }), title: 'They wait in the Plan as ideas until you say yes' }, 'Add as ideas to look at'),
+      h('button', { class: `btn${st.campaign ? '' : ' go'}`, type: 'button', 'data-act': 'create-add', disabled: !picked.length || st.loading, onclick: () => addPicked(redraw, { approved: true }), title: 'They go on the calendar approved: Claude builds each one as its date gets close' }, `Add ${picked.length || ''} to the calendar`.replace('  ', ' ')),
+      h('button', { class: `btn${st.campaign ? ' go' : ''}`, type: 'button', 'data-act': 'create-add-ideas', disabled: !picked.length || st.loading, onclick: () => addPicked(redraw, { approved: false }), title: 'They wait in the Plan as ideas. Nothing is scheduled: schedule them later, when you are ready' }, st.campaign ? 'Add as ideas, schedule later' : 'Add as ideas to look at'),
       h('button', { class: 'btn quiet', type: 'button', 'data-act': 'create-copy', onclick: () => copyRequest(r.request) }, icon('clipboard', 14), 'Ask Claude to improve these')),
     st.added ? h('p', { class: 'cr-added', role: 'status' }, `${plural(st.added.done, 'post')} ${st.added.approved ? 'added and approved' : 'added as ideas'}. `, st.added.note, ' ', h('a', { href: '#/s/plan' }, 'Open the plan')) : null) : null;
 
@@ -183,5 +285,5 @@ export function renderCreate(root, ctx) {
     h('header', { class: 'cr-head' },
       h('h2', {}, `For ${pr.name}`),
       h('p', { class: 'muted' }, 'Start with a few words, or let Nordle suggest posts for the next month. You choose what goes on the calendar; nothing is posted.')),
-    ask, controls(pr, redraw), st.error ? h('p', { class: 'cr-err', role: 'alert' }, st.error) : null, results));
+    ask, st.newCamp ? campaignForm(pr, redraw) : null, controls(pr, redraw), videosCard(pr, redraw), st.error ? h('p', { class: 'cr-err', role: 'alert' }, st.error) : null, results));
 }

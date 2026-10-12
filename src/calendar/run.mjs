@@ -21,7 +21,14 @@ import { monthReport } from './plan.mjs';
 import { addMonths, monthOf } from './dates.mjs';
 
 export const DEFAULT_TIMEOUT_MS = 25 * 60 * 1000;
-export const DEFAULT_MAX_TURNS = 80;
+export const DEFAULT_MAX_TURNS = 60;
+export const PROPOSE_MAX_TURNS = 25;
+// What a run may cost. A claude -p run stops by itself at the budget, so a stuck run cannot quietly use a lot of the owner's allowance.
+export const BUILD_BUDGET_USD = 2.5;
+export const PROPOSE_BUDGET_USD = 1;
+// Sonnet at medium effort builds a post well for far less than the biggest model at full effort; the owner can change both per brand (settings.claudeModel, claudeEffort)
+export const DEFAULT_MODEL = 'sonnet';
+export const DEFAULT_EFFORT = 'medium';
 export const DEFAULT_LIMIT = 5;
 
 const BUILD_TOOLS = ['mcp__nordle', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Agent', 'Task', 'Bash(node:*)'];
@@ -56,13 +63,16 @@ export function mcpConfig(nordleRoot = ROOT) {
 }
 
 /** Arguments for `claude -p`. The prompt itself goes in on stdin. */
-export function claudeArgs({ mcpFile, maxTurns = DEFAULT_MAX_TURNS, tools, model } = {}) {
+export function claudeArgs({ mcpFile, maxTurns = DEFAULT_MAX_TURNS, tools, model, effort, maxBudgetUsd } = {}) {
   const extra = (process.env.NORDLE_CLAUDE_ARGS ?? '').split(/\s+/).filter(Boolean);
   const allowed = process.env.NORDLE_CLAUDE_TOOLS ? process.env.NORDLE_CLAUDE_TOOLS.split(',').map((s) => s.trim()).filter(Boolean) : tools;
   return [
     '-p', '--output-format', 'json', '--max-turns', String(maxTurns),
     '--mcp-config', mcpFile, '--strict-mcp-config', '--permission-mode', 'acceptEdits',
-    ...(model ? ['--model', model] : []), ...extra,
+    '--model', model || process.env.NORDLE_CLAUDE_MODEL || DEFAULT_MODEL,
+    '--effort', effort || process.env.NORDLE_CLAUDE_EFFORT || DEFAULT_EFFORT,
+    ...(maxBudgetUsd ? ['--max-budget-usd', String(maxBudgetUsd)] : []),
+    '--no-session-persistence', ...extra,
     '--allowedTools', ...allowed,
   ];
 }
@@ -233,7 +243,7 @@ export async function runDue({
   if (dryRun) {
     result.dryRun = queue.slice(0, limit).map(({ item, mode }) => {
       const prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot });
-      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: BUILD_TOOLS, model })], promptChars: prompt.length, prompt };
+      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD })], promptChars: prompt.length, prompt };
     });
     return result;
   }
@@ -266,7 +276,7 @@ export async function runDue({
       let prompt, args, run, verdict;
       try {
         prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot });
-        args = claudeArgs({ mcpFile, maxTurns, tools: BUILD_TOOLS, model });
+        args = claudeArgs({ mcpFile, maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD });
         const env = { ...process.env, NORDLE_AGENT_RUN: '1' };
         run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env, prompt, timeoutMs, signal });
         run.parsed = parseClaudeOutput(run.stdout);
@@ -289,7 +299,7 @@ export async function runDue({
         id: item.id, mode, startedAt, durationMs: run.durationMs, exitCode: run.code, signal: run.signal, timedOut: run.timedOut, spawnError: run.error,
         outcome: verdict.outcome, error: verdict.error ?? null, claude: summarise(run.parsed), stderrTail: tail(run.stderr, 1500), command: [claudeBin(), ...args], promptChars: prompt.length,
       });
-      result.ran.push({ id: item.id, mode, outcome: verdict.outcome, ...(verdict.doc ? { doc: verdict.doc } : {}), ...(verdict.error ? { error: verdict.error } : {}), durationMs: run.durationMs, log: logFile });
+      result.ran.push({ id: item.id, mode, outcome: verdict.outcome, ...(run.parsed?.num_turns ? { turns: run.parsed.num_turns } : {}), ...(typeof run.parsed?.total_cost_usd === 'number' ? { costUsd: run.parsed.total_cost_usd } : {}), ...(verdict.doc ? { doc: verdict.doc } : {}), ...(verdict.error ? { error: verdict.error } : {}), durationMs: run.durationMs, log: logFile });
       log(`  ${verdict.outcome}${verdict.doc ? ` -> ${verdict.doc}` : ''}${verdict.error ? `: ${verdict.error}` : ''}`);
       if ((verdict.outcome === 'failed' && run.error) || verdict.outcome === 'signed-out') break;          // Claude cannot even start (or is signed out): do not try the rest
     }
@@ -310,7 +320,7 @@ const readState = (dir) => { try { return JSON.parse(readFileSync(stateFile(dir)
  * It runs at most once every `minHours` unless yes is true. Returns { project, enabled, months, ran:[...]}.
  */
 export async function runPropose({
-  projectDir, today, yes = false, dryRun = false, timeoutMs = DEFAULT_TIMEOUT_MS, maxTurns = DEFAULT_MAX_TURNS, minHours = 20,
+  projectDir, today, yes = false, dryRun = false, timeoutMs = DEFAULT_TIMEOUT_MS, maxTurns = PROPOSE_MAX_TURNS, minHours = 20,
   exec = defaultExec, spawn = nodeSpawn, log = () => {}, nordleRoot = ROOT, now = Date.now(), model, months: onlyMonths, extra = '',
 } = {}) {
   const dir = resolve(projectDir);
@@ -326,7 +336,7 @@ export async function runPropose({
   if (!yes && last.lastAt && now - Date.parse(last.lastAt) < minHours * 3600 * 1000) return { ...result, skipped: `Proposed ${Math.round((now - Date.parse(last.lastAt)) / 3600000)} hours ago; waiting.` };
 
   const prompt = proposePrompt(dir, { months, today: day, nordleRoot }) + (extra ? `\n${String(extra).slice(0, 6000)}` : '');
-  if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, model })], promptChars: prompt.length, prompt }] };
+  if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD })], promptChars: prompt.length, prompt }] };
 
   const lock = acquireRunLock(dir, { mode: 'propose', item: null }, { staleMs: timeoutMs * 1.5 + 120000 });
   if (!lock.ok) return { ...result, locked: lock.holder };
@@ -336,7 +346,7 @@ export async function runPropose({
     writeFileSync(mcpFile, JSON.stringify(mcpConfig(nordleRoot)));
     const before = new Set(loadProject(dir).cal.items.map((i) => i.id));
     log(`Asking Claude for ideas for ${months.join(', ')}...`);
-    const args = claudeArgs({ mcpFile, maxTurns, tools: PROPOSE_TOOLS, model });
+    const args = claudeArgs({ mcpFile, maxTurns, tools: PROPOSE_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD });
     const run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env: { ...process.env, NORDLE_AGENT_RUN: '1' }, prompt, timeoutMs });
     run.parsed = parseClaudeOutput(run.stdout);
     const added = loadProject(dir).cal.items.filter((i) => !before.has(i.id));
@@ -345,7 +355,7 @@ export async function runPropose({
     const logFile = writeLog(dir, 'propose', { startedAt: new Date(now).toISOString(), durationMs: run.durationMs, exitCode: run.code, timedOut: run.timedOut, outcome, added: added.map((i) => i.id), error, claude: summarise(run.parsed), stderrTail: tail(run.stderr, 1500), command: [claudeBin(), ...args], promptChars: prompt.length });
     mkdirSync(join(dir, 'history', 'calendar-runs'), { recursive: true });
     writeFileSync(stateFile(dir), JSON.stringify({ lastAt: new Date(now).toISOString(), months, added: added.length }));
-    result.ran.push({ outcome, added: added.map((i) => i.id), ...(error ? { error } : {}), durationMs: run.durationMs, log: logFile });
+    result.ran.push({ outcome, added: added.map((i) => i.id), ...(error ? { error } : {}), durationMs: run.durationMs, ...(run.parsed?.num_turns ? { turns: run.parsed.num_turns } : {}), ...(typeof run.parsed?.total_cost_usd === 'number' ? { costUsd: run.parsed.total_cost_usd } : {}), log: logFile });
   } finally {
     lock.release();
     rmSync(tmp, { recursive: true, force: true });

@@ -13,6 +13,7 @@ const INSTRUCTIONS = [
   'After every meaningful edit look at the result with nordle_render, and run nordle_check before saying you are done.',
   'The owner sets how far you may go (suggest, review or apply) and can lock layers; tool results tell you what happened. Never work around a lock.',
   'Never invent facts, prices, statistics or quotes.',
+  'Nordle was created by Samuel Young (CC BY 4.0). Say so when you introduce it, and if the owner is forking, rebuilding or publishing on it, tell them the licence requires credit to him (ATTRIBUTION.md).',
 ].join(' ');
 
 const client = new NordleClient();

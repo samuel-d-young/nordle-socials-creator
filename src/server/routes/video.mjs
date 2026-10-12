@@ -134,9 +134,9 @@ export default {
         const format = b.format === 'png' ? 'png' : 'jpg';
         const out = mkdtempSync(join(tmpdir(), 'nordle-stills-'));
         try {
-          const r = await pool.use((browser) => videoStills(session.file, b.times.map(Number), { browser, preview: b.preview !== false, scale: [0.25, 0.35, 0.5, 0.75, 1].includes(b.scale) ? b.scale : undefined, format, overlay: b.overlay !== false, size: b.size, out }));
+          const r = await pool.use((browser) => videoStills(session.file, b.times.map(Number), { browser, boxes: b.boxes === true, preview: b.preview !== false, scale: [0.25, 0.35, 0.5, 0.75, 1].includes(b.scale) ? b.scale : undefined, format, overlay: b.overlay !== false, size: b.size, out }));
           if (!r.ok) failed(r);
-          const files = r.files.map((f) => ({ t: f.t, time: f.time, frame: f.frame, shows: f.shows, w: f.w, h: f.h, mime: format === 'png' ? 'image/png' : 'image/jpeg', base64: readFileSync(f.path).toString('base64') }));
+          const files = r.files.map((f) => ({ t: f.t, time: f.time, frame: f.frame, shows: f.shows, w: f.w, h: f.h, mime: format === 'png' ? 'image/png' : 'image/jpeg', base64: readFileSync(f.path).toString('base64'), ...(f.boxes ? { boxes: f.boxes } : {}) }));
           return sendJson(ctx.res, 200, { files, issues: r.issues });
         } finally { rmSync(out, { recursive: true, force: true }); }
       }

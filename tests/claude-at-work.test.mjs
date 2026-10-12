@@ -141,3 +141,25 @@ test('the Studio: a queued post shows its line and a Build it now button; "Ask C
     assert.match(await page.locator('.build-line[data-state="done"]').innerText(), /Claude added 2 ideas/);
   }, { claudeRunner });
 });
+
+test('while Claude is on a post: its picture loops with an animation, the top bar says so, and the animation stops when the run ends', async () => {
+  clearJobs();
+  await studioPage(async ({ page, open, call, work }) => {
+    const project = await firstProject(call);
+    const { dir, item } = setItem(work, project, { status: 'building', run: { state: 'building', startedAt: '2026-10-05T01:00:00.000Z', attempts: 1 } });
+    const lock = acquireRunLock(dir, { mode: 'build', item: item.id });
+    try {
+      await open(`#/s/list?today=${TODAY}`);
+      await page.waitForSelector('.th.working', { timeout: 20000 });
+      assert.ok((await page.locator('.th.working .th-claude i').count()) >= 3, 'three dots loop on the picture');
+      assert.equal(await page.locator('.th.working').first().evaluate((el) => getComputedStyle(el, '::after').animationName), 'nv-sweep', 'and a light sweeps across it, over and over');
+      assert.match(await page.locator('.working .spin + span').first().innerText(), /Claude is building/);
+      await page.evaluate((u) => { location.hash = `#/s/list?today=2026-10-05&post=${encodeURIComponent(u)}`; }, `${project}:${item.id}`);
+      await page.waitForSelector('.build-line.live .dots');
+      assert.equal(await page.locator('.build-line.live').evaluate((el) => getComputedStyle(el, '::after').animationName), 'nv-slide');
+    } finally { lock.release(); }
+    await page.evaluate(() => document.querySelector('.rn[data-view="list"], .rn')?.click());
+    await open(`#/s/list?today=${TODAY}`);
+    await page.waitForFunction(() => !document.querySelector('.th.working'), null, { timeout: 40000 });
+  });
+});

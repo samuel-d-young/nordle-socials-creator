@@ -1035,3 +1035,29 @@ test('Ctrl+click adds clips to the selection: the Inspector counts them, Split w
     assert.deepEqual(await doc(), original);
   });
 });
+
+test('text on the picture: a title can be clicked to select it, double-clicked to change its words in place; captions point to the transcript', { timeout: 120000 }, async () => {
+  await videoEditor('reel-edit', async ({ page, doc, settle }) => {
+    await gotoSeconds(page, 2);
+    await page.waitForSelector('.vm-tbox[data-layer="title"]', { timeout: 30000 });
+    assert.equal(await page.locator('.vm-tbox[data-layer="title"]').getAttribute('data-editable'), '1');
+    await page.locator('.vm-tbox[data-layer="title"]').click();
+    assert.match(await page.locator('.vt-layer[data-id="title"]').getAttribute('class'), /selected/, 'the same title is selected on the timeline');
+    assert.ok(await page.locator('[data-field="layer-text"]').count(), 'and its settings open on the right');
+    await page.locator('.vm-tbox[data-layer="title"]').dblclick();
+    await page.waitForSelector('[data-field="frame-text"]');
+    assert.equal(await page.inputValue('[data-field="frame-text"]'), (await doc()).layers[0].text, 'the box starts with the words that are there');
+    await page.fill('[data-field="frame-text"]', 'Changed on the picture');
+    await page.keyboard.press('Enter');
+    await settle();
+    assert.equal((await doc()).layers[0].text, 'Changed on the picture');
+    assert.equal(await page.locator('[data-field="frame-text"]').count(), 0, 'the box closes');
+    // Escape leaves it as it was
+    await page.waitForSelector('.vm-tbox[data-layer="title"]', { timeout: 30000 });
+    await page.locator('.vm-tbox[data-layer="title"]').dblclick();
+    await page.fill('[data-field="frame-text"]', 'Not kept');
+    await page.keyboard.press('Escape');
+    await settle();
+    assert.equal((await doc()).layers[0].text, 'Changed on the picture');
+  });
+});

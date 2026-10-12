@@ -63,7 +63,9 @@ export const fileUrl = (projectId, path) => `/p/${encodeURIComponent(projectId)}
 
 /** A framed small picture of a post (or an index-card stand-in when it has none yet). */
 export function postThumb(p, { w = 240, eager = false, cls = '' } = {}) {
-  const box = h('span', { class: `th ${cls}`.trim(), style: { '--lane': laneColor(p.project) } });
+  // while Claude is working on the post, its picture shimmers and a small mark loops over it (CSS only, so it keeps going without any script)
+  const box = h('span', { class: `th ${p.build?.active ? 'working ' : ''}${cls}`.trim(), style: { '--lane': laneColor(p.project) }, ...(p.build?.active ? { title: p.build.mode === 'change' ? 'Claude is changing this post now' : 'Claude is building this post now' } : {}) });
+  if (p.build?.active) box.append(h('span', { class: 'th-claude', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')));
   if (p.thumb) {
     const img = h('img', { src: thumbUrl(p.project, p.thumb, w), alt: '', loading: eager ? 'eager' : 'lazy', decoding: 'async', draggable: 'false' });
     img.addEventListener('error', () => { box.classList.add('th-missing'); img.remove(); box.prepend(h('span', { class: 'th-ph' }, h('span', {}, p.title))); });
@@ -253,7 +255,7 @@ export function buildLine(p) {
   const paint = () => {
     const kids = [];
     if (b.phase === 'building' && b.active) {
-      kids.push(h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', {}, h('b', {}, b.mode === 'change' ? 'Claude is changing this post now' : 'Claude is building this post now'), b.since ? ` · started ${elapsed(b.since)} ago` : '', b.attempt > 1 ? ` · try ${b.attempt} of ${b.maxAttempts}` : '', '. It comes back here to be reviewed when it is done.'));
+      kids.push(h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', {}, h('b', {}, b.mode === 'change' ? 'Claude is changing this post now' : 'Claude is building this post now'), h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), b.since ? ` · started ${elapsed(b.since)} ago` : '', b.attempt > 1 ? ` · try ${b.attempt} of ${b.maxAttempts}` : '', '. It comes back here to be reviewed when it is done.'));
     } else if (b.phase === 'building') {
       kids.push(icon('alert', 14), h('span', {}, 'It was being built, but nothing is running now. It will be picked up again; or press Build it now.'));
     } else if (b.due) {

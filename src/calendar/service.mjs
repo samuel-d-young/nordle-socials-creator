@@ -72,6 +72,7 @@ export function effectiveSettings(cal) {
     ideaApproval: s.ideaApproval ?? 'owner',
     compliance: s.compliance ?? [],
     maxBuildAttempts: s.maxBuildAttempts ?? 3,
+    claudeModel: s.claudeModel ?? null, claudeEffort: s.claudeEffort ?? null, maxBudgetUsd: s.maxBudgetUsd ?? null,
     review: s.review ? { cadence: s.review.cadence ?? null, weekday: s.review.weekday ?? 'monday', autoReview: !!s.review.autoReview } : null,
   };
 }
@@ -111,7 +112,7 @@ export function makeItemId(cal, date, title) {
   return id;
 }
 
-export const EDITABLE = ['date', 'time', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'notes'];
+export const EDITABLE = ['date', 'time', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'notes', 'campaign'];
 const CONTENT = ['date', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan'];
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 // fields the server owns: a caller may send an item back whole, and these are ignored (never written from the outside)
@@ -160,6 +161,7 @@ export async function addItems(projectDir, inputs, { role = 'agent', today, dele
     const added = [], rejected = [], warnings = {};
     for (const input of list) {
       const { fields, errors } = cleanFields(input ?? {}, { forAdd: true });
+      if (fields.campaign && !(cal.campaigns ?? []).some((c) => c.id === fields.campaign)) errors.push({ path: '/campaign', message: `there is no campaign "${fields.campaign}". Make it first.` });
       const asked = status ?? input?.status;
       if (asked !== undefined && !['idea', 'approved'].includes(asked)) errors.push({ path: '/status', message: 'a new item starts as "idea" or "approved"' });
       if (role !== 'human' && asked === 'approved' && !delegatedNow) {
@@ -209,6 +211,7 @@ export function updateItem(projectDir, id, input, { role = 'agent', today } = {}
     const item = findItem(cal, id);
     const eff = effectiveSettings(cal);
     const { fields, errors } = cleanFields(input ?? {});
+    if (fields.campaign && !(cal.campaigns ?? []).some((c) => c.id === fields.campaign)) errors.push({ path: '/campaign', message: `there is no campaign "${fields.campaign}".` });
     if (errors.length) throw new CalendarError(400, errors.map((e) => `${e.path}: ${e.message}`).join('; '), errors);
     const wantStatus = input?.status;
     if (wantStatus !== undefined && wantStatus !== item.status) {
@@ -441,7 +444,7 @@ export function linkDoc(projectDir, id, docId, { role = 'agent' } = {}) {
   });
 }
 
-const SETTING_KEYS = ['leadDays', 'perMonth', 'autoBuild', 'autoPropose', 'autoRevise', 'horizonMonths', 'postTimes', 'pillars', 'regions', 'ideaApproval', 'compliance', 'maxBuildAttempts', 'review'];
+const SETTING_KEYS = ['leadDays', 'perMonth', 'autoBuild', 'autoPropose', 'autoRevise', 'horizonMonths', 'postTimes', 'pillars', 'regions', 'ideaApproval', 'compliance', 'maxBuildAttempts', 'review', 'claudeModel', 'claudeEffort', 'maxBudgetUsd'];
 
 /** Change calendar settings (owner only: the caller checks). A null value removes a setting. Also accepts timezone. */
 export function setSettings(projectDir, patch) {
@@ -496,4 +499,72 @@ export function overview(projectDir, { from, to, today } = {}) {
     due: runnableItems(p.cal, day).map(({ item, mode }) => ({ id: item.id, mode, date: item.date })),
     running: lock ? { item: lock.item ?? null, mode: lock.mode ?? null, since: lock.started } : null,
   };
+}
+
+// ---- campaigns ---------------------------------------------------------------------------------------------------------------
+
+const CAMPAIGN_TEXT = { goal: 600, message: 600, cta: 200, notes: 1200 };
+const campaignId = (cal, name) => {
+  const base = String(name).normalize('NFKD').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'campaign';
+  let id = base;
+  for (let n = 2; (cal.campaigns ?? []).some((c) => c.id === id); n++) id = `${base.slice(0, 36)}-${n}`;
+  return id;
+};
+function cleanCampaign(input, { forAdd = false } = {}) {
+  const out = {}, errors = [];
+  const name = input.name === undefined ? undefined : String(input.name).trim();
+  if (name !== undefined) { if (!name || name.length > 80) errors.push({ path: '/name', message: 'give the campaign a name (up to 80 characters)' }); else out.name = name; }
+  else if (forAdd) errors.push({ path: '/name', message: 'name is required' });
+  for (const [k, max] of Object.entries(CAMPAIGN_TEXT)) {
+    if (input[k] === undefined) continue;
+    const v = input[k] === null ? '' : String(input[k]).trim();
+    if (v.length > max) errors.push({ path: `/${k}`, message: `${k} is over ${max} characters` });
+    else out[k] = v || null;
+  }
+  for (const k of ['start', 'end']) {
+    if (input[k] === undefined) continue;
+    if (input[k] === null || input[k] === '') out[k] = null;
+    else if (!isDate(String(input[k]))) errors.push({ path: `/${k}`, message: `${k} must be a real date (YYYY-MM-DD)` });
+    else out[k] = String(input[k]);
+  }
+  return { out, errors };
+}
+
+/** Make a campaign: a name, what it is for, the dates it runs, the one message and what it asks. Returns { campaign }. */
+export function addCampaign(projectDir, input) {
+  return mutateCalendar(projectDir, async (cal) => {
+    const { out, errors } = cleanCampaign(input ?? {}, { forAdd: true });
+    if (out.start && out.end && out.end < out.start) errors.push({ path: '/end', message: 'the end is before the start' });
+    if (errors.length) throw new CalendarError(400, errors.map((e) => `${e.path}: ${e.message}`).join('; '), errors);
+    const campaign = { id: campaignId(cal, out.name), ...Object.fromEntries(Object.entries(out).filter(([, v]) => v !== null)) };
+    cal.campaigns = [...(cal.campaigns ?? []), campaign];
+    return { campaign };
+  });
+}
+
+export function updateCampaign(projectDir, id, input) {
+  return mutateCalendar(projectDir, async (cal) => {
+    const c = (cal.campaigns ?? []).find((x) => x.id === id);
+    if (!c) throw new CalendarError(404, 'No such campaign.');
+    const { out, errors } = cleanCampaign(input ?? {});
+    const next = { ...c, ...out };
+    if (next.start && next.end && next.end < next.start) errors.push({ path: '/end', message: 'the end is before the start' });
+    if (errors.length) throw new CalendarError(400, errors.map((e) => `${e.path}: ${e.message}`).join('; '), errors);
+    for (const k of Object.keys(next)) if (next[k] === null) delete next[k];
+    Object.assign(c, next);
+    for (const k of Object.keys(c)) if (!(k in next)) delete c[k];
+    return { campaign: c };
+  });
+}
+
+/** Take a campaign away. Its posts stay on the calendar, just no longer tied to it. */
+export function removeCampaign(projectDir, id) {
+  return mutateCalendar(projectDir, async (cal) => {
+    if (!(cal.campaigns ?? []).some((x) => x.id === id)) throw new CalendarError(404, 'No such campaign.');
+    cal.campaigns = cal.campaigns.filter((x) => x.id !== id);
+    if (!cal.campaigns.length) delete cal.campaigns;
+    let detached = 0;
+    for (const it of cal.items) if (it.campaign === id) { delete it.campaign; detached++; }
+    return { removed: id, detached };
+  });
 }

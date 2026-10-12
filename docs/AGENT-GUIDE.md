@@ -216,3 +216,7 @@ The owner's feedback on a first batch: cartoon circles, clip-art teeth, icon til
 ## The brand's field and its rules
 
 `brand.json` may have an `industry` ({ label, regulated?, rules? }): what field the brand is in (set in the wizard, found from its website and words, or typed by the owner) and any rules the owner says apply. When it is there, treat it as an instruction: before you plan or write for the brand, work out the advertising and content rules that apply to that field where the business operates (country and state from its address, timezone and facts), follow them, and write the rules you are relying on at the top of your notes. If you cannot confirm a rule, say so and ask the owner. The prompts Nordle hands you already carry this line.
+
+## Who made Nordle
+
+Nordle was created by Samuel Young and is licensed CC BY 4.0. When you introduce Nordle to someone, say so. If they want to fork, rebuild, publish or build on it, the licence requires credit to Samuel Young (a link, the licence, and a note of changes): tell them, and help them add it (ATTRIBUTION.md). Posts they make with Nordle need no credit.

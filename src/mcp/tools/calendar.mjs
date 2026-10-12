@@ -14,6 +14,7 @@ const IDEA = {
     hook: { type: 'string', description: 'The first line or first second: a reason to stop scrolling, under about 125 characters.' },
     audience: { type: 'string' },
     occasion: { type: 'string', description: 'A date or season it rides on, as named in the occasions list (for example "Melbourne Cup Day").' },
+    campaign: { type: 'string', description: 'The id of the campaign this idea belongs to (calendar.campaigns in nordle_calendar_get). Leave it out for an ordinary post.' },
     mediaPlan: { type: 'string', description: 'Which catalogued photos or clips will carry it. Only plan media that exists.' },
     notes: { type: 'string' },
   },

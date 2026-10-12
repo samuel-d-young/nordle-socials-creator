@@ -23,6 +23,7 @@ import { loadPublish, openConnect, openSchedule, pub, refreshAuto } from './stud
 import { openAddBrand, openGuide } from './studio-brand.js';
 import { openStock } from './studio-stock.js';
 import * as act from './studio-actions.js';
+import { api } from './api.js';
 
 const VIEW_META = {
   month: { label: 'Month', icon: 'month', key: 'm' },
@@ -210,7 +211,8 @@ function build() {
   el.selbar = h('div', { class: 'selbar hidden', role: 'region', 'aria-label': 'Selected posts' });
   el.banner = h('div', { class: 'offline hidden', role: 'status' });
   el.working = h('div', { class: 'working hidden', role: 'status', 'data-state': 'working' });
-  el.main = h('div', { class: 's-main' }, el.banner, el.working, el.mast, el.filters, el.view, el.selbar);
+  el.update = h('div', { class: 'update hidden', role: 'status', 'data-state': 'update' });
+  el.main = h('div', { class: 's-main' }, el.banner, el.update, el.working, el.mast, el.filters, el.view, el.selbar);
   el.scrim = h('div', { class: 'scrim', onclick: closeDetail });
   el.detail = h('aside', { class: 'detail', 'aria-label': 'Post', 'aria-hidden': 'true' });
   el.tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Views' });
@@ -252,7 +254,8 @@ function renderRail() {
       h('button', { class: 'rf', type: 'button', onclick: () => openConnect('buffer'), title: hostingNote() || 'Publishing: platforms, accounts and where your pictures and video are hosted' }, icon('calendarSend', 15), h('span', {}, 'Publishing'),
         hostingNote() ? h('span', { class: 'rf-n rf-ok', 'data-state': 'hosting-ready', title: hostingNote() }, 'Hosting on') : null),
       h('button', { class: 'rf', type: 'button', 'data-act': 'open-stock', onclick: () => openStock({ project: S.brand !== 'all' ? S.brand : '' }), title: 'Stock libraries: add a library and its key, and search photos, video, music and sound effects' }, icon('film', 15), h('span', {}, 'Stock')),
-      h('a', { class: 'rf', href: '#/projects' }, icon('home', 15), h('span', {}, 'Library'))));
+      h('a', { class: 'rf', href: '#/projects' }, icon('home', 15), h('span', {}, 'Library')),
+      h('a', { class: 'rf rf-credit', href: 'https://github.com/samuel-d-young/nordle-socials-creator', target: '_blank', rel: 'noopener', title: 'Nordle was created by Samuel Young and is free to use under CC BY 4.0. Credit him if you share it or build on it.' }, h('span', {}, 'Nordle by Samuel Young'))));
 }
 
 /** "Media hosting is set up: Cloudflare R2, bucket nordle-posts" once a hosting bucket is saved, else ''. The rail shows it so it is never a surprise. */
@@ -690,7 +693,7 @@ export function showStudio(hash) {
   if (first) {
     Object.keys(sigs).forEach((k) => delete sigs[k]);
     update({ load: S.load === 'ready' ? 'ready' : 'loading' });
-    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); });
+    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); startUpdateChecks(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) { load(); refreshAuto(); } }, 15000);
   } else {
@@ -710,3 +713,34 @@ export function hideStudio() {
 
 /** Where the Studio is right now, so the editor's back button can return to the same place. */
 export const studioHash = () => (S.load === 'ready' ? hashFor() : '#/');
+
+
+// ---- "Nordle has been updated on GitHub" -----------------------------------------------------------------------------------------------
+// Asks the server (which asks GitHub at most every six hours). It only tells you; the two commands to run are one click away.
+let updateTimer = 0;
+async function checkUpdate({ force = false } = {}) {
+  let u;
+  try { u = await api.get(`/update${force ? '?force=1' : ''}`); } catch { return; }
+  S.updateInfo = u;
+  const show = u.enabled && u.updateAvailable && !u.dismissed;
+  el.update.classList.toggle('hidden', !show);
+  if (!show) return;
+  const n = u.behindBy || u.changes.length || 0;
+  el.update.replaceChildren(icon('alert', 15),
+    h('span', {}, h('b', {}, 'Nordle has been updated on GitHub'), n ? ` · ${n} new change${n === 1 ? '' : 's'}` : '', u.latest?.message ? ` · latest: ${u.latest.message}` : ''),
+    h('button', { class: 'linklike', type: 'button', 'data-act': 'update-info', onclick: () => showUpdate(u) }, 'What changed'),
+    h('button', { class: 'linklike', type: 'button', 'data-act': 'update-copy', onclick: () => { navigator.clipboard?.writeText(u.command).then(() => notify('Copied. Paste it in a terminal, then restart the Studio.', { kind: 'ok' }), () => notify(u.command, { kind: 'info' })); } }, 'Copy the update command'),
+    h('button', { class: 'linklike', type: 'button', 'data-act': 'update-dismiss', onclick: async () => { try { await api.post('/update/dismiss', { sha: u.latest.sha }); } catch { /* it comes back next time */ } el.update.classList.add('hidden'); } }, 'Not now'));
+}
+function showUpdate(u) {
+  const body = h('div', { class: 'db' },
+    h('p', {}, 'These changes are on GitHub and not in your copy yet:'),
+    h('ul', { class: 'upd-list' }, (u.changes.length ? u.changes : [{ sha: (u.latest?.sha ?? '').slice(0, 7), message: u.latest?.message ?? '' }]).map((c) => h('li', {}, h('code', {}, c.sha), ' ', c.message))),
+    h('p', {}, 'To update, run this in a terminal, then restart the Studio:'), h('pre', { class: 'upd-cmd' }, u.command),
+    h('p', { class: 'muted' }, 'Nordle only tells you; it never installs anything itself. Your projects and settings are not touched. ', h('a', { href: u.url, target: '_blank', rel: 'noopener' }, 'See everything on GitHub')),
+    h('p', { class: 'muted' }, 'Created by Samuel Young. ', h('button', { class: 'linklike', type: 'button', onclick: async () => { try { await api.post('/update/settings', { enabled: false }); notify('Update checks are off. Turn them on again with: node nordle.mjs update --on', { kind: 'info' }); el.update.classList.add('hidden'); } catch (e) { notify(e.message, { kind: 'error' }); } } }, 'Stop checking for updates')));
+  const dlg = h('dialog', { class: 'wide', 'aria-label': 'What changed in Nordle' }, h('div', { class: 'dh' }, 'What changed'), body, h('div', { class: 'df' }, h('button', { class: 'btn primary', type: 'button', onclick: () => dlg.close() }, 'Close')));
+  dlg.addEventListener('close', () => dlg.remove());
+  document.body.append(dlg); dlg.showModal();
+}
+export function startUpdateChecks() { checkUpdate(); clearInterval(updateTimer); updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkUpdate(); }, 6 * 3600 * 1000); }

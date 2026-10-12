@@ -1,6 +1,7 @@
 # Licences of everything Nordle ships or depends on
 
-Rule: MIT / Apache-2.0 / BSD / OFL only in the core. Every asset in the repo gets a line here.
+Nordle itself (its code, docs and original sample material) is CC BY 4.0, created by Samuel Young: see LICENSE and ATTRIBUTION.md.
+Rule: MIT / Apache-2.0 / BSD / OFL / CC BY only in the core, for what it depends on and ships. Every asset in the repo gets a line here.
 Last audited: 2026-10-05 (Phase 1). Re-audit at Phase 6 before sharing.
 
 ## Dependencies
@@ -32,10 +33,10 @@ Avoided on purpose:
 
 | Asset | Licence / origin |
 |---|---|
-| `samples/little-gannet/assets/*.svg` | Original artwork made for this project, MIT |
-| `samples/little-gannet/brand.json` and `docs/*.json` | Original, MIT. The brand is fictional |
-| `data/platforms.json` | Original data, MIT. Values are approximate and unverified |
-| `data/occasions-au.json`, `examples/calendar.example.json` | Original data, MIT. Dates of public holidays and observances are facts, written as rules; each entry names where to confirm it and unsure ones are marked verify |
+| `samples/little-gannet/assets/*.svg` | Original artwork made for this project, CC BY 4.0 |
+| `samples/little-gannet/brand.json` and `docs/*.json` | Original, CC BY 4.0. The brand is fictional |
+| `data/platforms.json` | Original data, CC BY 4.0. Values are approximate and unverified |
+| `data/occasions-au.json`, `examples/calendar.example.json` | Original data, CC BY 4.0. Dates of public holidays and observances are facts, written as rules; each entry names where to confirm it and unsure ones are marked verify |
 | Test media (`sources/`) | Generated on demand by `tools/make-sample-media.mjs` from ffmpeg test patterns and sine tones; not stored in git |
 
 Fonts bundled in `fonts/` (variable fonts, latin, latin-ext and vietnamese subsets), copied unmodified from the

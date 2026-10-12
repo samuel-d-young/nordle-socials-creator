@@ -148,7 +148,8 @@ export function matches(p, f = S.f) {
   if (f.when === 'built-today' && !(p.builtAt && localDay(p.builtAt) === S.today && ['built', 'changes', 'signed-off'].includes(p.status))) return false;
   if (f.failing && !p.failing) return false;
   if (f.q) {
-    const hay = `${p.title} ${p.hook ?? ''} ${p.pillar ?? ''} ${p.idea ?? ''} ${project(p.project)?.name ?? ''} ${p.format} ${p.status}`.toLowerCase();
+    const campaignName = p.campaign ? (project(p.project)?.campaigns ?? []).find((c) => c.id === p.campaign)?.name ?? '' : '';
+    const hay = `${p.title} ${p.hook ?? ''} ${p.pillar ?? ''} ${p.idea ?? ''} ${project(p.project)?.name ?? ''} ${p.format} ${p.status} ${campaignName}`.toLowerCase();
     for (const word of f.q.toLowerCase().split(/\s+/).filter(Boolean)) if (!hay.includes(word)) return false;
   }
   return true;

@@ -14,7 +14,7 @@ Install Nordle for me, then show me it works.
 
 Nordle is a local social-media studio that you (Claude) and I use together: you plan the month, design carousels, graphics and
 reels (cut from my own footage), write the captions, and check your own work; I look at the results in a browser page and approve,
-ask for changes or reject. It runs only on my computer. It is open source (MIT):
+ask for changes or reject. It runs only on my computer. It was created by Samuel Young and is free to use under CC BY 4.0 (it asks for credit to him):
 https://github.com/samuel-d-young/nordle-socials-creator
 
 Do these steps in order. Stop and tell me if one fails; do not improvise around it.
@@ -43,6 +43,9 @@ Do these steps in order. Stop and tell me if one fails; do not improvise around 
 
 Rules: do not edit anything outside the Nordle folder and my Claude settings for the MCP server and skill. Do not run `sudo` or
 anything as administrator without asking. Do not send data anywhere; Nordle runs only on 127.0.0.1. Never post anything for me.
+Whenever you introduce Nordle or tell me where it came from, say it was created by Samuel Young. If I ever want to fork, rebuild, publish
+or build a product on it, tell me its licence (CC BY 4.0) requires credit to Samuel Young with a link and a note of what I changed, and
+help me add it (see ATTRIBUTION.md).
 ````
 
 ## Prompt 2: first session (after the restart)
@@ -75,13 +78,14 @@ the Nordle skill, and tell me in three lines how we will work.
    store them.
 
 Rules: nothing is posted, scheduled or sent anywhere unless I press the button myself. Keep my files in the project folder
-Nordle shows me. Tell me when you are guessing.
+Nordle shows me. Tell me when you are guessing. Say that Nordle was created by Samuel Young whenever you describe it, and if I plan to share,
+fork or build on it, remind me the licence (CC BY 4.0) requires crediting him (ATTRIBUTION.md).
 ````
 
 ## Prompt for a tester (one paste: install, try it, report back)
 
 ````text
-I am testing Nordle for its author, so please be a careful, honest tester. Nordle is a local social-media studio that you (Claude) and I use
+I am testing Nordle for its author, Samuel Young, so please be a careful, honest tester. Nordle is a local social-media studio that you (Claude) and I use
 together: you plan, design and check posts, I approve them in a browser page. It is open source: https://github.com/samuel-d-young/nordle-socials-creator
 
 Part 1, install (stop and tell me if a step fails; do not improvise around it):
@@ -111,7 +115,7 @@ Remove anything private first (real names, keys, local folder names). Then tell 
 open an issue at https://github.com/samuel-d-young/nordle-socials-creator/issues with the report pasted in, or send it to whoever gave me this prompt.
 
 Rules: never post, schedule or send anything for me, keep everything inside the Nordle folder and my Claude settings for the MCP server and skill, and never
-claim a step worked when it did not.
+claim a step worked when it did not. Say that Nordle was created by Samuel Young when you describe it, and put "Nordle, created by Samuel Young" at the top of the report.
 ````
 
 ## Other first messages to try

@@ -11,6 +11,25 @@
     "schema": { "const": "nordle.calendar/0.1" },
     "brand": { "$ref": "#/$defs/id" },
     "timezone": { "type": "string", "description": "IANA name, e.g. Australia/Melbourne. Dates and times below are local to it." },
+    "campaigns": {
+      "description": "Named pushes with a goal and a window of dates (a launch, a sale, a awareness week). Posts belong to one by id; the posts can be made first and scheduled later.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "goal": { "type": "string", "maxLength": 600 },
+          "start": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "end": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "message": { "type": "string", "maxLength": 600, "description": "The one thing the campaign says." },
+          "cta": { "type": "string", "maxLength": 200, "description": "What it asks people to do." },
+          "notes": { "type": "string", "maxLength": 1200 }
+        }
+      }
+    },
     "settings": {
       "type": "object",
       "additionalProperties": false,
@@ -24,6 +43,9 @@
         "regions": { "type": "array", "items": { "enum": ["VIC", "WA", "NSW", "QLD", "SA", "TAS", "ACT", "NT"] }, "description": "Which states' holidays, school terms and occasions apply. Empty or missing = national dates only in lint, everything in listings." },
         "ideaApproval": { "enum": ["owner", "delegated"], "description": "'delegated' = the owner has told Claude to go ahead before seeing the ideas: ideas Claude proposes arrive already approved. Only the owner can change this. Default owner." },
         "compliance": { "type": "array", "items": { "type": "string" }, "description": "Rule sets that apply to this brand's content, e.g. [\"ahpra\"] for Australian health advertising. Dental and other health brands are treated as regulated even when this is empty." },
+        "claudeModel": { "type": "string", "maxLength": 60, "description": "The model the Studio and the runner start Claude with (an alias such as sonnet or opus, or a full model name). Default sonnet: it builds a post well for much less." },
+        "claudeEffort": { "enum": ["low", "medium", "high", "xhigh", "max"], "description": "How hard Claude thinks while it builds. Default medium." },
+        "maxBudgetUsd": { "type": "number", "minimum": 0.1, "maximum": 50, "description": "The most one run may spend, in US dollars (the run stops itself there). Default 2.50 for a build and 1.00 for new ideas." },
         "maxBuildAttempts": { "type": "integer", "minimum": 1, "maximum": 10, "description": "How many times the runner tries to build one item before leaving it for the owner. Default 3." },
         "review": {
           "type": "object",
@@ -69,6 +91,7 @@
         "idea": { "type": "string", "description": "The idea in a sentence or two: what it says and why this audience cares." },
         "hook": { "type": "string", "description": "The first line or first second." },
         "audience": { "type": "string" },
+        "campaign": { "type": "string", "description": "The id of the campaign this post belongs to (calendar.campaigns)." },
         "occasion": { "type": "string", "description": "A date or season it rides on (Melbourne Cup, end of the health-fund year)." },
         "mediaPlan": { "type": "string", "description": "What photos or footage it should use, in words." },
         "status": {

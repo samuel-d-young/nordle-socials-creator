@@ -24,6 +24,8 @@
 //                 ideaApproval?, doc?, external?, notes?, feedback?:[{at,by,comment,resolved?}], run?:{attempts,state,lastError?,...}, updated? }
 //   GET  /calendar/due               -> { today, leadDays, autoBuild, due:[ { mode, item } ] }
 //   GET  /calendar/slots?month=YYYY-MM -> { month, quota, need, slots:[ { date, time, format } ] }
+//   POST /calendar/campaigns (owner) { name, goal?, start?, end?, message?, cta?, notes? } -> 201 { campaign };  POST /calendar/campaigns/:id (owner) { ...changes };  POST /calendar/campaigns/:id/remove (owner)
+//        a campaign is a named push with a window of dates; items carry `campaign: <id>`; the posts can be made first and scheduled later
 //   POST /calendar/run (owner) { action:'propose', months?:[YYYY-MM], extra? } | { action:'build', item } -> 202 { ok, running, last }   starts Claude (claude -p) in the background
 //   GET  /calendar/run-status -> { running: null|{kind,startedAt,item?,months?}, last: null|{kind,finishedAt,outcome,added?,error?} }
 //   GET  /calendar/suggest?month=&count=&decide=1&formats=reel,carousel&styles=team,educate&learn=0&prompt=...  (the Create page)
@@ -50,11 +52,12 @@
 //                                              regions?, ideaApproval?, compliance?, maxBuildAttempts?, timezone? }  null removes one
 //        -> { ok:true, settings, timezone }
 
-import { ACTIONS, CalendarError, addItems, approveAll, decide, linkDoc, loadProject, overview, runnableItems, setSettings, updateItem } from '../../calendar/service.mjs';
+import { ACTIONS, CalendarError, addCampaign, addItems, approveAll, decide, linkDoc, loadProject, overview, removeCampaign, runnableItems, setSettings, updateCampaign, updateItem } from '../../calendar/service.mjs';
 import { needFor, monthCounts, quotaOf, spreadSlots } from '../../calendar/plan.mjs';
 import { isDate, isMonth } from '../../calendar/dates.mjs';
 import { occasionsBetween } from '../../calendar/occasions.mjs';
 import { suggestOptions } from '../../calendar/suggest.mjs';
+import { suggestForCampaign } from '../../calendar/suggest-campaign.mjs';
 import { jobStatus, startJob } from '../../calendar/jobs.mjs';
 import { runDue, runPropose } from '../../calendar/run.mjs';
 import { buildPrompt, proposePrompt } from '../../calendar/prompts.mjs';
@@ -83,6 +86,14 @@ export default {
         const day = isDate(q.get('today')) ? q.get('today') : p.today;
         return sendJson(res, 200, { today: day, leadDays: p.settings.leadDays, autoBuild: p.settings.autoBuild, due: runnableItems(p.cal, day).map(({ item, mode }) => ({ mode, item })) });
       }
+      if (method === 'POST' && rest[0] === 'campaigns') {
+        needHuman();
+        const b = await readJsonBody(req);
+        if (rest.length === 1) { const r = await addCampaign(dir, b); return sendJson(res, 201, { ok: true, campaign: r.campaign }); }
+        if (rest.length === 2) { const r = await updateCampaign(dir, rest[1], b); return sendJson(res, 200, { ok: true, campaign: r.campaign }); }
+        if (rest.length === 3 && rest[2] === 'remove') { const r = await removeCampaign(dir, rest[1]); return sendJson(res, 200, { ok: true, removed: r.removed, detached: r.detached }); }
+        throw new HttpError(404, 'Unknown campaign action.');
+      }
       if (method === 'GET' && rest[0] === 'run-status') return sendJson(res, 200, { ok: true, ...jobStatus(dir) });
       if (method === 'POST' && rest[0] === 'run') {
         needHuman();   // Claude is started by the owner, on the owner's computer, under the owner's sign-in
@@ -110,7 +121,8 @@ export default {
         const month = q.get('month');
         if (month && !isMonth(month)) throw new CalendarError(400, 'month must look like 2026-11');
         const list = (k) => (q.get(k) ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-        return sendJson(res, 200, { ok: true, ...suggestOptions(dir, { month: month ?? undefined, count: q.get('count') ? Number(q.get('count')) : undefined, decide: q.get('decide') === '1', formats: list('formats'), styles: list('styles'), learn: q.get('learn') !== '0', prompt: q.get('prompt') ?? '' }) });
+        if (q.get('campaign')) return sendJson(res, 200, { ok: true, ...suggestForCampaign(dir, { campaign: q.get('campaign'), count: q.get('count') ? Number(q.get('count')) : undefined, decide: q.get('decide') === '1', formats: list('formats'), learn: q.get('learn') !== '0', prompt: q.get('prompt') ?? '' }) });
+        return sendJson(res, 200, { ok: true, ...suggestOptions(dir, { month: month ?? undefined, count: q.get('count') ? Number(q.get('count')) : undefined, decide: q.get('decide') === '1', formats: list('formats'), styles: list('styles'), learn: q.get('learn') !== '0', prompt: q.get('prompt') ?? '', campaign: q.get('campaign') ?? undefined }) });
       }
       if (method === 'GET' && rest[0] === 'slots') {
         const p = loadProject(dir);

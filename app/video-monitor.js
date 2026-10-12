@@ -7,16 +7,17 @@ import { h, icon, promptBox, toast } from './dom.js';
 import { api } from './api.js';
 import { state, update } from './state.js';
 import { addComment, whenSaved } from './doc.js';
-import { V, onV, setV, doc, clock, currentSize, sizeParam, videoSizes, fileUrl, fpsOf, lengthOf, seek, selectedClip, snapFrame, sourceOf, toFrames, videoApi } from './video-state.js';
+import { V, onV, setV, doc, clock, currentSize, sizeParam, videoSizes, fileUrl, fpsOf, lengthOf, seek, select, selectedClip, snapFrame, sourceOf, toFrames, videoApi } from './video-state.js';
 import { cancelJob, checkPreview, ensureProxy, preview, previewRendered, previewUrl, sourceProblems, startRender, watchJob } from './video-data.js';
-import { setClipSourcePoint } from './video-actions.js';
+import { setClipSourcePoint, setLayerField } from './video-actions.js';
 
 export function mountMonitor(root) {
   const img = h('img', { class: 'vm-img', alt: 'The picture at the playhead, with titles and captions', draggable: 'false' });
   const video = h('video', { class: 'vm-video', playsinline: true, preload: 'auto', 'aria-label': 'Video monitor' });
   const pins = h('div', { class: 'vm-pins' });
   const note = h('div', { class: 'vm-note', role: 'status' });
-  const frameBox = h('div', { class: 'vm-frame' }, img, video, pins, note);
+  const boxLayer = h('div', { class: 'vm-boxes' });
+  const frameBox = h('div', { class: 'vm-frame' }, img, video, boxLayer, pins, note);
   const stage = h('div', { class: 'vm-stage' }, frameBox);
   const time = h('span', { class: 'vm-time', 'aria-live': 'off' });
   const stale = h('span', { class: 'vm-stale hidden', role: 'status' });
@@ -105,6 +106,49 @@ export function mountMonitor(root) {
     frameTimer = setTimeout(fetchFrame, 300);
   }
 
+  // ---- text on the picture: click a title to select it, double-click to change its words ---------------------------------------------
+  const boxCache = new Map();
+  let boxes = [];
+  const textLayer = (id) => (doc().layers ?? []).find((l) => l.id === id) ?? null;
+  function paintBoxes(list) {
+    boxes = V.mode === 'frame' ? list : [];
+    const sel = V.sel.kind === 'layer' ? new Set(V.sel.ids) : new Set();
+    boxLayer.replaceChildren(...boxes.filter((b) => b.type === 'text' || b.type === 'group').map((b) => {
+      const layer = textLayer(b.id);
+      const caption = b.id.startsWith('nv-');
+      if (!layer && !caption) return null;
+      const editable = layer?.type === 'text' && typeof layer.text === 'string' && !layer.lock;
+      const label = caption ? 'Captions come from the transcript' : editable ? `Title: ${layer.text.slice(0, 40)}` : `Title ${b.id}`;
+      return h('button', {
+        class: `vm-tbox${sel.has(b.id) ? ' sel' : ''}${caption ? ' cap' : ''}`, type: 'button', 'data-layer': b.id, 'data-editable': editable ? '1' : '0',
+        style: { left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` },
+        title: caption ? 'Captions come from the transcript: change the words in the Transcript tab.' : editable ? 'Click to select this text. Double-click to change the words.' : 'Click to select. Its settings are on the right.',
+        'aria-label': label,
+        onclick: (e) => { e.stopPropagation(); if (caption) { toast('Captions come from the transcript. Change the words in the Transcript tab.'); return; } select('layer', [b.id]); },
+        ondblclick: (e) => { e.stopPropagation(); if (editable) editText(b, layer); else if (!caption) select('layer', [b.id]); },
+      });
+    }).filter(Boolean));
+  }
+  /** The words changed in place: a box over the title, Enter (or clicking away) keeps it, Escape leaves it as it was. */
+  function editText(b, layer) {
+    video.pause();
+    const ta = h('textarea', { class: 'vm-edit', 'aria-label': `Words of ${layer.name ?? layer.id}`, 'data-field': 'frame-text', style: { left: `${b.x * 100}%`, top: `${b.y * 100}%`, minWidth: `${Math.max(b.w, 0.2) * 100}%`, minHeight: `${Math.max(b.h, 0.05) * 100}%` } });
+    ta.value = layer.text;
+    let done = false;
+    const finish = (keep) => {
+      if (done) return;
+      done = true;
+      const next = ta.value;
+      ta.remove();
+      if (keep && next.trim() && next !== layer.text) { try { setLayerField(layer.id, ['text'], next, `Text of ${layer.id}`); } catch (e) { toast(e.message); } }
+    };
+    ta.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.preventDefault(); finish(false); } });
+    ta.addEventListener('blur', () => finish(true));
+    boxLayer.append(ta);
+    ta.focus(); ta.select();
+  }
+  onV('sel', () => { for (const el of boxLayer.querySelectorAll('.vm-tbox')) el.classList.toggle('sel', V.sel.kind === 'layer' && V.sel.ids.includes(el.dataset.layer)); });
+
   async function fetchFrame() {
     if (V.mode !== 'frame') return;
     const d = doc();
@@ -113,7 +157,7 @@ export function mountMonitor(root) {
     const size = currentSize();
     const key = `${state.v}|${size.id}|${toFrames(t, fps)}`;
     const hit = frames.get(key);
-    if (hit) { img.src = hit; paintHead(); frameBox.classList.remove('stale'); frameBox.removeAttribute('aria-busy'); quiet(); return; }
+    if (hit) { img.src = hit; paintBoxes(boxCache.get(key) ?? []); paintHead(); frameBox.classList.remove('stale'); frameBox.removeAttribute('aria-busy'); quiet(); return; }
     const token = ++frameToken;
     say('', { busy: true });
     frameBox.setAttribute('aria-busy', 'true');
@@ -121,11 +165,13 @@ export function mountMonitor(root) {
       await whenSaved();
       if (token !== frameToken) return;
       const asked = state.v;
-      const r = await api.post(videoApi('stills'), { doc: state.docId, times: [t], scale: 0.5, size: sizeParam() });
+      const r = await api.post(videoApi('stills'), { doc: state.docId, times: [t], scale: 0.5, size: sizeParam(), boxes: true });
       if (token !== frameToken) return;     // the playhead or the document moved on while this was drawn: throw it away
       const f = r.files[0];
       const url = `data:${f.mime};base64,${f.base64}`;
       frames.set(`${asked}|${size.id}|${toFrames(t, fps)}`, url);
+      boxCache.set(`${asked}|${size.id}|${toFrames(t, fps)}`, f.boxes ?? []);
+      paintBoxes(f.boxes ?? []);
       if (frames.size > 40) frames.delete(frames.keys().next().value);
       img.src = url;
       paintHead();
@@ -348,6 +394,7 @@ export function mountMonitor(root) {
 
   function onMode() {
     quiet();
+    if (V.mode !== 'frame') boxLayer.replaceChildren();
     if (V.mode !== 'source') { source.explicit = null; source.key = ''; source.status = 'idle'; source.abort?.abort(); }
     if (V.mode !== 'cut') { videoReady = false; if (!video.paused) video.pause(); }
     if (V.mode === 'frame') { video.removeAttribute('src'); video.load(); videoSrc = ''; source.key = ''; source.status = 'idle'; fetchFrame(); }

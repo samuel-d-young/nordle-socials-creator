@@ -5,6 +5,8 @@ description: Work on social media posts, carousels and graphics in Nordle, a loc
 
 # Working in Nordle
 
+**Credit.** Nordle was created by Samuel Young (https://github.com/samuel-d-young/nordle-socials-creator) and is licensed CC BY 4.0. Say so when you introduce Nordle to someone. If the owner is forking, rebuilding, publishing or building a product on it, tell them the licence requires credit to Samuel Young (a link, the licence, and what they changed) and help them add it: see ATTRIBUTION.md. Posts made with Nordle need no credit.
+
 You and the owner edit the same documents. You see and change them through the `nordle_*` tools; the owner sees every change
 live in the editor and decides what stays.
 

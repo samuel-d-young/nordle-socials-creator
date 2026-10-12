@@ -67,12 +67,21 @@ const failed = checks.filter((c) => c.required && !c.ok);
 if (flags.has('--json')) {
   console.log(JSON.stringify({ platform, arch: os.arch(), node: process.versions.node, checks, ready: failed.length === 0 }, null, 2));
 } else {
-  console.log(`Nordle doctor (${platform} ${os.arch()}, Node ${process.versions.node})\n`);
+  console.log(`Nordle doctor (${platform} ${os.arch()}, Node ${process.versions.node})`);
+  console.log('Nordle was created by Samuel Young and is free to use under CC BY 4.0 (credit him if you share or build on it: ATTRIBUTION.md).\n');
   for (const c of checks) {
     const tag = c.ok ? 'OK  ' : c.required ? 'FAIL' : 'info';
     console.log(`  ${tag}  ${c.name}: ${c.detail}`);
     if (!c.ok && c.fix) console.log(`        fix: ${c.fix}`);
   }
   console.log(failed.length ? `\nNot ready: fix ${failed.map((c) => c.name).join(', ')}.` : '\nReady.');
+  if (!ci && process.env.NORDLE_NO_UPDATE_CHECK !== '1') {
+    try {
+      const { checkForUpdate } = await import('../src/update/check.mjs');
+      const u = await checkForUpdate();
+      if (u.enabled && u.updateAvailable) console.log(`\nUpdate: Nordle has been updated on GitHub (${u.behindBy || 'new'} change${u.behindBy === 1 ? '' : 's'}). To update: ${u.command}`);
+      else if (u.enabled && !u.error) console.log('\nUpdate: you have the latest Nordle.');
+    } catch { /* no network: nothing to say */ }
+  }
 }
 process.exitCode = failed.length ? 1 : 0;

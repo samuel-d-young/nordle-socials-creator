@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "A local social-media editor you and Claude edit together: video, carousels, graphics and post copy.",
-  "license": "MIT",
+  "license": "CC-BY-4.0",
   "type": "module",
   "bin": {
     "nordle": "nordle.mjs"
@@ -28,7 +28,8 @@
   "dependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "playwright-core": "^1.63.0",
+    "playwright-core": "^1.64.0",
     "pngjs": "^7.0.0"
-  }
+  },
+  "author": "Samuel Young (https://github.com/samuel-d-young)"
 }

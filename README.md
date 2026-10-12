@@ -1,5 +1,7 @@
 # Nordle
 
+*Created by [Samuel Young](https://github.com/samuel-d-young). Free to use and build on under [CC BY 4.0](LICENSE): credit him, see [ATTRIBUTION.md](ATTRIBUTION.md).*
+
 A local social-media studio where **Claude is the designer** and you are the art director. Claude plans the month, designs
 the posts (carousels, single graphics, **reels cut from your real footage**), writes the captions, and **checks its own
 work**; you open the Studio, step through what is ready, and approve, ask for changes, or move things around yourself.
@@ -104,4 +106,4 @@ The server listens on 127.0.0.1 only, answers only to localhost host names, need
 no CORS headers, caps request sizes, and serves your files with a locked-down content policy. Pages are rendered in a browser
 that can only read the project folder and the bundled fonts. Claude gets its own, weaker token. Read [SECURITY.md](SECURITY.md).
 
-Licence: MIT. The sample brand is fictional; see [LICENSES.md](LICENSES.md) for everything shipped or depended on.
+Licence: [CC BY 4.0](LICENSE). Nordle was created by Samuel Young: if you share it, rebuild it or build on it you must credit him and link to this repository, and say if you changed it (see [ATTRIBUTION.md](ATTRIBUTION.md)). Nothing you make *with* Nordle needs a credit. The sample brand is fictional; see [LICENSES.md](LICENSES.md) for everything shipped or depended on.
