@@ -121,7 +121,7 @@ cannot it says why ("Ask again" tries once more). A server restart puts back a r
 * The revise brief tells the designer to make the smallest change, to edit the post's existing spec, to rebuild with the project's own helper (a
   `specs/_go*.mjs`, `make.mjs`...: never a plain `build`, which drops a house look) or with the reel command for a reel, and, when a request cannot be met
   truthfully (the photo asked for is not in the catalogs), to say what is missing on that comment and leave it open instead of faking it.
-* **It needs Claude Code to be signed in on this computer** (`claude auth login`, once, in a terminal): the headless `claude -p` has its own sign-in and does
+* **It needs Claude Code to be signed in on this computer** (once: Nordle shows a **Sign in to Claude** button, in the banner at the top and wherever Claude is needed, that opens the browser to approve; `claude auth login` in a terminal does the same): the headless `claude -p` has its own sign-in and does
   not use the desktop app's. When it is not, the post says exactly that and what to type, instead of a raw error, and nothing else is tried.
 * `node nordle.mjs calendar watch [project]` prints one line the moment a post is sent back (`SENT-BACK <project> <item> doc=<doc> | <what was asked>`):
   an open Claude session (signed in through its app) can watch that and make the change itself while the CLI is not signed in. `node nordle.mjs feedback
@@ -192,6 +192,15 @@ use `POST .../items/<id>` for edits until PATCH is allowed through.
 HTTP and MCP surfaces including everything the agent token must not be able to do. The tests set `NORDLE_CLAUDE_BIN` to a path that does not exist, so a
 bug cannot start the real Claude.
 
+## How a reel is made (`reel`) and extra information (`guidance`)
+
+Two optional fields on a calendar item, both checked by the calendar service and written into the build prompt:
+
+- `reel` (reels only): `{ style, uses, seconds }`. `style` is `auto` (Claude chooses from what the project really has: footage that fits, motion graphics when there is none or animated type tells the idea better, a voice-over only when there is a recording with word timings), `footage`, `motion` (motion graphics only, no footage) or `voiceover` (motion graphics timed to the owner's recording). `uses` is any of footage, photos, stock, voiceover, music, sfx, captions, logo, endcard (a style drops what it cannot use, e.g. a motion-graphics reel has no footage). `seconds` is about how long (5 to 90).
+- `guidance` (any format, up to 2000 characters): extra information from the owner to steer the post: who to feature, what to stress, what to avoid. The build prompt tells Claude to follow it.
+
+Set them in the Create page (Reels row and the extra-info box; they go on every post added), in **Edit** on a post, through `nordle_calendar_propose` / `nordle_calendar_update`, or `--reel-style` / `--reel-seconds` on the command line. The words and checks are in `src/shared/reel-options.mjs`. Tests: `tests/reel-options.test.mjs`, `tests/reel-voiceover.test.mjs`.
+
 ## The Create page (Make posts)
 
 The Studio's **Create** view (press `n`) is the quick way to fill the calendar. It has two ways in:
@@ -214,7 +223,7 @@ against posts of their own kind. It is a lean, never proof of cause, and a choic
 
 ## Starting Claude from the Studio, and seeing it work
 
-You do not have to paste a prompt into Claude. Nordle can start Claude itself, on this computer, under your sign-in (`claude auth login` once; the Studio says so
+You do not have to paste a prompt into Claude. Nordle can start Claude itself, on this computer, under your sign-in (sign in once with the **Sign in to Claude** button; the Studio says so
 if it is signed out):
 
 - **Ask Claude now** (Create page): writes ideas for the month you chose, using what you asked for. They arrive in the Plan as ideas for you to approve.

@@ -79,7 +79,7 @@ the Nordle skill, and tell me in three lines how we will work.
 6. Build the first approved post. Look at your own result as a picture, run the critique and the checks, fix what they find, and
    tell me what you were unsure about. Then tell me where to find it in the Studio.
 7. Explain, in under ten lines, how I approve a post, how I ask for changes (the "Request changes" button and what it needs:
-   Claude Code signed in on this computer, `claude auth login`), and what Nordle will NOT do on its own (it never posts without me).
+   Claude Code signed in on this computer: Nordle shows a Sign in to Claude button, one click and approve in the browser, nobody types a command), and what Nordle will NOT do on its own (it never posts without me).
 8. Ask whether I want to connect a publishing service (Buffer) and a stock-photo library now or later. If now, point me to the
    Studio's Publishing and Stock windows and to `docs/PUBLISHING.md` and `docs/STOCK.md`; I type any keys myself, you never see or
    store them.

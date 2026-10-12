@@ -269,3 +269,40 @@ export function buildLine(p) {
   if (b.active) { const t = setInterval(() => { if (!el.isConnected) clearInterval(t); else paint(); }, 15000); }
   return el;
 }
+
+/**
+ * A "Sign in to Claude" button (and what it shows while you are signing in): it starts the sign-in on this computer, the browser opens, you approve there, and the
+ * `onReady` callback runs the moment Claude Code says it is signed in. No terminal. Returns an element.
+ */
+export function claudeSignIn({ onReady, label = 'Sign in to Claude' } = {}) {
+  const box = h('span', { class: 'signin', 'data-field': 'claude-signin' });
+  let timer = 0;
+  const stop = () => { clearInterval(timer); timer = 0; };
+  const paint = (state, url, error) => {
+    box.replaceChildren(...(state === 'waiting'
+      ? [h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', { role: 'status', 'data-state': 'signin-waiting' }, 'A browser window opened. Sign in there and approve, and Nordle carries on by itself. '),
+        url ? h('a', { href: url, target: '_blank', rel: 'noopener' }, 'If it did not open, use this link. ') : null,
+        h('button', { class: 'linklike', type: 'button', 'data-act': 'claude-signin-cancel', onclick: async () => { stop(); try { await api.post('/claude/login/cancel', {}); } catch { /* ok */ } paint('idle'); } }, 'Cancel')]
+      : [h('button', { class: 'btn primary', type: 'button', 'data-act': 'claude-signin', onclick: start }, label), error ? h('span', { class: 'bad', role: 'alert' }, ` ${error}`) : null]).filter(Boolean));
+  };
+  async function poll() {
+    try {
+      const r = await api.get('/claude');
+      if (r.signedIn === true) { stop(); paint('idle'); onReady?.(r); return; }
+      if (r.login?.state === 'waiting') paint('waiting', r.login.url);
+      else if (r.login?.state === 'failed' || r.login?.state === 'cancelled') { stop(); paint('idle', null, r.login.error ?? ''); }
+    } catch { /* the next look will try again */ }
+  }
+  async function start() {
+    paint('waiting');
+    try {
+      const r = await api.post('/claude/login', {});
+      if (r.login?.state === 'failed') { paint('idle', null, r.login.error); return; }
+      if (r.login?.state === 'done') { paint('idle'); onReady?.(r); return; }
+    } catch (e) { paint('idle', null, e.message); return; }
+    stop(); timer = setInterval(() => { if (!box.isConnected) stop(); else poll(); }, 2000);
+    poll();
+  }
+  paint('idle');
+  return box;
+}

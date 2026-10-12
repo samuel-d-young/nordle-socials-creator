@@ -16,6 +16,8 @@ const IDEA = {
     occasion: { type: 'string', description: 'A date or season it rides on, as named in the occasions list (for example "Melbourne Cup Day").' },
     campaign: { type: 'string', description: 'The id of the campaign this idea belongs to (calendar.campaigns in nordle_calendar_get). Leave it out for an ordinary post.' },
     mediaPlan: { type: 'string', description: 'Which catalogued photos or clips will carry it. Only plan media that exists.' },
+    guidance: { type: 'string', description: 'Extra information from the owner to steer this post (what to stress, who to feature, what to avoid). Copy it from the words the owner used; do not invent it.' },
+    reel: { type: 'object', description: 'Reels only. How it is made: { style: auto (Claude decides; the default) | footage | motion (motion graphics only, no footage) | voiceover (motion graphics timed to a voice-over the owner recorded), uses: [footage, photos, stock, voiceover, music, sfx, captions, logo, endcard], seconds }. Leave it out for an ordinary footage reel.', properties: { style: { type: 'string', enum: ['auto', 'footage', 'motion', 'voiceover'] }, uses: { type: 'array', items: { type: 'string', enum: ['footage', 'photos', 'stock', 'voiceover', 'music', 'sfx', 'captions', 'logo', 'endcard'] } }, seconds: { type: 'integer' } }, additionalProperties: false },
     notes: { type: 'string' },
   },
   required: ['date', 'format', 'title'],

@@ -112,6 +112,34 @@ ordinary project paths (`assets/photo.jpg`). `node tools/validate.mjs --media` c
 }
 ```
 
+## Voice-over reels and motion-graphics-only reels
+
+A reel does not need footage. `card` and `end` scenes plus hand-made `layers` (animated type, panels, rules) make a reel of motion graphics only: no sources at all.
+
+To make the graphics follow a **voice-over** (a recording of the owner's own voice; Nordle never makes a voice up), add the recording as an audio source with a words file and name it:
+
+```json
+{
+  "sources": { "vo": { "path": "mount:voice/tips.wav", "type": "audio", "transcript": "sources/transcripts/tips.words.json" } },
+  "voiceover": { "source": "vo", "in": 0.8, "lead": 0.15, "tail": 0.3 },
+  "captions": { "maxWordsPerLine": 3 },
+  "scenes": [
+    { "type": "card", "pattern": "statement", "say": "small batches", "content": { "headline": "Small batches" } },
+    { "type": "card", "pattern": "stat", "say": "three steps", "content": { "number": "3", "label": "steps" } },
+    { "type": "end", "say": "come and see us", "content": { "headline": "Come and see us" } }
+  ]
+}
+```
+
+- `say` is the words the scene covers, copied from the transcript (case and punctuation do not matter; `"first ... last"` runs from the first words to the last). Phrases are found in order, so a phrase said twice is found where the scene order expects it.
+- A scene starts when the one before ends and runs until `lead` seconds (default 0.15) before the next scene's words, so the graphics are on screen as the words are said. The last scene holds for `tail` seconds (default 0.3) after its words. A scene is held at least 0.8 s.
+- `in` is where in the recording the reel starts (skips a long lead-in). The voice goes on its own `Voice-over` audio track, music ducks under it, and captions follow it.
+- A layer can be timed the same way: `"time": { "say": "roasted ... order", "to": "optional later words", "hold": 0.4 }`.
+- If a phrase is not in the transcript, the build stops and names it. If the source has no word timings, it stops and says so.
+- `node nordle.mjs reel <project> <spec> --sheet` reads the words file itself; nothing needs to be passed.
+
+In the Studio this is the **Made from** choice on a reel (Create page and the idea editor): **Auto**, **Cut from footage**, **Motion graphics only**, **Motion graphics with a voice-over**, plus what it uses and about how long (`item.reel` on the calendar item).
+
 ## How the timeline is read
 
 - Times are seconds; the picture is cut on exact frames at `timeline.fps`. A clip lasts `(out - in) / speed`; for a photo, `out - in`.

@@ -25,9 +25,13 @@
 // "layers": [ ...document layers with a "time" ] (optional) are appended as they are: shapes, drawn diagrams, extra text.
 // "endPanel": { kicker, headline, label, url, phoneLine, disclaimer, logo, at } on a clip or photo scene slides a clean closing sheet up over
 //   the end of that shot (the reel ends on real footage instead of a full-screen card). Sits above the platform's covered bottom strip.
+// "voiceover": { source, in?, lead?, tail?, gainDb?, out? } makes the graphics follow a recording of the owner's voice (the source needs a transcript). A card, end or photo scene
+//   with "say": "the words it covers" runs from just before those words to just before the next scene's words; a layer may say "time": { say, to?, hold? }. See docs/VIDEO.md.
+//   With no footage scenes at all (only card and end) the reel is motion graphics only.
 // A card/end scene with "bare": true draws only its background (the pattern's text is left out) so "layers" can draw the card by hand.
 
 import { blocks, brandRoles, toneColours, composePage, logoFor, closingCard, closingCardHeight } from './patterns.mjs';
+import { findPhrase, spokenWords } from './voice-sync.mjs';
 
 export const COVER_FRAME_SECONDS = 0.1;      // three frames at 30 fps
 export class ReelSpecError extends Error {}
@@ -44,7 +48,7 @@ function prefixIds(layer, prefix) {
 
 const withTime = (layer, start, end, animate) => ({ ...layer, time: { start: r3(start), end: r3(end) }, ...(animate ? { animate } : {}) });
 
-export function buildReelDoc(spec, { brand, platforms }) {
+export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
   if (!spec.id || !ID.test(spec.id)) throw new ReelSpecError(`spec.id must be lower-case letters, numbers, - or _ (got "${spec.id}")`);
   if (!spec.title) throw new ReelSpecError('spec.title is required');
   if (!Array.isArray(spec.scenes) || !spec.scenes.length) throw new ReelSpecError('spec.scenes needs at least one scene');
@@ -82,6 +86,41 @@ export function buildReelDoc(spec, { brand, platforms }) {
   const need = (alias, i) => {
     if (!have.has(alias)) throw new ReelSpecError(`scene ${i + 1}: unknown source "${alias}". Sources: ${[...have].join(', ') || '(none)'}`);
     return alias;
+  };
+
+  // ---- a voice-over: scenes (and layers) that name the words they cover are timed from the recording's word timings ----
+  const vo = spec.voiceover ? { ...spec.voiceover } : null;
+  const voLead = vo?.lead ?? 0.15;    // graphics arrive this long before the words they show
+  const voTail = vo?.tail ?? 0.3;     // and stay this long after the last scene's words
+  const voIn = vo?.in ?? 0;           // where in the recording the reel starts (skips a long lead-in)
+  const voWords = vo ? spokenWords(transcripts[need(vo.source, -1)]) : [];
+  if (vo && !voWords.length) throw new ReelSpecError(`the voice-over "${vo.source}" has no word timings, so the graphics cannot follow it. Add a "transcript" (a words file) to that source.`);
+  const heard = (phrase, where, after) => {
+    const hit = findPhrase(voWords, phrase, { after });
+    if (!hit) throw new ReelSpecError(`${where}: the voice-over never says "${phrase}" (after ${r2(after)} s). Copy the words from the transcript.`);
+    return { start: r3(hit.start - voIn), end: r3(hit.end - voIn), last: hit.last };
+  };
+  // each scene's words, in order: the next phrase is looked for after the one before
+  const said = [];
+  {
+    let after = voIn;
+    (spec.coverFrame ? [...spec.scenes, {}] : spec.scenes).forEach((sc, i) => {
+      if (!sc.say) { said.push(null); return; }
+      if (!vo) throw new ReelSpecError(`scene ${i + 1}: "say" needs a "voiceover" in the spec (and a source with word timings).`);
+      if (!['card', 'end', 'photo'].includes(sc.type)) throw new ReelSpecError(`scene ${i + 1}: only card, end and photo scenes can say words (a talk scene is already the speech).`);
+      const h = heard(sc.say, `scene ${i + 1}`, after);
+      said.push(h);
+      after = voWords[h.last].start + 0.001;
+    });
+  }
+  /** How long a scene that names its words runs: until just before the next scene's words (or a short tail after its own, for the last). */
+  const saidDur = (i, t, fallback) => {
+    const me = said[i];
+    if (!me) return fallback;
+    const next = said.slice(i + 1).find(Boolean);
+    const end = next ? Math.max(me.end + 0.05, next.start - voLead) : me.end + voTail;
+    if (end - t < 0.8) { notes.push(`scene ${i + 1}: its words end at ${r2(me.end)} s, so it is held for 0.8 s at least.`); return 0.8; }
+    return r3(end - t);
   };
 
   // ---- walk the scenes ----
@@ -180,7 +219,7 @@ export function buildReelDoc(spec, { brand, platforms }) {
       t += dur;
     } else if (sc.type === 'photo') {
       const src = imageSource(sc.image);
-      const dur = sc.dur ?? 2.5;
+      const dur = sc.say ? saidDur(i, t, 2.5) : (sc.dur ?? 2.5);
       v1.push({ id: `${sceneId}-photo`, source: src, in: 0, out: r3(dur), at: r3(t), fit: 'cover', ...(sc.focal ? { focal: sc.focal } : {}), zoom: sc.zoom ?? { from: 1, to: 1.08 }, ...(sc.pan ? { pan: sc.pan } : {}), ...(spec.grade && sc.grade !== 'none' ? { grade: sc.grade ?? spec.grade } : {}), ...trans(sc) });
       textOver(sc, i, t, t + dur);
       if (sc.endPanel) panelLayers(sc, i, t, t + dur);
@@ -196,7 +235,7 @@ export function buildReelDoc(spec, { brand, platforms }) {
       v2.push(footage({ id: `${sceneId}-cutaway`, source: src, in: r3(sc.in ?? 0), out: r3((sc.in ?? 0) + dur * speed), at: r3(start), mute: true, ...(speed !== 1 ? { speed } : {}), ...(sc.focal ? { focal: sc.focal } : {}), ...(sc.zoom ? { zoom: sc.zoom } : {}), ...(sc.pan ? { pan: sc.pan } : {}), ...(sc.grade ? { grade: sc.grade } : {}) }));
       textOver(sc, i, start, start + dur);
     } else if (sc.type === 'card' || sc.type === 'end') {
-      const dur = sc.dur ?? (sc.type === 'end' ? 3.4 : 2.4);
+      const dur = sc.say ? saidDur(i, t, 2.4) : (sc.dur ?? (sc.type === 'end' ? 3.4 : 2.4));
       cardLayers(sc, i, t, t + dur, sc.type === 'end');
       scenes.push({ id: sceneId, title, start: r3(t), end: r3(t + dur) });
       t += dur;
@@ -215,15 +254,30 @@ export function buildReelDoc(spec, { brand, platforms }) {
   }
 
   // hand-made overlay layers (shapes, extra text, drawn diagrams) with their own "time": {start,end}; added on top of everything
-  if (Array.isArray(spec.layers)) for (const l of spec.layers) layers.push(l);
+  // a layer may say when it shows by the words it goes with: time: { say: "the words", to?: "words where it ends", hold?: seconds after, after?: seconds }
+  if (Array.isArray(spec.layers)) {
+    for (const l of spec.layers) {
+      if (!l.time?.say) { layers.push(l); continue; }
+      if (!vo) throw new ReelSpecError(`layer "${l.id}": time.say needs a "voiceover" in the spec.`);
+      const a = heard(l.time.say, `layer "${l.id}"`, (l.time.after ?? 0) + voIn);
+      const b = l.time.to ? heard(l.time.to, `layer "${l.id}" (to)`, voWords[a.last].start + voIn) : a;
+      const { say: _s, to: _t, hold, after: _a, ...rest } = l.time;
+      layers.push({ ...l, time: { ...rest, start: r3(Math.max(0, a.start - voLead)), end: r3(Math.min(total, b.end + (hold ?? 0.4))) } });
+    }
+  }
 
   // ---- tracks ----
   const tracks = [{ id: 'v1', type: 'video', name: 'Picture', clips: v1 }];
   if (v2.length) tracks.push({ id: 'v2', type: 'video', name: 'Cutaways', clips: v2 });
+  if (vo) {
+    const voOut = vo.out ?? r3(Math.min(voIn + total, voWords[voWords.length - 1].end + 0.3));
+    if (voOut <= voIn) throw new ReelSpecError('the voice-over has no length (its "out" is not after its "in").');
+    tracks.push({ id: 'vo', type: 'audio', name: 'Voice-over', clips: [{ id: 'voice', source: vo.source, in: r3(voIn), out: r3(voOut), at: 0, gainDb: vo.gainDb ?? 0 }] });
+  }
   if (spec.music) {
     const m = spec.music;
     const msrc = need(m.source, -1);
-    tracks.push({ id: 'music', type: 'audio', name: 'Music', clips: [{ id: 'bed', source: msrc, in: r3(m.in ?? 0), out: r3((m.in ?? 0) + total), at: 0, gainDb: m.gainDb ?? -12, fade: { in: m.fadeIn ?? 0.4, out: m.fadeOut ?? 1.2 }, ...(talkRanges.length && m.duck !== false ? { duck: { under: 'v1', amountDb: m.duckDb ?? -14, attack: 0.12, release: 0.45 } } : {}) }] });
+    tracks.push({ id: 'music', type: 'audio', name: 'Music', clips: [{ id: 'bed', source: msrc, in: r3(m.in ?? 0), out: r3((m.in ?? 0) + total), at: 0, gainDb: m.gainDb ?? -12, fade: { in: m.fadeIn ?? 0.4, out: m.fadeOut ?? 1.2 }, ...((talkRanges.length || vo) && m.duck !== false ? { duck: { under: vo ? 'vo' : 'v1', amountDb: m.duckDb ?? -14, attack: 0.12, release: 0.45 } } : {}) }] });
   }
   // short sound effects (whooshes on word snaps and cuts): { source, at, gainDb?, dur?, in? }; the sources are audio files declared in `sources`
   if (spec.sfx?.length) {
@@ -242,7 +296,7 @@ export function buildReelDoc(spec, { brand, platforms }) {
   if (total > 45) notes.push(`The reel is ${total} s long; most viewers stop long before.`);
 
   const timeline = { fps: 30, duration: total, tracks, scenes, ...(spec.coverFrame ? { cover: r3(total - COVER_FRAME_SECONDS / 2) } : spec.cover !== undefined ? { cover: spec.cover } : {}) };
-  if (spec.captions && talkRanges.length) timeline.captions = { source: need(spec.captions.source, -1), highlight: 'word', maxWordsPerLine: 3, position: 'bottom-third', ...spec.captions };
+  if (spec.captions && (talkRanges.length || vo)) timeline.captions = { source: need(spec.captions.source ?? vo?.source, -1), highlight: 'word', maxWordsPerLine: 3, position: 'bottom-third', ...spec.captions };
   if (spec.scenes.some((sc) => sc.type === 'card' || sc.type === 'end') || !v1.length) timeline.background = roles.tok(roles.ink);
 
   const doc = {

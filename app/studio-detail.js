@@ -5,6 +5,7 @@ import { h, icon } from './dom.js';
 import { S, dateFmt, load, project } from './studio-store.js';
 import { brandName, brandTick, buildLine, emptyState, FORMAT_LABEL, glyph, kbd, mark, notify, plainWaits, plural, statusChip, statusOf } from './studio-ui.js';
 import { thumbUrl } from './studio-ui.js';
+import { reelSummary } from '/src/shared/reel-options.mjs';
 import * as act from './studio-actions.js';
 import { accountsOf, autoNote, openConnect, openSchedule, pub as pubState, quickLabel, quickReady, quickSchedule, serviceIcon } from './studio-publish.js';
 import { canEditHere, editHere } from './studio-edit.js';
@@ -324,6 +325,8 @@ export function why(d, post, { collapsed = false } = {}) {
   dl('Must avoid', b?.mustAvoid);
   dl('Occasion', it?.occasion);
   dl('Photos and footage', it?.mediaPlan);
+  dl('How the reel is made', it?.reel ? (reelSummary(it.reel) ?? 'Auto') : null);
+  dl('Extra info', it?.guidance);
   const idea = it?.idea ?? post.idea;
   if (!idea && !rows.length) return null;
   const body = h('div', {}, idea ? h('p', { class: 'why-idea' }, idea) : null, it?.hook ? h('p', { class: 'why-hook' }, h('span', { class: 'lbl-i' }, 'Hook'), it.hook) : null, rows.length ? h('dl', { class: 'kvs' }, rows) : null, it?.notes ? h('p', { class: 'muted why-notes' }, it.notes) : null);

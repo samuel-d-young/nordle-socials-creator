@@ -6,7 +6,7 @@ import {
   S, VIEWS, STATUS_GROUPS, addMonths, brandCounts, buildQueue, dateFmt, figures, inBrand, load, matches, months, monthOf, patchPost, project, subscribe, update, visible,
 } from './studio-store.js';
 import {
-  cycleThemeGlobal, elapsed, emptyState, hideTip, kbd, notify, skeleton, themeMode,
+  claudeSignIn, cycleThemeGlobal, elapsed, emptyState, hideTip, kbd, notify, skeleton, themeMode,
 } from './studio-ui.js';
 import { releaseViewer, activeViewer, mediaViewer } from './studio-media.js';
 import { renderMonth, isPhone, monthSpan, scrollToMonth, scrollAgenda } from './studio-month.js';
@@ -212,7 +212,8 @@ function build() {
   el.banner = h('div', { class: 'offline hidden', role: 'status' });
   el.working = h('div', { class: 'working hidden', role: 'status', 'data-state': 'working' });
   el.update = h('div', { class: 'update hidden', role: 'status', 'data-state': 'update' });
-  el.main = h('div', { class: 's-main' }, el.banner, el.update, el.working, el.mast, el.filters, el.view, el.selbar);
+  el.claude = h('div', { class: 'update claude-bar hidden', role: 'status', 'data-state': 'claude' });
+  el.main = h('div', { class: 's-main' }, el.banner, el.claude, el.update, el.working, el.mast, el.filters, el.view, el.selbar);
   el.scrim = h('div', { class: 'scrim', onclick: closeDetail });
   el.detail = h('aside', { class: 'detail', 'aria-label': 'Post', 'aria-hidden': 'true' });
   el.tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Views' });
@@ -743,4 +744,14 @@ function showUpdate(u) {
   dlg.addEventListener('close', () => dlg.remove());
   document.body.append(dlg); dlg.showModal();
 }
-export function startUpdateChecks() { checkUpdate(); clearInterval(updateTimer); updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkUpdate(); }, 6 * 3600 * 1000); }
+/** Claude Code is what builds posts, writes ideas and reads screenshots. If it is installed but not signed in, say so once, with a button: no terminal. */
+async function checkClaude() {
+  let c;
+  try { c = await api.get('/claude'); } catch { return; }
+  if (!c.found) { el.claude.replaceChildren(icon('alert', 15), h('span', {}, h('b', {}, 'Claude Code is not installed on this computer. '), 'Nordle uses it to build posts, write ideas and read pictures. Nothing else in Nordle needs it.')); el.claude.classList.remove('hidden'); return; }
+  if (c.signedIn !== false) { el.claude.classList.add('hidden'); return; }
+  el.claude.replaceChildren(icon('alert', 15), h('span', {}, h('b', {}, 'Claude is not signed in on this computer. '), 'Sign in once so Nordle can build posts, write ideas and read pictures for you. '),
+    claudeSignIn({ onReady: () => { el.claude.classList.add('hidden'); notify('Signed in. Nordle can use Claude now.', { kind: 'ok' }); } }));
+  el.claude.classList.remove('hidden');
+}
+export function startUpdateChecks() { checkClaude(); checkUpdate(); clearInterval(updateTimer); updateTimer = setInterval(() => { if (document.visibilityState === 'visible') checkUpdate(); }, 6 * 3600 * 1000); }

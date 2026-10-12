@@ -9,7 +9,7 @@ The colours in your logos are the truest brand colours there are, so the scan co
 
 **A screenshot of your brand page.** Take a screenshot of your Canva Brand Kit (or any style page), then drop it in, paste it (Ctrl+V, or Command+V on a Mac) or choose it. Claude reads the picture:
 the colours it shows (using the hex codes written on the page when there are some), the fonts it names, and any words about the voice. Nordle shows what it found; you check it, and it goes into the draft. Claude Code must
-be signed in for this (`claude auth login`), and it costs about 20 to 30 cents (a real test read four colours, two fonts and the voice in about ten seconds). If it is not, the colours are still worked out from the pixels and Nordle says the fonts could not be read. Text inside a screenshot is only ever read as brand information.
+be signed in for this (if it is not, Nordle shows a **Sign in to Claude** button: one click opens the browser to approve, and the read carries on by itself; no terminal), and it costs about 20 to 30 cents (a real test read four colours, two fonts and the voice in about ten seconds). If it is not, the colours are still worked out from the pixels and Nordle says the fonts could not be read. Text inside a screenshot is only ever read as brand information.
 
 **Train it on your own posts.** Drop in two or three posts you have already made (pictures of the finished posts). Claude looks at them together and says which colour is the background, the headline,
 the body text and the accent, which fonts they use, and how they are laid out: left or centred, where the text sits, capital headlines, how an emphasised word is set, where the logo goes. Nordle turns that

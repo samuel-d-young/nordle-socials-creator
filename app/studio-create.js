@@ -5,7 +5,9 @@
 import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, addMonths, dateFmt, monthOf, project, load } from './studio-store.js';
-import { FORMAT_LABEL, elapsed, emptyState, glyph, notify, plural } from './studio-ui.js';
+import { reelOptions } from './studio-reel.js';
+import { reelSummary } from '/src/shared/reel-options.mjs';
+import { FORMAT_LABEL, claudeSignIn, elapsed, emptyState, glyph, notify, plural } from './studio-ui.js';
 
 const FORMATS = ['reel', 'carousel', 'post', 'story'];
 const FORMAT_WORD = { reel: 'Reels', carousel: 'Carousels', post: 'Posts', story: 'Stories' };
@@ -14,7 +16,7 @@ const COUNTS = [4, 8, 12];
 const vid = { paths: [], typed: '', size: 'ig-reel-9x16', mode: 'each', busy: false, note: '', done: null };
 const VID_SIZES = [['ig-reel-9x16', 'Reel (tall)'], ['ig-story-9x16', 'Story (tall)'], ['ig-feed-4x5', 'Feed (4:5)'], ['ig-feed-1x1', 'Feed (square)']];
 const base = (p) => p.split(/[\\/]/).pop();
-const st = { campaign: null, newCamp: null, job: null, jobTimer: 0, brand: null, prompt: '', month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
+const st = { campaign: null, newCamp: null, job: null, jobTimer: 0, brand: null, prompt: '', guide: '', reel: null, month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
 
 function brandId() {
   if (S.brand && S.brand !== 'all') return S.brand;
@@ -32,7 +34,7 @@ async function suggest(redraw) {
   if (st.decide) q.set('decide', '1'); else q.set('count', String(st.count));
   if (st.formats.size) q.set('formats', [...st.formats].join(','));
   if (st.styles.size) q.set('styles', [...st.styles].join(','));
-  if (st.prompt.trim()) q.set('prompt', st.prompt.trim());
+  if (asked()) q.set('prompt', asked());
   try {
     st.result = await api.get(`/projects/${encodeURIComponent(id)}/calendar/suggest?${q}`);
     st.picked = new Set(st.result.options.map((o) => o.id));
@@ -40,13 +42,19 @@ async function suggest(redraw) {
   st.loading = false; redraw();
 }
 
-/** Start Claude on this month, from here: no pasting. Nordle runs `claude` on this computer (it must be signed in: claude auth login). */
+/** What the owner typed to steer Claude: the request, any extra information, and the reel choices. */
+const asked = () => {
+  const reel = reelSummary(st.reel);
+  return [st.prompt.trim(), st.guide.trim() ? `Extra information from the owner (copy it into each post's \`guidance\`): ${st.guide.trim()}` : '', reel ? `For reels, the owner chose: ${reel}. Put that in each reel's \`reel\` field (style, uses, seconds).` : ''].filter(Boolean).join('\n');
+};
+
+/** Start Claude on this month, from here: no pasting. Nordle runs `claude` on this computer (it must be signed in: the Sign in to Claude button does that). */
 async function askClaude(redraw) {
   const id = brandId();
   if (!id) return;
   if (!st.result) await suggest(() => {});
   try {
-    await api.post(`/projects/${encodeURIComponent(id)}/calendar/run`, { action: 'propose', months: [st.result?.month ?? st.month ?? nextMonth()], extra: st.result?.ask ?? st.prompt });
+    await api.post(`/projects/${encodeURIComponent(id)}/calendar/run`, { action: 'propose', months: [st.result?.month ?? st.month ?? nextMonth()], extra: st.result?.ask ?? asked() });
   } catch (e) { st.error = e.message; return redraw(); }
   watchJob(redraw);
 }
@@ -75,7 +83,9 @@ function jobPanel() {
   if (j.running) return null;
   const l = j.last;
   if (l.outcome === 'proposed') return h('div', { class: 'build-line', role: 'status', 'data-state': 'done' }, icon('check', 14), h('span', {}, h('b', {}, `Claude added ${plural(l.added ?? 0, 'idea')}`), ' for you to look at. ', h('a', { href: '#/s/plan' }, 'Open the plan')));
-  return h('div', { class: 'build-line', role: 'alert', 'data-state': 'failed' }, icon('alert', 14), h('span', { class: 'bad' }, l.error ?? 'Claude did not add any ideas.'));
+  const signedOut = /not signed in/i.test(l.error ?? '');
+  return h('div', { class: 'build-line', role: 'alert', 'data-state': 'failed' }, icon('alert', 14), h('span', { class: 'bad' }, signedOut ? 'Claude is not signed in on this computer. ' : (l.error ?? 'Claude did not add any ideas.')),
+    signedOut ? claudeSignIn({ onReady: () => { st.job = { running: null, last: null }; notify('Signed in. Press Ask Claude now again.', { kind: 'ok' }); renderAgain?.(); } }) : null);
 }
 
 /** Videos that already exist on this computer: choose them (the system's file window), and each becomes a post to edit. They are not copied. */
@@ -138,7 +148,8 @@ async function addPicked(redraw, { approved }) {
   if (!chosen.length) return;
   st.loading = true; redraw();
   try {
-    const items = chosen.map(({ date, time, format, title, idea, hook, pillar, occasion, campaign }) => ({ date, ...(time ? { time } : {}), format, title, idea, hook, ...(pillar ? { pillar } : {}), ...(occasion ? { occasion } : {}), ...(campaign ? { campaign } : {}), status: approved ? 'approved' : 'idea' }));
+    const guidance = st.guide.trim().slice(0, 2000);
+    const items = chosen.map(({ date, time, format, title, idea, hook, pillar, occasion, campaign }) => ({ date, ...(time ? { time } : {}), format, title, idea, hook, ...(format === 'reel' && st.reel ? { reel: st.reel } : {}), ...(guidance ? { guidance } : {}), ...(pillar ? { pillar } : {}), ...(occasion ? { occasion } : {}), ...(campaign ? { campaign } : {}), status: approved ? 'approved' : 'idea' }));
     const r = await api.post(`/projects/${encodeURIComponent(id)}/calendar/items`, { items });
     const done = r.items?.length ?? 0, left = r.rejected?.length ?? 0;
     st.added = { done, left, note: left ? `${plural(left, 'option')} could not be added: ${r.rejected[0].errors?.[0]?.message ?? 'a check failed'}.` : '', approved };
@@ -231,6 +242,7 @@ function controls(pr, redraw) {
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Kinds of post' },
         chip('A mix for me', st.formats.size === 0, () => { st.formats = new Set(); redraw(); }, { 'data-act': 'create-mix' }),
         FORMATS.map((f) => chip(FORMAT_WORD[f], st.formats.has(f), () => { if (st.formats.has(f)) st.formats.delete(f); else st.formats.add(f); redraw(); }, { 'data-format': f })))),
+    st.formats.size === 0 || st.formats.has('reel') ? h('div', { class: 'cr-reel', 'data-state': 'reel-options' }, h('h4', { class: 'lbl' }, 'Reels'), reelOptions({ value: st.reel, onChange: (r) => { st.reel = r; } })) : null,
     st.campaign ? null : h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Style'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Style of post' },
         chip('Any style', st.styles.size === 0, () => { st.styles = new Set(); redraw(); }, { 'data-act': 'create-any-style' }),
@@ -251,8 +263,10 @@ const STYLES_FALLBACK = [
   { id: 'invite', label: 'A gentle invitation', hint: 'A soft call to book, call or visit' },
 ];
 
+let renderAgain = null;
 export function renderCreate(root, ctx) {
   const redraw = () => renderCreate(root, ctx);
+  renderAgain = redraw;
   const id = brandId();
   const pr = id && project(id);
   if (!pr) return root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Add a brand first, then you can make posts for it here.' }));
@@ -261,10 +275,11 @@ export function renderCreate(root, ctx) {
   const ask = h('section', { class: 'cr-card', 'aria-label': 'Ask Claude' },
     h('h3', { class: 'lbl' }, 'Tell Claude what you want'),
     (() => { const t = h('textarea', { class: 'field cr-prompt', rows: 3, 'data-field': 'create-prompt', placeholder: 'e.g. Three reels about meeting the team, and a carousel on what to expect at a first visit. Keep it light.' }); t.value = st.prompt; t.addEventListener('input', () => { st.prompt = t.value; }); return t; })(),
+    (() => { const t = h('textarea', { class: 'field cr-prompt', rows: 2, maxlength: 2000, 'data-field': 'create-guide', 'aria-label': 'Extra information for these posts', placeholder: 'Extra info to guide the reels and posts (optional): who to feature, what to stress, what to avoid, a look to follow.' }); t.value = st.guide; t.addEventListener('input', () => { st.guide = t.value; }); return t; })(),
     h('div', { class: 'cr-go' },
       h('button', { class: 'btn primary', type: 'button', 'data-act': 'create-run', disabled: !!st.job?.running, onclick: () => askClaude(redraw) }, 'Ask Claude now'),
       h('button', { class: 'btn', type: 'button', 'data-act': 'create-ask', onclick: () => { if (r) return copyRequest(r.request); suggest(redraw).then(() => st.result && copyRequest(st.result.request)); } }, icon('clipboard', 14), 'Copy for Claude Code instead'),
-      h('span', { class: 'muted' }, 'Nordle starts Claude on this computer and the ideas land in your Plan. Claude Code must be signed in (claude auth login). Or pick from the options below.')),
+      h('span', { class: 'muted' }, 'Nordle starts Claude on this computer and the ideas land in your Plan. If Claude is not signed in yet, Nordle shows a Sign in button. Or pick from the options below.')),
     jobPanel());
 
   const results = r ? h('section', { class: 'cr-card cr-results', 'aria-label': 'Options', 'data-state': 'options' },

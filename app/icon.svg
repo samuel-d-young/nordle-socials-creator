@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nordle">
+  <rect x="9" y="9" width="50" height="50" rx="12" fill="#17191B"/>
+  <rect x="4" y="4" width="50" height="50" rx="12" fill="#FF6B1A" stroke="#17191B" stroke-width="4"/>
+  <path d="M17 41V16h7.5l12 15V16H44v25h-7.5l-12-15v15z" fill="#17191B"/>
+</svg>

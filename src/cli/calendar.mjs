@@ -74,6 +74,7 @@ function readIdeas(flags) {
   else return [{
     date: flags.date, time: flags.time, format: flags.format, title: flags.title, pillar: flags.pillar, idea: flags.idea, hook: flags.hook,
     audience: flags.audience, occasion: flags.occasion, mediaPlan: flags.media ?? flags['media-plan'], notes: flags.notes,
+    ...(flags['reel-style'] || flags['reel-seconds'] ? { reel: { ...(flags['reel-style'] ? { style: String(flags['reel-style']) } : {}), ...(flags['reel-seconds'] ? { seconds: Number(flags['reel-seconds']) } : {}) } } : {}),
   }];
   return Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : Array.isArray(data.ideas) ? data.ideas : [data];
 }

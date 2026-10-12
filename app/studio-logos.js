@@ -6,7 +6,7 @@
 
 import { api } from './api.js';
 import { h, icon } from './dom.js';
-import { notify } from './studio-ui.js';
+import { claudeSignIn, notify } from './studio-ui.js';
 
 export const LOGO_KINDS = [
   { key: 'primary', label: 'Full colour', hint: 'The logo as it normally appears', bg: 'light' },
@@ -108,7 +108,7 @@ function imageImport({ session, state, onChange, kind }) {
     state.busy = true; state.note = 'Checking that Claude Code is ready…'; onChange();
     try {
       const ready = await api.get('/claude').catch(() => null);
-      if (ready && (!ready.found || ready.signedIn === false)) { state.busy = false; state.note = ready.message ?? 'Claude Code is not ready.'; state.blocked = true; return onChange(); }
+      if (ready && (!ready.found || ready.signedIn === false)) { state.busy = false; state.note = ready.found ? 'Claude Code is not signed in yet.' : (ready.message ?? 'Claude Code is not installed.'); state.blocked = ready.found ? 'signin' : 'missing'; return onChange(); }
       state.blocked = false;
       state.note = train ? 'Claude is looking at your posts. This takes about half a minute.' : 'Claude is looking at your screenshot. This takes about half a minute.'; onChange();
       const r = await api.post(train ? '/brand/read-examples' : '/brand/read-screenshots', { uploadSession: session, files: state.names });
@@ -137,6 +137,7 @@ function imageImport({ session, state, onChange, kind }) {
       h('button', { class: 'btn sm quiet', type: 'button', 'aria-label': `Remove screenshot ${i + 1}`, 'data-act': 'shot-remove', onclick: () => { URL.revokeObjectURL(p); state.names.splice(i, 1); state.previews.splice(i, 1); state.shot = null; onChange(); } }, 'Remove')))) : null,
     state.names.length ? h('div', { class: 'cr-go' }, h('button', { class: 'btn primary', type: 'button', 'data-act': train ? 'train-read' : 'shot-read', disabled: state.busy, onclick: read }, state.busy ? 'Working…' : s ? 'Read it again' : train ? 'Read my posts' : 'Read my screenshot')) : null,
     state.note ? h('p', { class: `muted bg-hint${state.busy ? '' : ' shot-note'}`, role: 'status', 'data-state': 'shot-note' }, state.note) : null,
+    state.blocked === 'signin' ? claudeSignIn({ onReady: () => { state.blocked = false; state.note = ''; read(); } }) : null,
     s && train ? h('div', { class: 'shot-result', 'data-state': 'train-read' },
       h('ul', { class: 'bg-sws' }, s.colors.map((c) => h('li', { class: 'bg-sw', title: `${ROLE[c.role] ?? 'Colour'}: ${c.hex}` }, h('i', { style: { background: c.hex } }), h('span', {}, ROLE[c.role] ?? ''), h('code', {}, c.hex)))),
       h('p', {}, [s.fonts.headline && `Headlines: ${s.fonts.headline}`, s.fonts.body && `Body: ${s.fonts.body}`, s.fonts.accent && `Accent: ${s.fonts.accent}`].filter(Boolean).join(' · ') || (s.fallback ? 'The fonts could not be read.' : 'No fonts could be named from the posts.')),

@@ -106,8 +106,8 @@ test('the Studio: a notice when there is an update (what changed, the command, N
   await studioPage(async ({ page, open }) => {
     await open('#/s/month');
     await page.waitForSelector('.update:not(.hidden)', { timeout: 20000 });
-    assert.match(await page.locator('.update').innerText(), /Nordle has been updated on GitHub · 2 new changes/);
-    assert.match(await page.locator('.update').innerText(), /latest: Newest change/);
+    assert.match(await page.locator('.update[data-state="update"]').innerText(), /Nordle has been updated on GitHub · 2 new changes/);
+    assert.match(await page.locator('.update[data-state="update"]').innerText(), /latest: Newest change/);
     await page.locator('[data-act="update-info"]').click();
     await page.waitForSelector('dialog .upd-list');
     assert.equal(await page.locator('dialog .upd-list li').count(), 2);

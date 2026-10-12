@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { ROOT } from '../../tools/validate.mjs';
 import { PATTERNS } from '../shared/patterns.mjs';
 import { CalendarError, loadProject } from './service.mjs';
+import { reelPromptLines } from '../shared/reel-options.mjs';
 import { DEFAULT_RISK_WORDS, FORMATS, bannedPhrasesOf, isRegulated, monthReport, spreadSlots } from './plan.mjs';
 import { addDays, addMonths, diffDays, monthEnd, monthName, monthOf, monthStart, weekdayName } from './dates.mjs';
 import { occasionsBetween } from './occasions.mjs';
@@ -179,6 +180,8 @@ export function proposePrompt(projectDir, { months, today, nordleRoot = ROOT } =
   out.push('- `idea`: one or two sentences: what it says, why this audience cares, and what makes it true.');
   out.push('- `hook`: the first line or first second, under about 125 characters, a reason to stop scrolling.');
   out.push('- `mediaPlan`: the photos or clips that will carry it. Check `assets/catalog.json` and `sources/catalog.json` and name real entries; do not plan a shot that does not exist.');
+  out.push('- `reel` (reels only, optional): how it is made, `{ style: "footage" | "motion" | "voiceover", uses: [...], seconds }`. Use `motion` for a reel made only of animated graphics (no footage), and `voiceover` for animated graphics timed to a voice-over the owner has recorded (only if the project has one with word timings). Leave it out for an ordinary reel cut from footage. Honour any reel choices the owner asked for below.');
+  out.push('- `guidance` (optional): only when the owner gave you extra information to steer a post, copy it onto that idea in their words.');
   out.push('- If a call refuses an idea it says why (a repeat, a banned phrase, a date in the past, a month already full, a pillar that is not defined). Fix that idea or drop it; do not argue with the check. Warnings are for you to weigh.');
   out.push('- Fill each month to its quota using the open slots as a start; move one a day or two to land on an occasion. Finish with three lines: ideas per month, occasions used, anything the owner has to decide.', '');
   out.push('## What a good idea is', '');
@@ -251,8 +254,9 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
   out.push(`Brand: ${p.brand.name ?? p.id} (project "${p.id}"). Calendar item \`${item.id}\`, planned for ${item.date} (${weekdayName(item.date)})${item.time ? ` at ${item.time}` : ''}, pillar ${item.pillar ?? 'unassigned'}. Today is ${day}${diffDays(day, item.date) >= 0 ? `, ${diffDays(day, item.date)} day(s) before it goes out` : ''}. The owner ${how === 'revise' ? 'sent this post back with changes' : 'approved this idea'}; you are the designer. ${how === 'revise' ? 'Change the existing post, do not start again.' : 'Make a finished, checked post.'} You never post, approve or sign off anything.`, '');
 
   out.push('## The brief', '');
-  const brief = [['Idea', item.idea], ['Hook', item.hook], ['Audience', item.audience ?? p.brand.voice?.audience], ['Occasion', item.occasion], ['Media plan', item.mediaPlan], ['Notes', item.notes]].filter(([, v]) => v);
+  const brief = [['Idea', item.idea], ['Hook', item.hook], ['Audience', item.audience ?? p.brand.voice?.audience], ['Occasion', item.occasion], ['Media plan', item.mediaPlan], ['Extra guidance from the owner (follow it)', item.guidance], ['Notes', item.notes]].filter(([, v]) => v);
   out.push(...brief.map(([k, v]) => `- ${k}: ${v}`));
+  out.push(...reelPromptLines(item));
   if (how === 'revise') {
     const open = (item.feedback ?? []).filter((f) => !f.resolved).map((f) => `(${f.at.slice(0, 10)}) ${f.comment}`);
     for (const l of String(item.notes ?? '').split('\n')) if (/^Changes requested:/i.test(l)) open.push(l.replace(/^Changes requested:\s*/i, ''));   // how the Studio records it when there is no review file
@@ -281,6 +285,11 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
     }
     if (videoTools.length && how === 'revise') {
       out.push(`Video tools installed here: ${videoTools.join(', ')}.${videoGuide} Footage comes only from the catalogued sources (never invent a clip), music only from the owner's library mount. Keep the document id "${docId}" and its brief as they are.`);
+    } else if (videoTools.length && item.reel?.style && item.reel.style !== 'footage') {
+      out.push(`Video tools installed here: ${videoTools.join(', ')}.${videoGuide} This reel is made of motion graphics (see the reel style above), so write a reel spec of \`card\` and \`end\` scenes with animated layers (header of src/shared/reel-spec.mjs) and build it with the reel command, never with \`build\`:`);
+      out.push('```', `${cli} reel "${proj}" "${proj}/specs/${docId}.json" --sheet`, '```');
+      if (setBrief) out.push('Write the brief first with nordle_set_brief (goal, audience, message, must-avoid).');
+      out.push(`Make the document id "${docId}" and set its \`brief.calendarItem\` to "${item.id}" and \`brief.postDate\` to "${item.date}". Look at the sheet it writes.`);
     } else if (videoTools.length) {
       out.push(`Video tools installed here: ${videoTools.join(', ')}.${videoGuide} Read their descriptions and \`nordle_get_guide\`, then cut real footage from the catalogued sources: transcribe, choose whole sentences, add word-timed captions, cutaways that fit what is being said, music only from the owner's library mount.`);
       if (setBrief) out.push(`Write the brief first with nordle_set_brief (goal, audience, message, must-avoid).`);

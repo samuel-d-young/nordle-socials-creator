@@ -1462,3 +1462,9 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .shot-th { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .shot-th img { height: 90px; border: 1px solid var(--rule-strong); border-radius: 2px; }
 .shot-note { color: var(--proof); }
+
+/* reel options (Create page and the idea editor) */
+.reel-opts { display: grid; gap: 8px; }
+.reel-opts .cr-hint { margin: -2px 0 2px 84px; font-size: 12.5px; }
+.edit-row .reel-opts .cr-row > .lbl-i { width: 64px; }
+@media (max-width: 640px) { .reel-opts .cr-hint { margin-left: 0; } }

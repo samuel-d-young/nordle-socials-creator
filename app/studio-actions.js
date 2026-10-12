@@ -5,6 +5,7 @@ import { api } from './api.js';
 import { h, dialog } from './dom.js';
 import { S, update, patchPost, load, project, dateFmt } from './studio-store.js';
 import { askConfirm, askText, notify, plural, FORMAT_LABEL } from './studio-ui.js';
+import { reelOptions } from './studio-reel.js';
 
 const short = (t, n = 48) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 
@@ -179,16 +180,23 @@ export async function editIdea(post, detail) {
     idea: h('textarea', { class: 'field', rows: 4, value: item.idea ?? post.idea ?? '', 'aria-label': 'The idea' }),
     hook: h('input', { class: 'field', value: item.hook ?? post.hook ?? '', 'aria-label': 'Hook' }),
     mediaPlan: h('textarea', { class: 'field', rows: 2, value: item.mediaPlan ?? '', 'aria-label': 'Photos and footage' }),
+    guidance: h('textarea', { class: 'field', rows: 3, value: item.guidance ?? '', maxlength: 2000, placeholder: 'Anything that should steer it: who to feature, what to stress, what to avoid, a look to follow.', 'aria-label': 'Extra information' }),
   };
+  let reel = item.reel ?? null;
+  const reelBox = h('div', { class: 'grow', 'data-field': 'reel-box' });
+  const showReel = () => reelBox.replaceChildren(...(f.format.value === 'reel' ? [reelOptions({ value: reel, onChange: (r) => { reel = r; } })] : []));
+  f.format.addEventListener('change', showReel);
+  showReel();
   const row = (label, el) => h('div', { class: 'row edit-row' }, h('label', {}, label), h('div', { class: 'grow' }, el));
   const r = await dialog({
     title: 'Edit the idea',
-    build: (body) => body.append(row('Title', f.title), row('Date', f.date), row('Format', f.format), row('Pillar', f.pillar), row('The idea', f.idea), row('Hook', f.hook), row('Media', f.mediaPlan)),
+    build: (body) => body.append(row('Title', f.title), row('Date', f.date), row('Format', f.format), row('Pillar', f.pillar), row('The idea', f.idea), row('Hook', f.hook), row('Media', f.mediaPlan), h('div', { class: 'row edit-row', 'data-field': 'reel-row' }, h('label', {}, 'Reel'), reelBox), row('Extra info', f.guidance)),
     onOpen: () => f.title.focus(),
     actions: [{ id: 'cancel', label: 'Cancel' }, { id: 'ok', label: 'Save', primary: true }],
   });
   if (r !== 'ok') return false;
   const fields = Object.fromEntries(Object.entries(f).map(([k, el]) => [k, el.value]));
+  if (fields.format === 'reel') fields.reel = reel; else if (item.reel) fields.reel = null;
   if (!fields.title.trim()) { notify('Give it a title.', { kind: 'error' }); return false; }
   if (!fields.date) delete fields.date;
   try {

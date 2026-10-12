@@ -83,6 +83,7 @@ looked at it (`shows`, `tags`, `traps`, `people`). Say honestly what is unsure.
   1080-wide page. The last layer in a list is on top.
 - To change one size only, pass `size` to `nordle_update_layer`.
 - Text under platform buttons (safe zones), under 24 px, or below 4.5:1 contrast gets flagged by `nordle_check`.
+- A reel's `reel` option (style auto | footage | motion | voiceover, uses, seconds) and a post's `guidance` come from the owner: follow them (`docs/AGENT-GUIDE.md` "Reels made of motion graphics").
 - Video posts (reels) use the `nordle_video_*`, `nordle_render_video` and `nordle_probe_media` tools: see the Video section of the guide (`nordle_get_guide`) and `docs/VIDEO.md`. Check the cut with `nordle_video_check`, look with `nordle_video_stills`, render a preview before the full render. To take words out of a talking recording (or bring them back) use `nordle_cut_list` then `nordle_cut_words`, not hand-edited `in`/`out`.
 
 ## Performance review

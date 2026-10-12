@@ -213,6 +213,14 @@ The owner's feedback on a first batch: cartoon circles, clip-art teeth, icon til
   every reel reads as generated). End on a real shot with the booking details on a clean card over it: give the last footage scene `endPanel`
   (see the header of `src/shared/reel-spec.mjs`). Keep the type big and plain enough to read on a phone in two seconds.
 
+## Reels made of motion graphics, and voice-over reels
+
+The rule above (every scene carries real media) is for reels cut from footage. When a calendar item's `reel.style` is **motion** or **voiceover**, the owner asked for a graphics-led reel, so typographic scenes are the point. Still never draw clip-art, cartoon icons or diagrams with shapes. Make it look designed: big brand type, one idea per scene, numbers and key words doing the work, panels and rules for structure, different structure from scene to scene, and the brand's end card.
+- **motion**: `card` and `end` scenes plus `layers` with `time` and `animate`. No footage, photos or stock.
+- **voiceover**: the owner's own recording is the spine. Use only a recording the project has (an audio source with a words file). If there is none, do not invent a voice: write what is missing into the item's notes and stop. Add `voiceover: { source }` to the spec and give each scene a `say` copied from the transcript so the graphics land on the words; show the key word or number rather than repeating the sentence (captions already do that). Details: docs/VIDEO.md "Voice-over reels and motion-graphics-only reels".
+- **auto**: choose one of footage, motion or voiceover from what exists and from the idea, and say which and why in one line.
+- Honour `reel.uses` and `reel.seconds`, and follow any `guidance` the owner wrote on the item.
+
 ## The brand's field and its rules
 
 `brand.json` may have an `industry` ({ label, regulated?, rules? }): what field the brand is in (set in the wizard, found from its website and words, or typed by the owner) and any rules the owner says apply. When it is there, treat it as an instruction: before you plan or write for the brand, work out the advertising and content rules that apply to that field where the business operates (country and state from its address, timezone and facts), follow them, and write the rules you are relying on at the top of your notes. If you cannot confirm a rule, say so and ask the owner. The prompts Nordle hands you already carry this line.

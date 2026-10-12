@@ -505,7 +505,7 @@ export function detail(store, uid) {
   const approval = review ? activeApproval(review) : null;
   const itemOut = item ? {
     id: item.id, date: item.date, time: item.time ?? null, format: item.format, title: item.title, pillar: item.pillar ?? null, idea: item.idea ?? null, hook: item.hook ?? null,
-    audience: item.audience ?? null, occasion: item.occasion ?? null, mediaPlan: item.mediaPlan ?? null, status: item.status, origin: item.origin ?? null, notes: item.notes ?? null,
+    audience: item.audience ?? null, occasion: item.occasion ?? null, mediaPlan: item.mediaPlan ?? null, reel: item.reel ?? null, guidance: item.guidance ?? null, status: item.status, origin: item.origin ?? null, notes: item.notes ?? null,
     note: ext?.note ?? null, publish: item.publish ?? null,
     run: item.run ? { state: item.run.state ?? null, attempts: item.run.attempts ?? 0, startedAt: item.run.startedAt ?? null, lastAt: item.run.lastAt ?? null, lastError: item.run.lastError ?? null } : null,
     feedback: (item.feedback ?? []).slice(-5).map((f) => ({ at: f.at, by: f.by ?? 'owner', comment: f.comment, resolved: f.resolved ?? null })),

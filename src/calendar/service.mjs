@@ -13,6 +13,7 @@ import { DEFAULT_LEAD_DAYS, DEFAULT_POST_TIMES, FORMATS, ideaLint, lintCalendar,
 import { DEFAULT_TIMEZONE, addMonths, diffDays, isDate, monthEnd, monthOf, monthStart, monthsBetween, todayIn } from './dates.mjs';
 import { occasionsBetween } from './occasions.mjs';
 import { readRunLock, withFileLock } from './lock.mjs';
+import { cleanReel } from '../shared/reel-options.mjs';
 
 export class CalendarError extends Error {
   constructor(status, message, errors) { super(message); this.name = 'CalendarError'; this.status = status; this.errors = errors ?? [{ path: '/', message }]; }
@@ -112,8 +113,8 @@ export function makeItemId(cal, date, title) {
   return id;
 }
 
-export const EDITABLE = ['date', 'time', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'notes', 'campaign'];
-const CONTENT = ['date', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan'];
+export const EDITABLE = ['date', 'time', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'notes', 'campaign', 'reel', 'guidance'];
+const CONTENT = ['date', 'format', 'title', 'pillar', 'idea', 'hook', 'audience', 'occasion', 'mediaPlan', 'reel', 'guidance'];
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 // fields the server owns: a caller may send an item back whole, and these are ignored (never written from the outside)
 const SERVER_KEYS = new Set(['id', 'status', 'comment', 'origin', 'ideaApproval', 'doc', 'external', 'run', 'feedback', 'updated']);
@@ -124,6 +125,12 @@ export function cleanFields(input, { forAdd = false } = {}) {
   for (const k of Object.keys(input)) if (!EDITABLE.includes(k) && !SERVER_KEYS.has(k)) errors.push({ path: `/${k}`, message: `unknown field "${k}". Fields: ${EDITABLE.join(', ')}` });
   for (const k of EDITABLE) {
     if (input[k] === undefined) continue;
+    if (k === 'reel') {   // an object: { style, uses, seconds }
+      const r = cleanReel(input.reel);
+      errors.push(...r.errors);
+      if (r.value) fields.reel = r.value; else if (input.reel === null && !forAdd) fields.reel = null;
+      continue;
+    }
     if (input[k] === null || (typeof input[k] === 'string' && !input[k].trim())) { if (!forAdd) fields[k] = null; continue; }
     if (typeof input[k] !== 'string') { errors.push({ path: `/${k}`, message: `${k} must be text` }); continue; }
     fields[k] = input[k].trim();
@@ -131,6 +138,7 @@ export function cleanFields(input, { forAdd = false } = {}) {
   if (fields.date !== undefined && !isDate(fields.date)) errors.push({ path: '/date', message: `"${fields.date}" is not a real date (use YYYY-MM-DD)` });
   if (fields.format !== undefined && !FORMATS.includes(fields.format)) errors.push({ path: '/format', message: `format must be one of ${FORMATS.join(', ')}` });
   if (fields.time && !TIME.test(fields.time)) errors.push({ path: '/time', message: `time must look like 18:30` });
+  if (fields.guidance && fields.guidance.length > 2000) errors.push({ path: '/guidance', message: 'guidance is over 2000 characters' });
   if (fields.title && fields.title.length > 140) errors.push({ path: '/title', message: 'title is over 140 characters' });
   if (forAdd) for (const k of ['date', 'format', 'title']) if (!fields[k]) errors.push({ path: `/${k}`, message: `${k} is required` });
   return { fields, errors };
@@ -162,6 +170,7 @@ export async function addItems(projectDir, inputs, { role = 'agent', today, dele
     for (const input of list) {
       const { fields, errors } = cleanFields(input ?? {}, { forAdd: true });
       if (fields.campaign && !(cal.campaigns ?? []).some((c) => c.id === fields.campaign)) errors.push({ path: '/campaign', message: `there is no campaign "${fields.campaign}". Make it first.` });
+      if (fields.reel && fields.format !== 'reel') errors.push({ path: '/reel', message: 'reel options only apply to a reel' });
       const asked = status ?? input?.status;
       if (asked !== undefined && !['idea', 'approved'].includes(asked)) errors.push({ path: '/status', message: 'a new item starts as "idea" or "approved"' });
       if (role !== 'human' && asked === 'approved' && !delegatedNow) {
@@ -212,6 +221,7 @@ export function updateItem(projectDir, id, input, { role = 'agent', today } = {}
     const eff = effectiveSettings(cal);
     const { fields, errors } = cleanFields(input ?? {});
     if (fields.campaign && !(cal.campaigns ?? []).some((c) => c.id === fields.campaign)) errors.push({ path: '/campaign', message: `there is no campaign "${fields.campaign}".` });
+    if (fields.reel && (fields.format ?? item.format) !== 'reel') errors.push({ path: '/reel', message: 'reel options only apply to a reel' });
     if (errors.length) throw new CalendarError(400, errors.map((e) => `${e.path}: ${e.message}`).join('; '), errors);
     const wantStatus = input?.status;
     if (wantStatus !== undefined && wantStatus !== item.status) {

@@ -7,6 +7,8 @@ import { dirname, join, resolve } from 'node:path';
 import { ROOT, readJson } from '../../tools/validate.mjs';
 import { buildReelDoc, ReelSpecError } from '../shared/reel-spec.mjs';
 import { linkDoc } from '../calendar/service.mjs';
+import { applyFixes, loadWordsFile } from '../video/words.mjs';
+import { resolveMediaPath } from '../video/mounts.mjs';
 
 const atomic = (file, text) => { mkdirSync(dirname(file), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, text); renameSync(tmp, file); };
 
@@ -28,8 +30,17 @@ export default {
     const platforms = readJson(join(ROOT, 'data', 'platforms.json'));
     const spec = readJson(resolve(specArg));
 
+    // word timings of the sources that have them: a voice-over reel is timed from these
+    const transcripts = {};
+    if (spec.voiceover) {
+      const s = spec.sources?.[spec.voiceover.source];
+      if (s?.transcript) {
+        try { const w = loadWordsFile(resolveMediaPath(projectDir, s.transcript)); transcripts[spec.voiceover.source] = applyFixes(w.words, w.fixes).map((x) => ({ text: x.shown ?? x.text, start: x.start, end: x.end })); } catch (e) { console.error(`SPEC ERROR: the voice-over's word timings could not be read: ${e.message}`); return 2; }
+      }
+    }
+
     let built;
-    try { built = buildReelDoc(spec, { brand, platforms }); } catch (e) {
+    try { built = buildReelDoc(spec, { brand, platforms, transcripts }); } catch (e) {
       if (e instanceof ReelSpecError) { console.error(`SPEC ERROR: ${e.message}`); return 2; }
       throw e;
     }

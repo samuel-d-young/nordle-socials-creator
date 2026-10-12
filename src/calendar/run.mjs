@@ -37,7 +37,7 @@ const PROPOSE_TOOLS = ['mcp__nordle', 'Read', 'Glob', 'Grep'];
 
 /** `claude -p` runs with its own sign-in, not the desktop app's: when that is missing or expired every run fails the same way, at once. */
 export const SIGNED_OUT = /failed to authenticate|oauth session expired|not logged in|please run \/login|invalid api key|authentication_error/i;
-export const SIGNED_OUT_MESSAGE = 'Claude Code is not signed in on this computer, so it could not start. In a terminal run: claude auth login (then try again).';
+export const SIGNED_OUT_MESSAGE = 'Claude Code is not signed in on this computer, so it could not start. Press "Sign in to Claude" in Nordle (or, in a terminal, run: claude auth login), then try again.';
 
 const clip = (s, n) => (String(s ?? '').length > n ? `${String(s).slice(0, n - 3)}...` : String(s ?? ''));
 const tail = (s, n) => (String(s ?? '').length > n ? `...${String(s).slice(-n)}` : String(s ?? ''));

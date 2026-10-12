@@ -145,7 +145,8 @@ test('Add a brand: when Claude Code is not signed in, reading a screenshot says 
     await page.waitForSelector('[data-field="shot-import"] .shot-th img');
     await page.locator('[data-act="shot-read"]').click();
     await page.waitForFunction(() => /not signed in/.test(document.querySelector('[data-state="shot-note"]')?.textContent ?? ''));
-    assert.match(await page.locator('[data-state="shot-note"]').innerText(), /is not signed in\. In a terminal run: "\/x\/claude" auth login/);
+    assert.match(await page.locator('[data-state="shot-note"]').innerText(), /not signed in yet/);
+    assert.equal(await page.locator('[data-field="shot-import"] [data-act="claude-signin"]').count(), 1, 'a Sign in button, not a terminal command');
     assert.equal(asked, 0, 'nothing was read');
     assert.equal(await page.locator('[data-state="shot-read"]').count(), 0);
   }, { brandReader: async () => { asked += 1; return SAID; }, claudeStatusFn: () => ({ found: true, path: '/x/claude', signedIn: false, message: 'Claude Code is found at /x/claude but is not signed in. In a terminal run: "/x/claude" auth login' }) });
