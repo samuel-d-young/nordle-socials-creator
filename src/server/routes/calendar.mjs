@@ -24,6 +24,8 @@
 //                 ideaApproval?, doc?, external?, notes?, feedback?:[{at,by,comment,resolved?}], run?:{attempts,state,lastError?,...}, updated? }
 //   GET  /calendar/due               -> { today, leadDays, autoBuild, due:[ { mode, item } ] }
 //   GET  /calendar/slots?month=YYYY-MM -> { month, quota, need, slots:[ { date, time, format } ] }
+//   GET  /calendar/suggest?month=&count=&decide=1&formats=reel,carousel&styles=team,educate&learn=0&prompt=...  (the Create page)
+//        -> { options:[ { id, date, time, format, title, idea, hook, pillar?, occasion?, style, why } ], learned, request (a ready prompt for Claude), want, need, ... }
 //   GET  /calendar/occasions?from=&to=&regions=VIC,WA&tags=dental&minRelevance=medium -> { occasions:[...] }
 //   GET  /calendar/prompt?kind=propose&month=2026-11,2026-12  or  ?kind=build&item=<id>[&revise=1] -> { kind, prompt }
 //
@@ -50,6 +52,7 @@ import { ACTIONS, CalendarError, addItems, approveAll, decide, linkDoc, loadProj
 import { needFor, monthCounts, quotaOf, spreadSlots } from '../../calendar/plan.mjs';
 import { isDate, isMonth } from '../../calendar/dates.mjs';
 import { occasionsBetween } from '../../calendar/occasions.mjs';
+import { suggestOptions } from '../../calendar/suggest.mjs';
 import { buildPrompt, proposePrompt } from '../../calendar/prompts.mjs';
 
 const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : undefined);
@@ -75,6 +78,12 @@ export default {
         const p = loadProject(dir);
         const day = isDate(q.get('today')) ? q.get('today') : p.today;
         return sendJson(res, 200, { today: day, leadDays: p.settings.leadDays, autoBuild: p.settings.autoBuild, due: runnableItems(p.cal, day).map(({ item, mode }) => ({ mode, item })) });
+      }
+      if (method === 'GET' && rest[0] === 'suggest') {
+        const month = q.get('month');
+        if (month && !isMonth(month)) throw new CalendarError(400, 'month must look like 2026-11');
+        const list = (k) => (q.get(k) ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+        return sendJson(res, 200, { ok: true, ...suggestOptions(dir, { month: month ?? undefined, count: q.get('count') ? Number(q.get('count')) : undefined, decide: q.get('decide') === '1', formats: list('formats'), styles: list('styles'), learn: q.get('learn') !== '0', prompt: q.get('prompt') ?? '' }) });
       }
       if (method === 'GET' && rest[0] === 'slots') {
         const p = loadProject(dir);

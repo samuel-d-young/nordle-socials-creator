@@ -63,7 +63,8 @@ the Nordle skill, and tell me in three lines how we will work.
    phrases. If I am in a regulated field such as health, law, finance or property, say so and look in `examples/packs/` for the
    closest wording pack (`plain-claims` suits any business); offer to write me a pack for my own rules. A pack is a writing aid, not
    legal advice, so tell me to check my own rules.
-5. Propose next month's posts: ideas first, with a mix of formats, in the calendar. Wait while I approve, edit or reject them in
+5. Propose next month's posts: ideas first, with a mix of formats, in the calendar (the Studio's Create page, key `n`, also offers options I can tick,
+   with how many, which kinds and which style; use it to show me). Wait while I approve, edit or reject them in
    the Studio (Plan view). Do not build anything I have not approved.
 6. Build the first approved post. Look at your own result as a picture, run the critique and the checks, fix what they find, and
    tell me what you were unsure about. Then tell me where to find it in the Studio.

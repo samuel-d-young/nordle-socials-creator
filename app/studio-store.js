@@ -3,7 +3,7 @@
 
 import { api } from './api.js';
 
-export const VIEWS = ['month', 'wall', 'list', 'queue', 'plan', 'insights', 'trash'];
+export const VIEWS = ['month', 'wall', 'list', 'queue', 'plan', 'create', 'insights', 'trash'];
 
 export const S = {
   load: 'loading',            // loading | ready | error

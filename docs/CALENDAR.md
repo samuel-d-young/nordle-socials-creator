@@ -191,3 +191,23 @@ use `POST .../items/<id>` for edits until PATCH is allowed through.
 `claude` (success, failure, timeout, lock, stale lock, crashed run, validation failure, revise, dry run, missing binary), the command line and the
 HTTP and MCP surfaces including everything the agent token must not be able to do. The tests set `NORDLE_CLAUDE_BIN` to a path that does not exist, so a
 bug cannot start the real Claude.
+
+## The Create page (Make posts)
+
+The Studio's **Create** view (press `n`) is the quick way to fill the calendar. It has two ways in:
+
+1. **Tell Claude what you want**: a box for a few words ("three reels about the team, one carousel on what to expect at a first visit"). *Copy this for Claude*
+   copies a ready request (the same planning prompt Claude always gets, plus your words and the options below) to paste into Claude Code.
+2. **Choose, and Nordle suggests**: the month, **how many** (or *Decide for me*, which fills what the month is still missing), the **kinds** (reels, carousels,
+   posts, stories, or *a mix for me*), the **style** (meet the team, explain something, answer a question, behind the scenes, seasons and occasions, community,
+   a gentle invitation), and **Learn from my results**.
+
+*Show me options* returns cards, each with a date, a kind, a title, a one-line idea and why it was suggested. They are built from the brand's own
+facts (its team and services become "Meet Ana" and "Sourdough classes: what to expect"; nothing is invented), the occasions worth a post in that month, and the
+month's missing mix. Tick the ones you like, then **Add to the calendar** (approved: Claude builds each one as its date gets close) or **Add as ideas to look at**
+(they wait in the Plan). If Nordle can only make some of the options you asked for it says so, and *Ask Claude to improve these* hands the rest to Claude.
+
+**Learning from results.** Once results are connected (see PERFORMANCE.md) and at least 5 posts are measured, the options lean toward what did well on
+*this account's own history*: the format that engaged the biggest share of the people it reached (about a fifth of the month moves to it), and the themes and openings that scored best
+against posts of their own kind. It is a lean, never proof of cause, and a choice you make always wins. The route is `GET /calendar/suggest` and the engine is
+`src/calendar/suggest.mjs`.

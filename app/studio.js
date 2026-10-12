@@ -13,6 +13,7 @@ import { renderMonth, isPhone, monthSpan, scrollToMonth, scrollAgenda } from './
 import { renderWall, resetWall, revealAll } from './studio-wall.js';
 import { renderList, sorted, resetList } from './studio-list.js';
 import { renderPlan } from './studio-plan.js';
+import { renderCreate } from './studio-create.js';
 import { renderInsights } from './insights.js';
 import { renderTrash } from './studio-trash.js';
 import * as Q from './studio-queue.js';
@@ -28,11 +29,12 @@ const VIEW_META = {
   wall: { label: 'Wall', icon: 'wall', key: 'w' },
   queue: { label: 'Review', icon: 'queue', key: 'q' },
   list: { label: 'List', icon: 'list', key: 'l' },
+  create: { label: 'Create', icon: 'plus', key: 'n' },
   plan: { label: 'Plan', icon: 'plan', key: 'p' },
   insights: { label: 'Insights', icon: 'insights', key: 'i' },
   trash: { label: 'Trash', icon: 'trash', key: 't' },
 };
-const NAV_ORDER = ['month', 'wall', 'queue', 'list', 'plan', 'insights'];
+const NAV_ORDER = ['create', 'month', 'wall', 'queue', 'list', 'plan', 'insights'];
 
 let root = null;
 let active = false;
@@ -77,7 +79,7 @@ function writeUrl(push = false) {
 }
 
 function applyHash(hash) {
-  const m = /^#\/s\/(month|wall|list|queue|plan|insights|trash)(?:\?(.*))?$/.exec(hash);
+  const m = /^#\/s\/(month|wall|list|queue|plan|create|insights|trash)(?:\?(.*))?$/.exec(hash);
   const q = new URLSearchParams(m?.[2] ?? '');
   if (q.get('today')) S.todayOverride = q.get('today');
   if (m?.[1] === 'insights') S.insights = q.get('ip') || S.insights;
@@ -285,7 +287,7 @@ function cycleTheme() {
   update();
 }
 
-const VIEW_TITLE = { wall: 'The wall', list: 'Every post', queue: 'Review', plan: 'The plan', insights: 'Insights', trash: 'The trash' };
+const VIEW_TITLE = { wall: 'The wall', list: 'Every post', queue: 'Review', plan: 'The plan', create: 'Make posts', insights: 'Insights', trash: 'The trash' };
 function renderMast() {
   const fig = figures();
   const phone = isPhone();
@@ -310,7 +312,7 @@ function renderMast() {
 }
 
 function renderFilters() {
-  const shown = S.view !== 'plan' && S.view !== 'insights' && S.view !== 'trash';
+  const shown = S.view !== 'plan' && S.view !== 'create' && S.view !== 'insights' && S.view !== 'trash';
   el.filters.classList.toggle('hidden', !shown);
   if (!shown) return;
   const fq = h('input', { class: 'f-q', type: 'search', placeholder: 'Search posts', 'aria-label': 'Search posts', value: S.f.q, 'data-field': 'f-q', autocomplete: 'off', spellcheck: 'false' });
@@ -366,6 +368,7 @@ function renderView() {
   else if (view === 'list') renderList(r, ctx);
   else if (view === 'queue') Q.renderQueue(r, ctx);
   else if (view === 'plan') renderPlan(r, ctx);
+  else if (view === 'create') renderCreate(r, ctx);
   else if (view === 'insights') renderInsights(r, ctx);
   else if (view === 'trash') renderTrash(r, ctx);
   if (sigs.scrollKey === scrollKey) r.scrollTop = prevTop;
@@ -620,7 +623,7 @@ function onKey(e) {
   }
   const lower = k.length === 1 ? k.toLowerCase() : k;
   switch (lower) {
-    case 'g': gPending = Date.now(); document.body.append(h('div', { class: 'g-hint' }, 'g…  ', h('span', {}, 'm month · w wall · q review · l list · p plan · i insights'))); setTimeout(() => document.querySelector('.g-hint')?.remove(), 1400); e.preventDefault(); return;
+    case 'g': gPending = Date.now(); document.body.append(h('div', { class: 'g-hint' }, 'g…  ', h('span', {}, 'n create · m month · w wall · q review · l list · p plan · i insights'))); setTimeout(() => document.querySelector('.g-hint')?.remove(), 1400); e.preventDefault(); return;
     case '/': e.preventDefault(); (el.filters.querySelector('.f-q') ?? el.filters.querySelector('input'))?.focus(); return;
     case '?': e.preventDefault(); showKeys(); return;
     case 'Escape':
@@ -648,7 +651,7 @@ function onKey(e) {
     else if (lower === ' ') { e.preventDefault(); Q.toggle(); }
     return;
   }
-  if (S.view === 'plan' || S.view === 'insights') return;
+  if (S.view === 'plan' || S.view === 'create' || S.view === 'insights') return;
   if (lower === 'j') { e.preventDefault(); move('next'); }
   else if (lower === 'k') { e.preventDefault(); move('prev'); }
   else if (lower === 'ArrowRight') { e.preventDefault(); move('right'); }
