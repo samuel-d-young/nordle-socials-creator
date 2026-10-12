@@ -1468,3 +1468,6 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .reel-opts .cr-hint { margin: -2px 0 2px 84px; font-size: 12.5px; }
 .edit-row .reel-opts .cr-row > .lbl-i { width: 64px; }
 @media (max-width: 640px) { .reel-opts .cr-hint { margin-left: 0; } }
+
+/* Create page: which brand the posts are for */
+.cr-brands { margin-top: 8px; }

@@ -105,7 +105,7 @@ export default {
           const months = (Array.isArray(b.months) ? b.months : []).filter((m) => isMonth(m)).slice(0, 3);
           const extra = typeof b.extra === 'string' ? b.extra : '';
           const r = startJob(dir, 'propose', () => run.propose({ projectDir: dir, yes: true, months, extra }), { months });
-          return sendJson(res, r.started ? 202 : 409, { ok: r.started, ...(r.started ? {} : { errors: [{ message: 'Claude is already working in this brand. It is shown at the top of the page.' }] }), ...jobStatus(dir) });
+          return sendJson(res, r.started || r.queued ? 202 : 409, { ok: r.started || !!r.queued, ...(r.queued ? { queued: true, position: r.position } : {}), ...(r.started || r.queued ? {} : { errors: [{ message: r.full ? 'Claude already has 20 things waiting in this brand. Let some finish first.' : 'Claude is already doing exactly this. It is shown at the top of the page.' }] }), ...jobStatus(dir) });
         }
         if (b.action === 'build') {
           const id = String(b.item ?? '');
@@ -115,7 +115,7 @@ export default {
           if (!['approved', 'changes'].includes(it.status)) throw new CalendarError(409, `A ${it.status} post is not waiting to be built.`);
           // today = the post's own date, so a post that is not due yet can still be built early when the owner asks
           const r = startJob(dir, 'build', () => run.build({ projectDir: dir, yes: true, itemId: id, today: it.date >= p.today ? it.date : p.today }), { item: id });
-          return sendJson(res, r.started ? 202 : 409, { ok: r.started, ...(r.started ? {} : { errors: [{ message: 'Claude is already working in this brand. Wait for it to finish.' }] }), ...jobStatus(dir) });
+          return sendJson(res, r.started || r.queued ? 202 : 409, { ok: r.started || !!r.queued, ...(r.queued ? { queued: true, position: r.position } : {}), ...(r.started || r.queued ? {} : { errors: [{ message: r.full ? 'Claude already has 20 things waiting in this brand. Let some finish first.' : 'Claude is already building this post.' }] }), ...jobStatus(dir) });
         }
         throw new CalendarError(400, 'action must be "propose" or "build".');
       }

@@ -101,7 +101,8 @@
           "properties": {
             "style": { "enum": ["auto", "footage", "motion", "voiceover"] },
             "uses": { "type": "array", "uniqueItems": true, "items": { "enum": ["footage", "photos", "stock", "voiceover", "music", "sfx", "captions", "logo", "endcard"] } },
-            "seconds": { "type": "integer", "minimum": 5, "maximum": 90 }
+            "seconds": { "type": "integer", "minimum": 5, "maximum": 90 },
+            "shape": { "enum": ["vertical", "portrait", "square", "landscape"] }
           }
         },
         "status": {

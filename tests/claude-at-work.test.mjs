@@ -80,9 +80,9 @@ test('the run route: only the owner starts Claude; one job at a time; the answer
     assert.equal(started.status, 202, JSON.stringify(started.body));
     assert.equal(started.body.running.kind, 'propose');
     assert.deepEqual(seen[0], ['propose', ['2026-11'], 'three reels about the team'], 'only real months, and the owner\'s words, reach Claude');
-    const again = await call(`${base}/run`, 'POST', { action: 'propose' });
-    assert.equal(again.status, 409, 'a second job waits');
-    assert.match(again.body.errors[0].message, /already working/);
+    const again = await call(`${base}/run`, 'POST', { action: 'propose', months: ['2026-11'] });
+    assert.equal(again.status, 409, 'exactly the same job twice is refused');
+    assert.match(again.body.errors[0].message, /already doing exactly this/);
     assert.equal((await call(`${base}/run-status`)).body.running.kind, 'propose');
     release();
     for (let i = 0; i < 50 && (await call(`${base}/run-status`)).body.running; i++) await new Promise((r) => setTimeout(r, 40));

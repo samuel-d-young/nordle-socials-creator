@@ -498,8 +498,23 @@ function renderTabbar() {
 
 // ---- the whole page ---------------------------------------------------------------------------------------------------------------------
 
+/** What each post was last time we looked, so a post that was being built and now is built can say so once (a notice: nothing opens by itself, not even the editor). */
+const lastStatus = new Map();
+function announceFinished() {
+  if (S.load !== 'ready') return;
+  for (const p of S.posts) {
+    const before = lastStatus.get(p.uid);
+    if (before === 'building' && ['built', 'changes'].includes(p.status) && p.docId) {
+      const what = p.format === 'reel' ? 'reel' : p.format === 'carousel' ? 'carousel' : 'post';
+      notify(`The ${what} “${p.title}” is built and waiting for your review.`, { kind: 'ok', ms: 12000, action: { label: 'Review it', fn: () => select(p.uid, { open: true }) } });
+    }
+    lastStatus.set(p.uid, p.status);
+  }
+}
+
 function render() {
   if (!active) return;
+  announceFinished();
   el.studio.classList.toggle('is-queue', S.view === 'queue');
   el.studio.classList.toggle('with-detail', S.open && S.view !== 'queue');
   el.studio.dataset.view = S.view;
@@ -589,14 +604,14 @@ async function quick(kind) {
     if (kind === 'a') ok = await act.approveIdea(post);
     else if (kind === 'x') await act.editIdea(post, await D.fetchDetail(post).catch(() => null));
     else ok = await act.rejectIdea(post);
-    if (ok && S.open) closeDetail();
+    if (ok && S.open && kind !== 'a') closeDetail();   // approving leaves the sheet open
     return;
   }
   if (post.status === 'rejected') { if (kind === 'a') await act.reopen(post); return; }
   if (!post.docId && !post.external && kind !== 'r') { notify('This post is not built yet, so there is nothing to sign off.', { kind: 'info' }); return; }
   if (kind === 'a' && post.status === 'signed-off' && !post.staleSignoff) { notify('Already approved.', { kind: 'info' }); return; }
   const ok = kind === 'a' ? await act.approve(post) : kind === 'x' ? await act.requestChanges(post) : await act.reject(post);
-  if (ok && S.open) closeDetail();
+  if (ok && S.open && kind !== 'a') closeDetail();   // approving leaves the sheet open; asking for changes and rejecting still close it
 }
 
 function showKeys() {

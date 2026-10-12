@@ -69,7 +69,10 @@ function makeContext({ doc, brand, size, fonts, urls }) {
   const fill = (v) => {
     if (v === undefined) return undefined;
     if (typeof v === 'object') {
-      return `linear-gradient(${num(v.angle ?? 180)}deg, ${v.stops.map((s) => `${colour(s.color)} ${num(s.at * 100)}%`).join(', ')})`;
+      const stops = v.stops.map((s) => `${colour(s.color)} ${num(s.at * 100)}%`).join(', ');
+      // without a radius the glow fades out exactly at the edge of its own box, however big the box is
+      if (v.type === 'radial') return `radial-gradient(${v.radius ? `circle calc(var(--cw) * ${num(v.radius / 100)})` : 'closest-side'} at ${num(v.x ?? 50)}% ${num(v.y ?? 50)}%, ${stops})`;
+      return `linear-gradient(${num(v.angle ?? 180)}deg, ${stops})`;
     }
     return colour(v);
   };
@@ -141,7 +144,10 @@ function layerHtml(layer, c, path, inStack = false) {
   const style = { ...(layer.style ?? {}), ...(o.style ?? {}) };
   const attrs = `data-layer="${esc(layer.id)}" data-path="${esc(path)}" data-type="${layer.type}" data-safe="${layer.ignoreSafe ? 0 : 1}" data-fixed-h="${layout.h !== undefined && layout.h !== 'auto' ? 1 : 0}"`;
   const shared = [];
-  const box = (extra) => (inStack ? flowCss(layout, extra) : boxCss(layout, extra));
+  const effects = [];   // blur and blend: any kind of layer may have them
+  if (style.blur) effects.push(`filter:blur(calc(var(--u) * ${num(style.blur)}))`);
+  if (style.blend && style.blend !== 'normal') effects.push(`mix-blend-mode:${style.blend}`);
+  const box = (extra) => (inStack ? flowCss(layout, [...extra, ...effects]) : boxCss(layout, [...extra, ...effects]));
   if (layer.type !== 'text' && style.opacity !== undefined) shared.push(`opacity:${num(style.opacity)}`);
 
   switch (layer.type) {
@@ -165,6 +171,12 @@ function layerHtml(layer, c, path, inStack = false) {
     case 'shape': {
       const extra = ['box-sizing:border-box', ...shared];
       const f = c.fill(style.fill);
+      if (layer.shape === 'path') {
+        // an outline drawn in a 100 by 100 box and stretched to the layer; the stroke keeps its width, and pathLength 1 lets the draw animation trace it
+        const stroke = style.stroke ? ` stroke="${esc(c.colour(style.stroke.color) ?? '#000')}" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:calc(var(--u) * ${num(style.stroke.width)})"` : '';
+        const body = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><path d="${esc(layer.d ?? '')}" pathLength="1" vector-effect="non-scaling-stroke" fill="${f && !f.includes('gradient') ? esc(f) : 'none'}" stroke-dasharray="1" stroke-dashoffset="0"${stroke}/></svg>`;
+        return `<div class="layer shape path" ${attrs} style="${box(['box-sizing:border-box', ...shared])}">${body}</div>`;
+      }
       if (layer.shape === 'line') {
         extra.push(`height:calc(var(--u) * ${num(style.stroke?.width ?? 2)})`, `background:${c.colour(style.stroke?.color) ?? f ?? c.defaultColour}`);
       } else {

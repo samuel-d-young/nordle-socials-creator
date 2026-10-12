@@ -144,6 +144,8 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
   const done = async (fn) => { const ok = await fn(); if (ok) afterAction?.(); return ok; };
   // a decision settles the post: the sheet that was open for it goes away (the toast says what happened and offers Undo)
   const decided = async (fn) => { const ok = await fn(); if (ok) (onResolved ?? afterAction)?.(); return ok; };
+  /** Approving keeps the sheet open (the post shows as approved, and the next step is right there); rejecting and the like still close it. */
+  const kept = async (fn) => { const ok = await fn(); if (ok) afterAction?.(); return ok; };
   const href = post.docId ? `#/p/${encodeURIComponent(post.project)}/${encodeURIComponent(post.docId)}` : null;
   // a reel opens the video editor: that button sits with the decisions, under the video, where it is seen (not in the dock at the bottom)
   const isVideo = !!post.docId && (post.kind === 'video' || !!d.media?.editable);
@@ -207,7 +209,7 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
       updated,
       signed ? h('button', { class: 'btn approved', type: 'button', disabled: true, 'data-act': 'approved', 'aria-label': `Approved${d.approval ? ` ${when(d.approval.date)}` : ''}`, title: d.approval ? `Approved ${when(d.approval.date)}` : 'Already approved' }, icon('check', 16), 'Approved', d.approval ? h('span', { class: 'ap-when' }, when(d.approval.date)) : null)
         : waiting ? h('div', { class: 'sent' }, h('div', { class: `acts-done muted${post.reviseFailed ? ' bad' : ''}`, role: 'status', 'data-state': post.reviseFailed ? 'failed' : 'waiting' }, designerLine(d, post)), sentNote(d))
-          : h('button', { class: 'btn go', 'data-act': 'approve', onclick: () => decided(() => act.approve(post)) }, icon('check', 16), 'Approve', kbd('A')),
+          : h('button', { class: 'btn go', 'data-act': 'approve', onclick: () => kept(() => act.approve(post)) }, icon('check', 16), 'Approve', kbd('A')),
       h('button', { class: 'btn ask', 'data-act': 'changes', onclick: () => done(() => act.requestChanges(post)) }, s === 'changes' ? 'Ask again' : 'Request changes', kbd('X')),   // only the comment window closes: the post stays open, and its comments show where they stand
       editNow,
       isVideo ? editor : null,
@@ -219,7 +221,7 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
   }
   if (s === 'idea') {
     return wrap(
-      h('button', { class: 'btn go', 'data-act': 'idea-approve', onclick: () => decided(() => act.approveIdea(post)) }, icon('check', 16), 'Approve idea', kbd('A')),
+      h('button', { class: 'btn go', 'data-act': 'idea-approve', onclick: () => kept(() => act.approveIdea(post)) }, icon('check', 16), 'Approve idea', kbd('A')),
       h('button', { class: 'btn ask', 'data-act': 'idea-edit', onclick: () => done(() => act.editIdea(post, d)) }, 'Edit', kbd('X')),
       h('button', { class: 'btn nope', 'data-act': 'idea-reject', onclick: () => decided(() => act.rejectIdea(post)) }, 'Reject', kbd('R')));
   }
@@ -229,7 +231,7 @@ export function actions(d, post, { afterAction, onResolved, compact = false, spl
   }
   if (s === 'approved' || s === 'building') {
     return wrap(post.build ? buildLine(post) : h('div', { class: 'acts-done muted' }, s === 'approved' ? 'Approved. Waiting to be built.' : 'Being built. Nothing to review yet.'),
-      post.build && !post.build.active ? h('button', { class: 'btn go', 'data-act': 'build-now', onclick: async (e) => { e.currentTarget.disabled = true; try { await api.post(`/projects/${encodeURIComponent(post.project)}/calendar/run`, { action: 'build', item: post.itemId }); notify('Claude is on it. This page shows when it starts and when it is done.', { kind: 'ok' }); await load({ force: true }); } catch (err) { notify(err.message, { kind: 'error' }); e.currentTarget.disabled = false; } } }, icon('check', 16), 'Build it now') : null,
+      post.build && !post.build.active ? h('button', { class: 'btn go', 'data-act': 'build-now', onclick: async (e) => { e.currentTarget.disabled = true; try { const r = await api.post(`/projects/${encodeURIComponent(post.project)}/calendar/run`, { action: 'build', item: post.itemId }); notify(r.queued ? `Claude is busy with another post, so this one is in line${r.position > 1 ? ` (${r.position - 1} ahead)` : ' and goes next'}. It starts by itself.` : 'Claude is on it. This page shows when it starts and when it is done.', { kind: 'ok' }); await load({ force: true }); } catch (err) { notify(err.message, { kind: 'error' }); e.currentTarget.disabled = false; } } }, icon('check', 16), 'Build it now') : null,
       h('button', { class: 'btn nope', 'data-act': 'idea-reject', onclick: () => decided(() => act.rejectIdea(post)) }, 'Drop it'), editor);
   }
   return wrap(h('div', { class: 'acts-done muted' }, s === 'posted' ? 'Posted.' : ''), editor);

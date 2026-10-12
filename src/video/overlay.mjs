@@ -13,8 +13,10 @@ import { newCanvas } from '../render/browser.mjs';
 import { resolveToken } from '../shared/tokens.mjs';
 import { installOverlayRuntime } from './overlay-runtime.mjs';
 
-const DEFAULT_DURATION = { 'fade-in': 0.5, 'fade-out': 0.4, 'rise-in': 0.55, 'rise-out': 0.4, 'fall-in': 0.55, pop: 0.4, 'slide-in': 0.5, 'slide-out': 0.4, wipe: 0.6, 'wipe-out': 0.5 };
-export const PRESETS = ['fade-in', 'fade-out', 'rise-in', 'rise-out', 'fall-in', 'pop', 'slide-in', 'slide-out', 'wipe', 'wipe-out', 'typewriter', 'word-by-word'];
+const DEFAULT_DURATION = { 'fade-in': 0.5, 'fade-out': 0.4, 'rise-in': 0.55, 'rise-out': 0.4, 'fall-in': 0.55, pop: 0.4, 'slide-in': 0.5, 'slide-out': 0.4, wipe: 0.6, 'wipe-out': 0.5, 'scale-in': 0.5, 'blur-in': 0.6, 'blur-out': 0.5, 'spin-in': 0.7, 'tracking-in': 0.8, draw: 0.8, 'draw-out': 0.5, 'reveal-circle': 0.8, 'count-up': 1.4, shake: 0.5 };
+/** Loops run for as long as the layer is on screen. */
+const LOOPS = ['float', 'sway', 'pulse', 'drift'];
+export const PRESETS = ['fade-in', 'fade-out', 'rise-in', 'rise-out', 'fall-in', 'pop', 'slide-in', 'slide-out', 'wipe', 'wipe-out', 'typewriter', 'word-by-word', 'scale-in', 'blur-in', 'blur-out', 'spin-in', 'tracking-in', 'draw', 'draw-out', 'reveal-circle', 'count-up', 'shake', ...LOOPS];
 const EASES = new Set(['linear', 'in', 'out', 'in-out', 'in-cubic', 'out-cubic', 'in-out-cubic', 'out-back']);
 const countChars = (layer) => [...(layer.text ?? (layer.runs ?? []).map((r) => r.text).join(''))].filter((c) => !/\s/.test(c)).length;
 const countWords = (layer) => (layer.text ?? (layer.runs ?? []).map((r) => r.text).join('')).split(/\s+/).filter(Boolean).length;
@@ -37,6 +39,7 @@ function normaliseAnims(layer, brand, issues) {
       issues.push({ level: 'warn', code: 'overlay-preset', message: `Layer "${layer.id}": the animation "${a.preset}" is not known and is ignored. Presets: ${PRESETS.join(', ')}.`, layer: layer.id });
       continue;
     }
+    if (LOOPS.includes(a.preset)) { out.push({ preset: a.preset, start: a.at ?? 0, dur: span, ease, params: a.params ?? {} }); continue; }
     let dur = a.duration ?? DEFAULT_DURATION[a.preset];
     if (dur === undefined) dur = a.preset === 'typewriter' ? Math.max(0.6, countChars(layer) * 0.045) : Math.max(0.6, countWords(layer) * 0.2);
     const exit = a.preset.endsWith('-out');

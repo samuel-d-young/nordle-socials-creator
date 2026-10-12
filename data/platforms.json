@@ -72,6 +72,12 @@
       "safe": { "top": 0.05, "right": 0.05, "bottom": 0.05, "left": 0.05 }, "verified": false
     },
     {
+      "id": "yt-landscape-16x9", "platform": "youtube", "name": "YouTube / website video 16:9",
+      "w": 1920, "h": 1080, "kinds": ["video"],
+      "safe": { "top": 0.05, "right": 0.05, "bottom": 0.08, "left": 0.05 },
+      "maxDuration": 900, "verified": false
+    },
+    {
       "id": "x-landscape-16x9", "platform": "x", "name": "X post image 16:9",
       "w": 1600, "h": 900, "kinds": ["graphic", "video"],
       "safe": { "top": 0.05, "right": 0.05, "bottom": 0.05, "left": 0.05 },

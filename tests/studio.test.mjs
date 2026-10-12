@@ -452,8 +452,8 @@ test('the post sheet: caption with the hook marked, checks with the missing ones
     await page.waitForFunction(() => document.querySelector('.detail .cv-count')?.textContent.startsWith('2'));
     await page.click('.detail .acts.decide [data-act="approve"]');
     await page.waitForSelector('.notice:has-text("Signed off")');
-    // the decision is made, so the sheet that was open for it goes away
-    await page.waitForFunction(() => !document.querySelector('.detail.open'));
+    // the decision is made; the sheet stays open and now shows the post as approved
+    await page.waitForFunction(() => document.querySelector('.detail.open .btn.approved')?.textContent.includes('Approved'));
     assert.equal(calendarOf(post.project).items.find((i) => i.id === post.itemId).status, 'signed-off');
     // opened again, the Approve button is a greyed-out "Approved" that cannot be pressed
     await page.goto(`${page.url().split('#')[0]}#/s/month?today=${TODAY}&post=${encodeURIComponent(post.uid)}&month=${post.date.slice(0, 7)}`);

@@ -117,8 +117,11 @@
       "required": ["type", "stops"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "linear" },
+        "type": { "enum": ["linear", "radial"] },
         "angle": { "type": "number" },
+        "x": { "type": "number", "description": "Radial only: the centre, in percent of the width." },
+        "y": { "type": "number", "description": "Radial only: the centre, in percent of the height." },
+        "radius": { "type": "number", "exclusiveMinimum": 0, "description": "Radial only: how far the last stop is from the centre, in percent of the width." },
         "stops": {
           "type": "array",
           "minItems": 2,
@@ -187,6 +190,8 @@
         },
         "radius": { "$ref": "#/$defs/length" },
         "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "blur": { "type": "number", "minimum": 0, "maximum": 300, "description": "Soften the whole layer (px on a 1080-wide page). Big blurred shapes make glows." },
+        "blend": { "enum": ["normal", "screen", "multiply", "overlay", "soft-light", "hard-light", "color-dodge", "plus-lighter", "difference"], "description": "How the layer mixes with what is under it." },
         "shadow": {
           "type": "object",
           "required": ["color", "blur"],
@@ -219,7 +224,7 @@
             "additionalProperties": false,
             "properties": {
               "t": { "type": "number", "minimum": 0 },
-              "prop": { "enum": ["x", "y", "w", "h", "rotate", "opacity", "scale"] },
+              "prop": { "enum": ["x", "y", "w", "h", "rotate", "opacity", "scale", "blur", "draw"] },
               "value": { "type": "number" },
               "ease": { "type": "string", "pattern": "^[a-z0-9-]+$" }
             }
@@ -291,7 +296,8 @@
         "volume": { "type": "number", "minimum": 0, "maximum": 2 },
         "fit": { "enum": ["cover", "contain", "fill"] },
         "focal": { "$ref": "#/$defs/focal" },
-        "shape": { "enum": ["rect", "ellipse", "line"] },
+        "shape": { "enum": ["rect", "ellipse", "line", "path"] },
+        "d": { "type": "string", "maxLength": 3000, "pattern": "^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\\-\\s]+$", "description": "Path shapes only: the outline, drawn in a 100 by 100 box that is stretched to the layer (SVG path commands: M L H V C S Q T A Z). Stroke it with style.stroke; the draw animation traces it." },
         "children": { "type": "array", "items": { "$ref": "#/$defs/layer" } },
         "stack": {
           "description": "Group only. Lay the children out top to bottom, one after another, with this gap (px on a 1080-wide page). Children then ignore x, y and anchor; only their width (and height) count. Text can never overlap inside a stack.",

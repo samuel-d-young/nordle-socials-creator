@@ -132,8 +132,8 @@ Part 2, try it (use the nordle_* tools and the Studio in the browser; read the g
    Run the checks and critique, fix what they find, and tell me what you were unsure about. Before any step that starts Claude on its own
    ("Ask Claude now", "Build it now"), tell me it uses my Claude usage, and only do it if I say yes; if it does run, note the time, the turns and the cost it shows.
 5. Use "Request changes" once with a comment. If Nordle says Claude is not signed in, press its "Sign in to Claude" button (nobody should have to type a command), approve in the browser, and tell me whether it carried on by itself; note anything confusing for the report.
-6. If ffmpeg is installed and I have no footage handy: make one "Motion graphics only" reel from the Create page (Ask Claude now, after telling me it uses my usage), look at
-   its sheet, and tell me if it reads as designed or generated. Do NOT make up a voice-over: a voice-over reel needs my own recording with word timings, so just say
+6. If ffmpeg is installed and I have no footage handy: make one "Motion graphics only" reel from the Create page (Ask Claude now, after telling me it uses my usage), once Vertical and once Landscape, look at
+   the sheets, and tell me if they read as designed or generated (animated numbers, drawn lines, moving backgrounds, nothing cut off). Do NOT make up a voice-over: a voice-over reel needs my own recording with word timings, so just say
    whether Nordle asks me for one clearly. Then, if ffmpeg is installed: use "Edit videos you already have" on the Create page with one short video of mine (or one you make with ffmpeg), open it in
    the video editor, click a title on the picture, double-click it and change its words, play it, split a clip (S), delete one, undo (Command+Z on a Mac,
    Ctrl+Z elsewhere), and say whether the picture and sound stay in step.

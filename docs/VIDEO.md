@@ -140,6 +140,36 @@ To make the graphics follow a **voice-over** (a recording of the owner's own voi
 
 In the Studio this is the **Made from** choice on a reel (Create page and the idea editor): **Auto**, **Cut from footage**, **Motion graphics only**, **Motion graphics with a voice-over**, plus what it uses and about how long (`item.reel` on the calendar item).
 
+## The motion kit: animated graphics, in any shape
+
+A `motion` scene is a finished piece of animated design in the brand's colours and fonts, made of timed layers (`src/shared/motion-kit.mjs`). It designs for the shape of the picture (vertical 9:16, portrait 4:5, square, landscape 16:9) rather than cropping one layout.
+
+```json
+{ "type": "motion", "recipe": "kinetic", "dur": 3.4, "background": "aurora", "tone": "dark", "sweep": true,
+  "content": { "kicker": "First visit", "headline": "Nervous?\nYou are not alone", "accent": "not alone", "body": "We go at your pace" } }
+```
+
+| recipe | content | what happens |
+|---|---|---|
+| `kinetic` | `kicker?`, `headline` (`\n` splits lines), `accent?`, `body?` | lines slide and blur in from alternate sides; the stressed line scales in with a hand-drawn underline |
+| `number` | `number`, `suffix?`, `prefix?`, `label`, `note?`, `progress?` | the number counts up inside a ring that draws itself |
+| `list` | `headline?`, `items` (2 to 5) | a line draws down and each item lands on a numbered badge |
+| `quote` | `quote`, `by?` | a big mark pops, the words build, the name slides in |
+| `bars` | `headline?`, `items` of `{ label, value }`, `max?` | bars grow while their numbers count up |
+| `ticker` | `words`, `headline?` | giant words cross behind a headline at different speeds |
+| `reveal` | `headline`, `body?` | two panels part to uncover the headline |
+| `logo` | `line?`, `url?`, `phone?`, `logo?` | the logo lands with a light sweep inside a drawn ring |
+
+`background`: `aurora` (drifting colour glows), `glow` (one breathing glow), `bold` (the accent colour with a big shape), `paper` (light, soft shapes), `plain`. `tone`: `dark`, `light` or `accent`. `particles` (floating specks; on for aurora and glow) and `sweep` (a colour panel wipes across as the scene begins) are options. A motion scene can name the words it covers with `say`, like any other scene. Only use numbers that are in `facts.json`.
+
+### What the engine can do (use these in your own `layers` too)
+
+- Gradients: `{ "type": "radial", "x": 50, "y": 50, "stops": [...] }` (fades out exactly at the edge of its layer unless you give a `radius`), plus the linear one. Stops may have alpha (`#ff880000`).
+- Style: `blur` (px, softens a layer; big blurred shapes make glows), `blend` (`screen`, `multiply`, `overlay`, `soft-light`, `plus-lighter`, ...).
+- Shapes: `rect`, `ellipse`, `line` and `path`: `"shape": "path", "d": "M2 55 Q 22 5 42 55 T 98 45"` is drawn in a 100 by 100 box stretched to the layer, stroked with `style.stroke`, and traced by the `draw` animation.
+- Animation presets (`animate: [{ preset, at, duration, ease, params }]`): `fade-in/out`, `rise-in/out`, `fall-in`, `pop`, `slide-in/out`, `wipe`, `wipe-out`, `typewriter`, `word-by-word`, `scale-in`, `blur-in/out`, `spin-in`, `tracking-in` (letters close up from wide), `draw` / `draw-out` (a path traces itself), `reveal-circle`, `count-up` (`params: { to, from, decimals, prefix, suffix }`: the layer's text counts), `shake`; loops that run while the layer is on: `float`, `sway`, `pulse`, `drift` (`params` amplitude, period, amount, degrees, dx, dy). Keyframes may also animate `blur` and `draw`. Easings include `out-back` (a little overshoot).
+- Landscape: size `yt-landscape-16x9` (1920 by 1080). Type sizes are px on a 1080-wide page, so a wide frame needs smaller numbers (the kit halves them).
+
 ## How the timeline is read
 
 - Times are seconds; the picture is cut on exact frames at `timeline.fps`. A clip lasts `(out - in) / speed`; for a photo, `out - in`.

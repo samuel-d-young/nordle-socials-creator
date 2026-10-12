@@ -8,7 +8,7 @@
   "sizes": ["ig-feed-4x5", "li-feed-4x5"],
   "tags": ["menu", "seasonal"],
   "copy": {
-    "caption": "Spring menu is here.\nThree new pours: a honey lavender latte, a cold brew tonic and a cardamom cortado. Open from 7 am on Quay Street.",
+    "caption": "Spring menu is here. Three new pours: a honey lavender latte, a cold brew tonic and a cardamom cortado. Open from 7 am on Quay Street.",
     "cta": "Tell us which one you will try first.",
     "hashtags": ["#littlegannet", "#portwren", "#springmenu"],
     "alt": {
@@ -85,7 +85,7 @@
           "id": "desc", "type": "text",
           "text": "House-made honey syrup and a pinch of dried lavender. Oat or dairy.",
           "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
-          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.paper" }
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "color": "$brand.colors.paper" }
         },
         {
           "id": "price", "type": "text", "text": "6.50",
@@ -121,7 +121,7 @@
           "id": "desc", "type": "text",
           "text": "Twelve-hour cold brew over ice, topped with tonic and an orange peel.",
           "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
-          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.paper" }
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "color": "$brand.colors.paper" }
         },
         {
           "id": "price", "type": "text", "text": "7.00",
@@ -157,7 +157,7 @@
           "id": "desc", "type": "text",
           "text": "Our house espresso, a crushed cardamom pod and warm milk.",
           "layout": { "anchor": "top-left", "x": 8, "y": 46, "w": 62 },
-          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "balance": true, "color": "$brand.colors.ink" }
+          "style": { "font": "$brand.fonts.body", "size": 40, "weight": 400, "lineHeight": 1.35, "color": "$brand.colors.ink" }
         },
         {
           "id": "price", "type": "text", "text": "5.50",

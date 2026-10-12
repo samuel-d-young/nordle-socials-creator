@@ -14,14 +14,22 @@ const FORMAT_WORD = { reel: 'Reels', carousel: 'Carousels', post: 'Posts', story
 const COUNTS = [4, 8, 12];
 
 const vid = { paths: [], typed: '', size: 'ig-reel-9x16', mode: 'each', busy: false, note: '', done: null };
-const VID_SIZES = [['ig-reel-9x16', 'Reel (tall)'], ['ig-story-9x16', 'Story (tall)'], ['ig-feed-4x5', 'Feed (4:5)'], ['ig-feed-1x1', 'Feed (square)']];
+const VID_SIZES = [['ig-reel-9x16', 'Reel (tall)'], ['ig-story-9x16', 'Story (tall)'], ['ig-feed-4x5', 'Feed (4:5)'], ['ig-feed-1x1', 'Feed (square)'], ['yt-landscape-16x9', 'Landscape (16:9)']];
 const base = (p) => p.split(/[\\/]/).pop();
 const st = { campaign: null, newCamp: null, job: null, jobTimer: 0, brand: null, prompt: '', guide: '', reel: null, month: null, decide: true, count: 8, formats: new Set(), styles: new Set(), learn: true, result: null, picked: new Set(), loading: false, error: '', added: null };
 
 function brandId() {
+  if (st.pick && st.pickAt === S.brand && project(st.pick)) return st.pick;   // chosen on this page, while the left bar stayed as it was
   if (S.brand && S.brand !== 'all') return S.brand;
   if (!st.brand || !project(st.brand)) st.brand = S.projects[0]?.id ?? null;
   return st.brand;
+}
+/** Make posts for another brand, from this page (the left bar's filter is left alone). Everything shown belongs to the brand, so it starts fresh. */
+function chooseBrand(id, redraw) {
+  if (id === brandId()) return;
+  Object.assign(st, { pick: id, pickAt: S.brand, brand: id, result: null, picked: new Set(), job: null, campaign: null, newCamp: null, added: null, error: '', reel: null, guide: '', prompt: '' });
+  vid.done = null; vid.note = '';
+  redraw();
 }
 const nextMonth = () => addMonths(monthOf(S.today), 1);
 
@@ -229,8 +237,6 @@ function controls(pr, redraw) {
   return h('section', { class: 'cr-card', 'aria-label': 'Choose what to make' },
     h('h3', { class: 'lbl' }, 'Or choose, and Nordle suggests'),
     campaignRow(pr, redraw),
-    S.brand === 'all' && S.projects.length > 1 ? h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Brand'),
-      h('select', { class: 'field', 'data-field': 'create-brand', onchange: (e) => { st.brand = e.target.value; st.result = null; st.job = null; redraw(); } }, S.projects.map((p) => h('option', { value: p.id, selected: p.id === pr.id }, p.name)))) : null,
     st.campaign ? null : h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'For'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Month' }, months.map((m) => chip(dateFmt.monthYear(m), m === month, () => { st.month = m; st.result = null; redraw(); }, { 'data-month': m })))),
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'How many'),
@@ -299,6 +305,8 @@ export function renderCreate(root, ctx) {
   root.replaceChildren(h('div', { class: 'create' },
     h('header', { class: 'cr-head' },
       h('h2', {}, `For ${pr.name}`),
+      S.projects.length > 1 ? h('div', { class: 'cr-row cr-brands', 'data-state': 'brand-pick' }, h('span', { class: 'lbl-i' }, 'Brand'),
+        h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Which brand the posts are for' }, S.projects.map((p) => chip(p.name, p.id === pr.id, () => chooseBrand(p.id, redraw), { 'data-brand': p.id })))) : null,
       h('p', { class: 'muted' }, 'Start with a few words, or let Nordle suggest posts for the next month. You choose what goes on the calendar; nothing is posted.')),
     ask, st.newCamp ? campaignForm(pr, redraw) : null, controls(pr, redraw), videosCard(pr, redraw), st.error ? h('p', { class: 'cr-err', role: 'alert' }, st.error) : null, results));
 }

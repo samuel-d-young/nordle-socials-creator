@@ -221,6 +221,10 @@ The rule above (every scene carries real media) is for reels cut from footage. W
 - **auto**: choose one of footage, motion or voiceover from what exists and from the idea, and say which and why in one line.
 - Honour `reel.uses` and `reel.seconds`, and follow any `guidance` the owner wrote on the item.
 
+### Motion graphics: go all out
+
+When the reel is motion graphics (or a voice-over reel), use the motion kit (`docs/VIDEO.md` "The motion kit") and build it like a motion designer: a hook in the first 2 seconds, a different recipe and background in every scene, a rhythm of quick beats and held ones, real figures from `facts.json` as `number` or `bars` scenes (never an invented figure), the logo scene to end. Add your own animated `layers` for anything the recipes do not cover. After building, look at the contact sheet and stills: if a scene is flat, crowded or cut off, fix it before you say it is done. Use the shape the owner chose (`reel.shape`): design for a landscape frame as a landscape frame.
+
 ## The brand's field and its rules
 
 `brand.json` may have an `industry` ({ label, regulated?, rules? }): what field the brand is in (set in the wizard, found from its website and words, or typed by the owner) and any rules the owner says apply. When it is there, treat it as an instruction: before you plan or write for the brand, work out the advertising and content rules that apply to that field where the business operates (country and state from its address, timezone and facts), follow them, and write the rules you are relying on at the top of your notes. If you cannot confirm a rule, say so and ask the owner. The prompts Nordle hands you already carry this line.

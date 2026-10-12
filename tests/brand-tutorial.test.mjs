@@ -74,3 +74,23 @@ test('setup can add a footage and stock folder right on the Brand added page; it
     rmSync(footage, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
   }
 });
+
+test('Create page: the brand the posts are for can be chosen right there, whatever the left bar shows; suggestions are asked for that brand', async () => {
+  await studioPage(async ({ page, open }) => {
+    await makeBrand(page, open, 'Chooser Two');   // the left bar now shows this new brand
+    await page.locator('[data-act="wz-done"]').click();
+    await open(`#/s/create?today=${TODAY}`);
+    await page.waitForSelector('[data-state="brand-pick"]');
+    const chips = await page.$$eval('[data-state="brand-pick"] .cr-chip', (b) => b.map((x) => [x.dataset.brand, x.getAttribute('aria-pressed')]));
+    assert.ok(chips.length >= 2, `a chip per brand: ${chips.length}`);
+    assert.equal(chips.filter(([, p]) => p === 'true').length, 1);
+    const before = await page.locator('.cr-head h2').innerText();
+    const other = chips.find(([, p]) => p !== 'true')[0];
+    await page.locator(`[data-state="brand-pick"] [data-brand="${other}"]`).click();
+    await page.waitForFunction((id) => document.querySelector(`[data-state="brand-pick"] [data-brand="${id}"]`)?.getAttribute('aria-pressed') === 'true', other);
+    assert.notEqual(await page.locator('.cr-head h2').innerText(), before, 'the page is now for the other brand');
+    const asked = page.waitForRequest((r) => /\/calendar\/suggest\?/.test(r.url()));
+    await page.locator('[data-act="create-suggest"]').click();
+    assert.ok((await asked).url().includes(`/projects/${encodeURIComponent(other)}/calendar/suggest`), 'the options are for the brand that was chosen');
+  });
+});

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { ROOT } from '../../tools/validate.mjs';
 import { PATTERNS } from '../shared/patterns.mjs';
 import { CalendarError, loadProject } from './service.mjs';
-import { reelPromptLines } from '../shared/reel-options.mjs';
+import { reelPromptLines, reelSizeOf } from '../shared/reel-options.mjs';
 import { DEFAULT_RISK_WORDS, FORMATS, bannedPhrasesOf, isRegulated, monthReport, spreadSlots } from './plan.mjs';
 import { addDays, addMonths, diffDays, monthEnd, monthName, monthOf, monthStart, weekdayName } from './dates.mjs';
 import { occasionsBetween } from './occasions.mjs';
@@ -294,7 +294,7 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
     out.push(`If a request cannot be met truthfully with what is in this project (for example the photo or clip asked for is not in \`assets/catalog.json\` or \`sources/catalog.json\`, or the wording would break a rule below), do NOT invent or substitute something that is not true: answer that comment with \`nordle_reply\`, saying exactly what is missing and what you would need, leave it open (do not resolve it), and still make every other change you can.`);
   }
   if (item.format === 'reel') {
-    out.push(`This is a video post (document kind "video", size ${SIZE_FOR.reel}).`);
+    out.push(`This is a video post (document kind "video", size ${reelSizeOf(item)}).`);
     if (how === 'revise' && haveSpec) {
       out.push(`Its reel spec is \`${proj}/specs/${docId}.json\`. Edit the spec (for example the clip's start time, speed, crop or the photo behind a card), then rebuild it with the reel command, never with \`build\`:`);
       out.push('```', `${cli} reel "${proj}" "${proj}/specs/${docId}.json" --render`, '```');

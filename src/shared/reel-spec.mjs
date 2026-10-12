@@ -17,6 +17,7 @@
 //       { "type": "photo", "image": "assets/photos/x.jpg", "dur": 2.6, "text": {...} },
 //       { "type": "cutaway", "source": "room", "in": 3, "dur": 1.8, "at": 2.0 },               over the previous talk scene, speech carries on
 //       { "type": "card",  "pattern": "statement|list|stat|quote", "dur": 2.4, "tone": "dark", "content": {...} },
+//       { "type": "motion", "recipe": "kinetic|number|list|quote|bars|ticker|reveal|logo", "dur": 3.2, "background": "aurora", "tone": "dark", "content": {...} },   animated graphics: see motion-kit.mjs
 //       { "type": "end",   "dur": 3.4, "content": { "lead":"...", "headline":"...", "phone":"...", "url":"...", "disclaimer":"..." } }
 //     ]
 //   }
@@ -32,6 +33,7 @@
 
 import { blocks, brandRoles, toneColours, composePage, logoFor, closingCard, closingCardHeight } from './patterns.mjs';
 import { findPhrase, spokenWords } from './voice-sync.mjs';
+import { MotionError, motionScene } from './motion-kit.mjs';
 
 export const COVER_FRAME_SECONDS = 0.1;      // three frames at 30 fps
 export class ReelSpecError extends Error {}
@@ -107,7 +109,7 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
     (spec.coverFrame ? [...spec.scenes, {}] : spec.scenes).forEach((sc, i) => {
       if (!sc.say) { said.push(null); return; }
       if (!vo) throw new ReelSpecError(`scene ${i + 1}: "say" needs a "voiceover" in the spec (and a source with word timings).`);
-      if (!['card', 'end', 'photo'].includes(sc.type)) throw new ReelSpecError(`scene ${i + 1}: only card, end and photo scenes can say words (a talk scene is already the speech).`);
+      if (!['card', 'end', 'photo', 'motion'].includes(sc.type)) throw new ReelSpecError(`scene ${i + 1}: only card, end, photo and motion scenes can say words (a talk scene is already the speech).`);
       const h = heard(sc.say, `scene ${i + 1}`, after);
       said.push(h);
       after = voWords[h.last].start + 0.001;
@@ -234,13 +236,23 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
       if (start + dur > lastTalk.end + 0.001) notes.push(`scene ${i + 1}: the cutaway runs ${r2(start + dur - lastTalk.end)} s past the end of the talking scene it covers.`);
       v2.push(footage({ id: `${sceneId}-cutaway`, source: src, in: r3(sc.in ?? 0), out: r3((sc.in ?? 0) + dur * speed), at: r3(start), mute: true, ...(speed !== 1 ? { speed } : {}), ...(sc.focal ? { focal: sc.focal } : {}), ...(sc.zoom ? { zoom: sc.zoom } : {}), ...(sc.pan ? { pan: sc.pan } : {}), ...(sc.grade ? { grade: sc.grade } : {}) }));
       textOver(sc, i, start, start + dur);
+    } else if (sc.type === 'motion') {
+      const dur = sc.say ? saidDur(i, t, 3) : (sc.dur ?? 3);
+      let made;
+      try {
+        made = motionScene({ recipe: sc.recipe, content: sc.content ?? {}, size, roles, f, brand, id: `s${i + 1}`, start: t, end: t + dur, tone: sc.tone, background: sc.background, particles: sc.particles, sweep: sc.sweep, logo: sc.recipe === 'logo' ? (sc.content?.logo === true || sc.content?.logo === undefined ? logoFor(brand, sc.tone === 'light' ? 'light' : 'dark') : sc.content.logo) : undefined });
+      } catch (e) { if (e instanceof MotionError) throw new ReelSpecError(`scene ${i + 1} (motion): ${e.message}`); throw e; }
+      for (const n of made.notes) notes.push(`scene ${i + 1}: ${n}`);
+      layers.push(...made.layers);
+      scenes.push({ id: sceneId, title, start: r3(t), end: r3(t + dur) });
+      t += dur;
     } else if (sc.type === 'card' || sc.type === 'end') {
       const dur = sc.say ? saidDur(i, t, 2.4) : (sc.dur ?? (sc.type === 'end' ? 3.4 : 2.4));
       cardLayers(sc, i, t, t + dur, sc.type === 'end');
       scenes.push({ id: sceneId, title, start: r3(t), end: r3(t + dur) });
       t += dur;
     } else {
-      throw new ReelSpecError(`scene ${i + 1}: unknown type "${sc.type}". Types: talk, clip, photo, cutaway, card, end.`);
+      throw new ReelSpecError(`scene ${i + 1}: unknown type "${sc.type}". Types: talk, clip, photo, cutaway, card, end, motion.`);
     }
   });
   const total = r3(t);
@@ -297,7 +309,7 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
 
   const timeline = { fps: 30, duration: total, tracks, scenes, ...(spec.coverFrame ? { cover: r3(total - COVER_FRAME_SECONDS / 2) } : spec.cover !== undefined ? { cover: spec.cover } : {}) };
   if (spec.captions && (talkRanges.length || vo)) timeline.captions = { source: need(spec.captions.source ?? vo?.source, -1), highlight: 'word', maxWordsPerLine: 3, position: 'bottom-third', ...spec.captions };
-  if (spec.scenes.some((sc) => sc.type === 'card' || sc.type === 'end') || !v1.length) timeline.background = roles.tok(roles.ink);
+  if (spec.scenes.some((sc) => sc.type === 'card' || sc.type === 'end' || sc.type === 'motion') || !v1.length) timeline.background = roles.tok(roles.ink);
 
   const doc = {
     schema: 'nordle.doc/0.1', id: spec.id, title: spec.title, kind: 'video', brand: brand.id,

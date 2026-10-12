@@ -7,6 +7,7 @@ import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, s
 import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { readRunLock } from '../calendar/lock.mjs';
+import { queuePosition } from '../calendar/jobs.mjs';
 import { DEFAULT_LEAD_DAYS } from '../calendar/plan.mjs';
 import { DEFAULT_TIMEZONE, addDays } from '../calendar/dates.mjs';
 import { requiredChecks, verificationStatus } from '../verify/store.mjs';
@@ -257,6 +258,8 @@ function buildOf(project, item, calendar) {
     };
   }
   const items = Array.isArray(calendar?.items) ? calendar.items : [];
+  const waiting = queuePosition(project.dir, item.id);   // the owner pressed Build it now while Claude was busy: it is in line
+  if (waiting) return { phase: 'queued', active: false, waiting, startsOn, due: true, leadDays: lead, autoBuild: !!calendar?.settings?.autoBuild, ahead: waiting - 1, busy: true, attempt: item.run?.attempts ?? null, lastError: null };
   const ahead = items.filter((i) => i.status === 'approved' && i.id !== item.id && (i.date < item.date || (i.date === item.date && i.id < item.id))).length
     + items.filter((i) => i.status === 'building').length;
   return { phase: 'queued', active: false, startsOn, due: today >= startsOn, leadDays: lead, autoBuild: !!calendar?.settings?.autoBuild, ahead, busy: !!lock, attempt: item.run?.attempts ?? null, lastError: item.run?.lastError ?? null };

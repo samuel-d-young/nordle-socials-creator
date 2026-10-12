@@ -50,11 +50,14 @@ export function installOverlayRuntime(cfg) {
     const item = {
       meta, el, baseOpacity: el.style.opacity === '' ? 1 : parseFloat(el.style.opacity), baseClip: el.style.clipPath,
       baseLeft: el.style.left, baseTop: el.style.top, baseWidth: el.style.width, baseHeight: el.style.height,
+      baseFilter: el.style.filter, baseSpacing: parseFloat(el.style.letterSpacing) || 0, path: el.querySelector('path'), counter: null,
       chars: null, words: null, runs: null, runColors: null, lastHighlight: undefined,
     };
     if (meta.anim.some((a) => a.preset === 'typewriter')) item.chars = split(el, 'chars');
     if (meta.anim.some((a) => a.preset === 'word-by-word')) item.words = split(el, 'words');
     if (meta.caption) item.runs = [...el.querySelectorAll('[data-run]')];
+    const count = meta.anim.find((a) => a.preset === 'count-up');
+    if (count) item.counter = count;
     el.style.visibility = 'hidden';
     items.push(item);
   }
@@ -98,6 +101,21 @@ export function installOverlayRuntime(cfg) {
       }
       case 'typewriter': st.chars = p; break;
       case 'word-by-word': st.words = p; break;
+      case 'scale-in': st.op *= Math.min(1, x * 2.5); st.sc *= lerp(params.from ?? 0.6, 1, p); break;
+      case 'blur-in': st.op *= p; st.blur = Math.max(st.blur ?? 0, (1 - p) * (params.amount ?? 24)); break;
+      case 'blur-out': st.op *= 1 - p; st.blur = Math.max(st.blur ?? 0, p * (params.amount ?? 24)); break;
+      case 'spin-in': { const q = ease('out-back', x); st.op *= Math.min(1, x * 3); st.rot += (1 - q) * (params.degrees ?? -90); st.sc *= lerp(params.from ?? 0.5, 1, q); break; }
+      case 'tracking-in': st.op *= p; st.spacing = lerp(params.from ?? 0.5, 0, p); break;
+      case 'draw': st.draw = p; break;
+      case 'draw-out': st.draw = 1 - p; break;
+      case 'reveal-circle': st.clip = `circle(${p * (params.reach ?? 150)}% at ${params.x ?? 50}% ${params.y ?? 50}%)`; break;
+      case 'count-up': st.count = p; break;
+      case 'shake': { const decay = 1 - p; st.tx += Math.sin(lt * 70) * (params.amount ?? 8) * decay; st.ty += Math.cos(lt * 53) * (params.amount ?? 8) * 0.6 * decay; break; }
+      // loops: they run for as long as the layer is there (the period is in seconds)
+      case 'float': st.ty += Math.sin(((lt - a.start) / (params.period ?? 3)) * Math.PI * 2) * (params.amplitude ?? 12); break;
+      case 'sway': st.rot += Math.sin(((lt - a.start) / (params.period ?? 4)) * Math.PI * 2) * (params.degrees ?? 3); break;
+      case 'pulse': st.sc *= 1 + Math.sin(((lt - a.start) / (params.period ?? 1.4)) * Math.PI * 2) * (params.amount ?? 0.04); break;
+      case 'drift': st.tx += (lt - a.start) * (params.dx ?? 10); st.ty += (lt - a.start) * (params.dy ?? 0); break;
       default: break;
     }
     return undefined;
@@ -122,6 +140,8 @@ export function installOverlayRuntime(cfg) {
       if (prop === 'opacity') st.op *= value;
       else if (prop === 'scale') st.sc *= value;
       else if (prop === 'rotate') st.rot += value;
+      else if (prop === 'blur') st.blur = Math.max(st.blur ?? 0, value);
+      else if (prop === 'draw') st.draw = value;
       else st.abs[prop] = value;
     }
   }
@@ -138,7 +158,7 @@ export function installOverlayRuntime(cfg) {
       const on = t >= m.start - 1e-6 && t < m.end - 1e-6;
       if (!on) { it.el.style.visibility = 'hidden'; continue; }
       const lt = t - m.start;
-      const st = { op: 1, tx: 0, ty: 0, sc: 1, rot: 0, clip: null, chars: null, words: null, abs: {} };
+      const st = { op: 1, tx: 0, ty: 0, sc: 1, rot: 0, clip: null, chars: null, words: null, abs: {}, blur: 0, spacing: null, draw: null, count: null };
       for (const a of m.anim) applyAnim(a, lt, st);
       const el = it.el;
       el.style.visibility = 'visible';
@@ -147,6 +167,16 @@ export function installOverlayRuntime(cfg) {
       el.style.scale = st.sc !== 1 ? String(st.sc) : '';
       el.style.rotate = st.rot ? `${st.rot}deg` : '';
       el.style.clipPath = st.clip ?? it.baseClip;
+      el.style.filter = st.blur > 0.01 ? `${it.baseFilter} blur(${st.blur * u}px)`.trim() : it.baseFilter;
+      if (st.spacing !== null) el.style.letterSpacing = `${it.baseSpacing + st.spacing}em`;
+      if (st.draw !== null && it.path) it.path.style.strokeDashoffset = String(1 - clamp01(st.draw));
+      if (it.counter && st.count !== null) {
+        const prm = it.counter.params ?? {};
+        const v = lerp(prm.from ?? 0, prm.to ?? 100, st.count);
+        const n = Number(v.toFixed(prm.decimals ?? 0));
+        const text = prm.separator === false ? String(n) : n.toLocaleString('en-AU', { minimumFractionDigits: prm.decimals ?? 0, maximumFractionDigits: prm.decimals ?? 0 });
+        el.textContent = `${prm.prefix ?? ''}${text}${prm.suffix ?? ''}`;
+      }
       el.style.left = st.abs.x !== undefined ? `calc(var(--cw) * ${st.abs.x / 100})` : it.baseLeft;
       el.style.top = st.abs.y !== undefined ? `calc(var(--ch) * ${st.abs.y / 100})` : it.baseTop;
       el.style.width = st.abs.w !== undefined ? `calc(var(--cw) * ${st.abs.w / 100})` : it.baseWidth;

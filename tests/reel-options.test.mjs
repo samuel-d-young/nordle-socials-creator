@@ -110,3 +110,21 @@ test('the Create page: reel choices and extra info are saved on the reels it add
     assert.ok(reels.every((i) => i.format === 'reel' && i.reel?.style === 'motion' && i.reel.seconds === 20), 'and the reel choices');
   });
 });
+
+test('shape: vertical, portrait, square or landscape, each with its own size; the build prompt says which and not to crop a vertical layout', async () => {
+  const { REEL_SHAPES, reelSizeOf } = await import('../src/shared/reel-options.mjs');
+  assert.deepEqual(REEL_SHAPES.map((s) => s.id), ['vertical', 'portrait', 'square', 'landscape']);
+  assert.equal(reelSizeOf({ format: 'reel' }), 'ig-reel-9x16');
+  assert.equal(reelSizeOf({ format: 'reel', reel: { shape: 'landscape' } }), 'yt-landscape-16x9');
+  assert.equal(reelSizeOf({ format: 'story', reel: { shape: 'landscape' } }), 'ig-story-9x16', 'a Story is always vertical');
+  assert.equal(cleanReel({ shape: 'landscape' }).value.shape, 'landscape');
+  assert.match(cleanReel({ shape: 'cinema' }).errors[0].message, /shape must be one of vertical, portrait, square, landscape/);
+  assert.equal(reelSummary({ shape: 'landscape', seconds: 30 }), 'Landscape 16:9, about 30 s');
+  assert.equal(reelSummary({ shape: 'vertical' }), null, 'vertical is the usual shape and is not mentioned');
+  const dir = project();
+  const item = (await S.addItems(dir, [{ date: '2026-11-10', format: 'reel', title: 'Wide one', idea: 'x', hook: 'x', reel: { style: 'motion', shape: 'landscape' } }], { role: 'human' })).added[0];
+  const t = buildPrompt(dir, item.id, { today: '2026-10-05' });
+  assert.match(t, /size yt-landscape-16x9/);
+  assert.match(t, /Shape: Landscape 16:9[\s\S]*"sizes": \["yt-landscape-16x9"\][\s\S]*Do not reuse a vertical layout and crop it/);
+  assert.match(t, /Go all out[\s\S]*end on the logo scene/);
+});
