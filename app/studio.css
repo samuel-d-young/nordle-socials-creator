@@ -1370,7 +1370,7 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 
 /* Make posts (app/studio-create.js) */
 .create { max-width: 980px; margin: 0 auto; padding: 22px 28px 60px; display: flex; flex-direction: column; gap: 16px; }
-.cr-head h2 { font: 800 30px/1.1 var(--font-display); letter-spacing: -.03em; }
+.cr-head h2 { font: 800 20px/1.2 var(--font-display); letter-spacing: -.02em; }
 .cr-head p { margin-top: 6px; max-width: 62ch; }
 .cr-card { border: 2px solid var(--ink); border-radius: var(--radius); background: var(--surface); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--hard, 3px 3px 0 var(--ink)); }
 .cr-prompt { width: 100%; resize: vertical; min-height: 74px; }
@@ -1403,3 +1403,4 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .cr-added { margin: 0; color: var(--stamp); font-weight: 560; }
 .cr-err { margin: 0; color: var(--proof); font-weight: 560; }
 @media (max-width: 720px) { .create { padding: 16px 14px 60px; } .cr-row > .lbl-i { width: 100%; } }
+.bg-check { display: flex; align-items: center; gap: 8px; }

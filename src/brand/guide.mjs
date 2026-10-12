@@ -3,6 +3,7 @@
 // it is. Every change is checked against the brand schema before it is written, and the file is replaced atomically.
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { cleanIndustry } from './industry.mjs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { validators } from '../../tools/validate.mjs';
@@ -40,6 +41,7 @@ export function toGuide(brand) {
   const more = Object.entries(colors).filter(([k]) => !coreKeys.has(k)).map(([key, value]) => ({ key, label: key, value }));
   return {
     id: brand.id, name: brand.name ?? '', note: brand.note ?? '',
+    industry: { id: brand.industry?.id ?? '', label: brand.industry?.label ?? '', regulated: brand.industry?.regulated ?? null, rules: brand.industry?.rules ?? '' },
     colors: { core, more },
     fonts: { display: f('display'), body: f('body'), others: Object.keys(brand.fonts ?? {}).filter((k) => !['display', 'body'].includes(k)) },
     voice: { audience: brand.voice?.audience ?? '', tone: list(brand.voice?.tone), do: list(brand.voice?.do), dont: list(brand.voice?.dont), bannedPhrases: list(brand.voice?.bannedPhrases) },
@@ -87,6 +89,10 @@ export function applyGuide(brand, patch) {
     const name = String(patch.name).trim();
     if (!name || name.length > 80) bad('/name', 'Give the brand a name (up to 80 characters).');
     next.name = name;
+  }
+  if (patch.industry !== undefined) {
+    const ind = cleanIndustry(patch.industry === null ? null : patch.industry);
+    if (ind) next.industry = ind; else delete next.industry;
   }
   if (patch.note !== undefined) { const note = String(patch.note).trim(); if (note) next.note = note.slice(0, 600); else delete next.note; }
   if (patch.colors !== undefined) {
@@ -147,6 +153,6 @@ export function newBrand(id, guide = {}) {
     voice: { tone: [], bannedPhrases: [] },
     motion: { personality: 'calm', ease: 'out-cubic' },
   };
-  return applyGuide(base, { colors: guide.colors, fonts: guide.fonts, voice: guide.voice, links: guide.links, note: guide.note });
+  return applyGuide(base, { colors: guide.colors, fonts: guide.fonts, voice: guide.voice, links: guide.links, note: guide.note, ...(guide.industry ? { industry: guide.industry } : {}) });
 }
 

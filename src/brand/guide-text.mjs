@@ -54,5 +54,5 @@ export function readGuideText(text) {
 export function readGuideFile(file) {
   const ext = extname(file).toLowerCase();
   if (!TEXT_EXT.has(ext)) return null;
-  try { if (statSync(file).size > MAX_TEXT * 2) return null; return { name: basename(file), ...readGuideText(readFileSync(file, 'utf8')) }; } catch { return null; }
+  try { if (statSync(file).size > MAX_TEXT * 2) return null; const text = readFileSync(file, 'utf8'); return { name: basename(file), snippet: ext === '.json' || ext === '.css' ? '' : text.slice(0, 6000), ...readGuideText(text) }; } catch { return null; }
 }

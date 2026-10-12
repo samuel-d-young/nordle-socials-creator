@@ -22,6 +22,7 @@ const btn = (label, o = {}, ...kids) => h('button', { class: `btn${o.primary ? '
 const lines = (s) => String(s ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
 const commas = (s) => String(s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 const HEX = /^#[0-9a-fA-F]{6}$/;
+const INDUSTRY_IDEAS = ['Dentistry', 'Health and medical', 'Beauty and aesthetics', 'Fitness and sport', 'Food and hospitality', 'Cleaning services', 'Trades and building', 'Education and training', 'Real estate', 'Legal services', 'Finance and accounting', 'Retail and e-commerce', 'Automotive', 'Events and entertainment', 'Weddings and photography', 'Creative and marketing', 'Technology and software', 'Charity and community', 'Pets and animals', 'Travel and tourism'];
 const FONT_IDEAS = ['Fraunces', 'Inter', 'Playfair Display', 'Cormorant Garamond', 'Lora', 'Merriweather', 'Montserrat', 'Poppins', 'Open Sans', 'Roboto', 'Work Sans', 'DM Sans', 'Oswald', 'Bebas Neue'];
 export const ZONES = ['Australia/Melbourne', 'Australia/Sydney', 'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Perth', 'Australia/Hobart', 'Australia/Darwin', 'Pacific/Auckland', 'UTC'];
 
@@ -76,6 +77,7 @@ function readView(g) {
         h('div', {}, h('h5', {}, 'Do'), bullets(g.voice.do, 'Nothing listed.')),
         h('div', {}, h('h5', {}, 'Do not'), bullets(g.voice.dont, 'Nothing listed.')),
         h('div', {}, h('h5', {}, 'Never say'), bullets(g.voice.bannedPhrases, 'Nothing listed.')))),
+    g.industry?.label ? h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Field and rules'), h('p', {}, h('b', {}, g.industry.label), g.industry.regulated ? h('span', { class: 'muted' }, ' · advertising rules apply') : null), g.industry.rules ? h('p', { class: 'bg-note' }, g.industry.rules) : h('p', { class: 'muted' }, 'Claude checks the rules of this field where the business operates.')) : null,
     g.note ? h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Notes'), h('p', { class: 'bg-note' }, g.note)) : null);
 }
 
@@ -129,6 +131,12 @@ export function guideEditor(g) {
   const handle = h('input', { class: 'field', value: g.links.handle ?? '', placeholder: '@yourbrand', 'data-field': 'bg-handle', 'aria-label': 'Instagram handle' });
   const website = h('input', { class: 'field', value: g.links.website ?? '', placeholder: 'https://example.com', 'data-field': 'bg-website', 'aria-label': 'Website' });
   const note = h('textarea', { class: 'field', rows: 3, maxlength: 600, placeholder: 'Anything else worth remembering about this brand', 'data-field': 'bg-note' }); note.value = g.note ?? '';
+  const ind = g.industry ?? { label: '', rules: '', regulated: null };
+  const industry = h('input', { class: 'field', value: ind.label ?? '', list: 'bg-industries', maxlength: 80, placeholder: 'e.g. Dentistry, carpet cleaning, education', 'data-field': 'bg-industry', 'aria-label': 'What field the brand is in' });
+  const industryList = h('datalist', { id: 'bg-industries' }, INDUSTRY_IDEAS.map((f) => h('option', { value: f })));
+  const regulated = h('input', { type: 'checkbox', checked: ind.regulated === true, 'data-field': 'bg-regulated', 'aria-label': 'This field has advertising rules' });
+  const rules = h('textarea', { class: 'field', rows: 3, maxlength: 1200, placeholder: 'Optional. Rules you know apply, e.g. “Australian health advertising rules: no testimonials, no before and after”, or “no medical claims”', 'data-field': 'bg-rules', 'aria-label': 'Rules that apply' }); rules.value = ind.rules ?? '';
+  const alts = (g.industryAlt ?? []).filter((l) => l && l !== ind.label).slice(0, 3);
   repaint();
   const el = h('div', { class: 'bg-edit' },
     h('div', { class: 'bg-top' }, h('div', { class: 'bg-grow' }, field('Brand name', name)), pv.el),
@@ -141,6 +149,11 @@ export function guideEditor(g) {
       field('Who it is for', audience), field('Tone (words, separated by commas)', tone),
       h('div', { class: 'bg-grid3' }, field('Do', doIt), field('Do not', dont), field('Never say', banned))),
     h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Where to find it'), h('div', { class: 'bg-grid' }, field('Instagram handle', handle), field('Website', website))),
+    h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Field and rules'), industryList,
+      field('What field is it in?', industry, 'Claude looks up and follows the advertising and content rules of this field where the business operates.'),
+      alts.length ? h('p', { class: 'muted bg-hint' }, 'Other possibilities: ', alts.map((l) => h('button', { class: 'linklike', type: 'button', onclick: () => { industry.value = l; } }, l)).flatMap((b, i) => (i ? [', ', b] : [b]))) : null,
+      h('label', { class: 'bg-f bg-check' }, regulated, h('span', {}, 'Advertising in this field has rules (health, finance, law, property…)')),
+      field('Rules that apply (optional)', rules, 'Write any you know. Claude checks the rest and tells you what it is relying on.')),
     h('section', { class: 'bg-sec' }, field('Notes', note)));
   return {
     el,
@@ -159,6 +172,7 @@ export function guideEditor(g) {
         fonts: { display: { family: display.value.trim(), source: dSrc.value }, body: { family: body.value.trim(), source: bSrc.value } },
         voice: { audience: audience.value.trim(), tone: commas(tone.value), do: lines(doIt.value), dont: lines(dont.value), bannedPhrases: lines(banned.value) },
         links: { handle: handle.value.trim(), website: website.value.trim() }, note: note.value.trim(),
+        industry: industry.value.trim() || rules.value.trim() ? { id: industry.value.trim() === ind.label ? ind.id || undefined : undefined, label: industry.value.trim() || 'Other', regulated: regulated.checked, rules: rules.value.trim() } : null,
       };
     },
   };
@@ -198,7 +212,7 @@ export async function openGuide(projectId, { brandName } = {}) {
 // ---- Add a brand -----------------------------------------------------------------------------------------------------------------
 
 const emptyGuide = (name = '') => ({
-  name, note: '',
+  name, note: '', industry: { id: '', label: '', regulated: null, rules: '' }, industryAlt: [],
   colors: { core: [['ink', 'Main text and dark areas', '#1F2933'], ['paper', 'Background', '#FAF7F2'], ['accent', 'Accent', '#C2410C'], ['accentDark', 'Accent for text (darker)', '#9A3412'], ['muted', 'Quiet text', '#6B7280']].map(([key, label, value]) => ({ key, label, value })), more: [] },
   fonts: { display: { family: 'Fraunces', source: 'google' }, body: { family: 'Inter', source: 'google' } },
   voice: { audience: '', tone: [], do: [], dont: [], bannedPhrases: [] }, links: { handle: '', website: '' },
@@ -208,6 +222,9 @@ function guideFromDraft(draft, name) {
   const g = emptyGuide(draft.name || name);
   const labels = { ink: 'Main text and dark areas', paper: 'Background', accent: 'Accent', accentDark: 'Accent for text (darker)', muted: 'Quiet text' };
   if (draft.colors) g.colors.core = Object.keys(labels).map((key) => ({ key, label: labels[key], value: draft.colors[key] ?? g.colors.core.find((c) => c.key === key).value }));
+  if (draft.colors) g.colors.more = Object.entries(draft.colors).filter(([k]) => !(k in labels)).map(([key, value]) => ({ key, label: key, value }));   // the brand's other colours (secondary, tertiary ...) are kept
+  if (draft.industry) g.industry = { id: draft.industry.id ?? '', label: draft.industry.label ?? '', regulated: draft.industry.regulated ?? null, rules: draft.industry.rules ?? '' };
+  if (draft.industryAlt) g.industryAlt = draft.industryAlt;
   if (draft.fonts?.display) g.fonts.display = { family: draft.fonts.display.family, source: draft.fonts.display.source ?? 'google' };
   if (draft.fonts?.body) g.fonts.body = { family: draft.fonts.body.family, source: draft.fonts.body.source ?? 'google' };
   if (draft.voice) g.voice = { ...g.voice, ...draft.voice };
@@ -219,11 +236,11 @@ function guideFromDraft(draft, name) {
 /** Add a brand in a few steps. `onCreated(id)` runs once it exists (the Studio switches to it). */
 export function openAddBrand({ onCreated, openPublishing } = {}) {
   const m = modal('Add a brand');
-  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
+  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
   const STEPS = () => (st.mode === 'auto' ? ['The brand', 'Look for its style', 'Check it', 'Done'] : ['The brand', 'Its style', 'Done']);
   const stepOf = () => (st.mode === 'manual' && st.step >= 3 ? st.step - 1 : st.step);
   const bar = () => h('ol', { class: 'wz-steps', 'aria-label': 'Steps' }, STEPS().map((t, i) => h('li', { class: i + 1 === stepOf() ? 'on' : i + 1 < stepOf() ? 'done' : '' }, h('span', { class: 'wz-n' }, i + 1 < stepOf() ? icon('check', 12) : String(i + 1)), t)));
-  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.folders.length || st.files.length || st.bio.trim() || st.captions.trim());
+  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.industry.trim() || st.folders.length || st.files.length || st.bio.trim() || st.captions.trim());
   const syncScan = () => { const b = m.foot.querySelector('[data-act="wz-scan"]'); if (b) b.disabled = st.scanning || !hasInput(); };   // the Look button wakes up as soon as something is filled in
   const input = (key, ph, extra = {}) => { const el = h('input', { class: 'field', value: st[key], placeholder: ph, 'data-field': `wz-${key}`, ...extra }); el.addEventListener('input', () => { st[key] = el.value; syncScan(); }); return el; };
   const field = (label, control, hint) => h('label', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
@@ -303,6 +320,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
   function step2auto() {
     const found = st.scan;
     return [h('p', { class: 'wz-lead' }, 'Give Nordle somewhere to look. Fill in any of these: more gives a better guess.'),
+      field('What field is it in? (optional)', (() => { const el = input('industry', 'e.g. Dentistry, carpet cleaning, education'); el.setAttribute('list', 'wz-industries'); return h('span', { class: 'pick-folders' }, el, h('datalist', { id: 'wz-industries' }, INDUSTRY_IDEAS.map((f) => h('option', { value: f })))); })(), 'Leave it blank and Nordle works it out from the website and captions. Claude uses it to check the rules of that field.'),
       field('Website', input('website', 'https://littlegannet.example'), 'Colours, fonts and the share picture come from the page itself.'),
       field('Instagram', input('instagram', '@yourbrand or the page address'), 'Instagram often asks for a sign-in; if it will not show, paste the bio and captions below.'),
       field('Files (a style guide, a logo, fonts, photos)', files(), 'A written style guide (Markdown, text, CSS or HTML) is read for colours, fonts, tone and phrases to avoid. A PDF is kept with the brand but cannot be read yet. Added files stay with the brand.'),
@@ -320,8 +338,8 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
   async function doScan() {
     st.scanning = true; draw();
     try {
-      st.scan = await api.post('/brand/scan', { name: st.name, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, bio: st.bio, captions: st.captions });
-      st.guide = guideFromDraft(st.scan.draft, st.name); st.editor = null;
+      st.scan = await api.post('/brand/scan', { name: st.name, industry: st.industry, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, bio: st.bio, captions: st.captions });
+      st.guide = guideFromDraft({ ...st.scan.draft, industryAlt: (st.scan.industry?.alternatives ?? []).map((a) => a.label) }, st.name); st.editor = null;
     } catch (e) { st.scan = { found: [], problems: [problem(e)], palette: [], draft: {} }; st.guide = guideFromDraft({}, st.name); st.editor = null; }
     st.scanning = false; draw();
   }

@@ -12,6 +12,18 @@
     "id": { "$ref": "#/$defs/id" },
     "name": { "type": "string", "minLength": 1 },
     "note": { "type": "string" },
+    "industry": {
+      "description": "What field the brand is in, and any rules the owner says apply to it. Claude is told to check the advertising and content rules of this field where the business operates.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "properties": {
+        "id": { "type": "string", "maxLength": 40 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "regulated": { "type": "boolean" },
+        "rules": { "type": "string", "maxLength": 1200 }
+      }
+    },
     "colors": {
       "type": "object",
       "minProperties": 2,

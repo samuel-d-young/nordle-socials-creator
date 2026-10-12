@@ -212,3 +212,7 @@ The owner's feedback on a first batch: cartoon circles, clip-art teeth, icon til
 - Do not end a reel on a screen of flat colour or gradient with a thin outlined "button" (a button on a video cannot be pressed, and the same card on
   every reel reads as generated). End on a real shot with the booking details on a clean card over it: give the last footage scene `endPanel`
   (see the header of `src/shared/reel-spec.mjs`). Keep the type big and plain enough to read on a phone in two seconds.
+
+## The brand's field and its rules
+
+`brand.json` may have an `industry` ({ label, regulated?, rules? }): what field the brand is in (set in the wizard, found from its website and words, or typed by the owner) and any rules the owner says apply. When it is there, treat it as an instruction: before you plan or write for the brand, work out the advertising and content rules that apply to that field where the business operates (country and state from its address, timezone and facts), follow them, and write the rules you are relying on at the top of your notes. If you cannot confirm a rule, say so and ask the owner. The prompts Nordle hands you already carry this line.

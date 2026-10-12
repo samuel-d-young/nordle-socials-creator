@@ -14,6 +14,7 @@ import { CalendarError, loadProject } from './service.mjs';
 import { DEFAULT_RISK_WORDS, FORMATS, bannedPhrasesOf, isRegulated, monthReport, spreadSlots } from './plan.mjs';
 import { addDays, addMonths, diffDays, monthEnd, monthName, monthOf, monthStart, weekdayName } from './dates.mjs';
 import { occasionsBetween } from './occasions.mjs';
+import { industryRules } from '../brand/industry.mjs';
 
 // The checks a post of each kind must pass come from the verification module. It belongs to another part of Nordle, so if it is
 // missing or changes shape the prompt still works, with a plain list.
@@ -44,8 +45,9 @@ export function pluginToolNames(dir = join(here, '..', 'mcp', 'tools')) {
 const namesMatching = (re, groups = pluginToolNames()) => Object.entries(groups).flatMap(([group, names]) => (group === 'calendar' || group === 'performance' ? [] : names.filter((n) => re.test(n))));
 
 /** The rules every brief shares, as bullet lines. Health practices get the health-advertising rules too. */
-export function contentRules({ regulated, scope = 'build', facts }) {
+export function contentRules({ regulated, scope = 'build', facts, brand }) {
   const rules = [
+    ...industryRules(brand),
     'Never invent a fact about the business: phone numbers, addresses, prices, opening hours, staff names or titles, statistics, awards. If it is not in facts.json (with a source), on the practice\'s own website, or in the footage transcripts, leave it out.',
     'Nothing goes public from here. You make ideas and drafts; the owner approves and posts.',
     ...(scope === 'build' ? [
@@ -211,7 +213,7 @@ export function proposePrompt(projectDir, { months, today, nordleRoot = ROOT } =
   const recent = p.cal.items.filter((i) => i.status !== 'rejected' && i.date >= addDays(day, -90)).sort((a, b) => a.date.localeCompare(b.date));
   const shownRecent = recent.length > 70 ? recent.slice(-70) : recent;
   out.push('## Already posted or planned (do not repeat these angles or hooks)', '', ...(recent.length ? shownRecent.map(itemLine) : ['Nothing yet.']), ...(recent.length > 70 ? [`(${recent.length - 70} earlier ones left out; nordle_calendar_get has them all)`] : []), '');
-  out.push('## Rules that always apply', '', ...contentRules({ regulated, scope: 'plan', facts: p.facts }).map((r) => `- ${r}`), '');
+  out.push('## Rules that always apply', '', ...contentRules({ regulated, scope: 'plan', facts: p.facts, brand: p.brand }).map((r) => `- ${r}`), '');
   return `${out.join('\n')}\n`;
 }
 
@@ -311,7 +313,7 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
   out.push('## Independent review (a fresh pair of eyes)', '');
   out.push(`Start a separate reviewer with the Agent tool, in a fresh context: give it only the project id, the document id "${docId}", the brief above and the rules below, not your reasoning. It looks at the rendered result (or frames) itself, checks the words against the media and the brief, and records its checks as by "reviewer". Fix everything it finds, then have it look again (at most two rounds). If you cannot start a reviewer, say so in the item's notes and in your final message: never record reviewer checks yourself.`, '');
 
-  out.push('## Rules that always apply', '', ...contentRules({ regulated, facts: p.facts }).map((r) => `- ${r}`), '');
+  out.push('## Rules that always apply', '', ...contentRules({ regulated, facts: p.facts, brand: p.brand }).map((r) => `- ${r}`), '');
   out.push('## Finish', '');
   out.push(`- The item must point at the finished document and be marked built: building through the spec does this, otherwise call \`nordle_calendar_link\` with project "${p.id}", item "${item.id}", doc "${docId}".`);
   out.push('- Do not approve, reject, sign off or change the status of anything else. The owner signs off.');

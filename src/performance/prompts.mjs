@@ -111,6 +111,6 @@ export function reviewPrompt(projectDir, period, { today, window = '7d', platfor
   o.push('## The numbers', '', reportMarkdown(report).replace(/^# .*\n+/, '').trim(), '');
   o.push('## Already posted or planned from today', '', ...upcomingLines(p, day), '');
   o.push('## Facts you may rely on in new ideas', '', ...factLines(p.facts, 10), '');
-  o.push('## Rules that always apply to ideas', '', ...contentRules({ regulated, scope: 'plan', facts: p.facts }).map((r) => `- ${r}`), '');
+  o.push('## Rules that always apply to ideas', '', ...contentRules({ regulated, scope: 'plan', facts: p.facts, brand: p.brand }).map((r) => `- ${r}`), '');
   return `${o.join('\n')}\n`;
 }

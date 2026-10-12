@@ -140,7 +140,7 @@ export function renderCreate(root, ctx) {
 
   root.replaceChildren(h('div', { class: 'create' },
     h('header', { class: 'cr-head' },
-      h('h2', {}, `Make posts for ${pr.name}`),
+      h('h2', {}, `For ${pr.name}`),
       h('p', { class: 'muted' }, 'Start with a few words, or let Nordle suggest posts for the next month. You choose what goes on the calendar; nothing is posted.')),
     ask, controls(pr, redraw), st.error ? h('p', { class: 'cr-err', role: 'alert' }, st.error) : null, results));
 }

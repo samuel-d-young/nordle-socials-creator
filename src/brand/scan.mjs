@@ -9,6 +9,7 @@ import { basename, extname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { binary } from '../video/ffmpeg.mjs';
 import { UNREADABLE_DOC_EXT, readGuideFile } from './guide-text.mjs';
+import { cleanIndustry, detectIndustry } from './industry.mjs';
 
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const FONT = new Set(['.ttf', '.otf', '.woff', '.woff2']);
@@ -294,6 +295,9 @@ export async function scanWebsite(url, { fetchImpl }) {
   try { page = await getText(url, { fetchImpl, max: MAX_HTML }); } catch (e) { problems.push(`The website could not be read (${e.cause?.code ?? e.message}).`); return out; }
   const meta = metaOf(page.text);
   out.meta = meta;
+  const strip = (html) => html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;|&amp;|&#?\w+;/g, ' ').replace(/\s+/g, ' ');
+  const heads = [...page.text.matchAll(/<h[1-2][^>]*>([\s\S]*?)<\/h[1-2]>/gi)].map((m) => strip(m[1])).join(' . ');
+  out.words = [{ text: [meta.title, meta['og:site_name'], meta['og:title'], meta.description, meta['og:description']].filter(Boolean).join(' . '), weight: 3 }, { text: heads, weight: 2 }, { text: strip(page.text).slice(0, 8000), weight: 1 }];
   found.push(`Read ${page.url}${meta['og:site_name'] || meta.title ? `: "${meta['og:site_name'] ?? meta.title}"` : ''}.`);
   let css = [...page.text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
   const links = [...page.text.matchAll(/<link\b[^>]*rel\s*=\s*["']?stylesheet[^>]*>/gi)].map((m) => attr(m[0], 'href')).filter(Boolean).filter((h) => !/fonts\.googleapis\.com/i.test(h)).slice(0, 8);
@@ -399,6 +403,7 @@ export async function scanBrand(input = {}) {
   const palette = new Map();
   let fonts = { display: null, body: null };
   const meta = {};
+  const wordSources = [{ text: input.name, weight: 2 }, { text: input.bio, weight: 3 }, { text: input.captions, weight: 1 }];
 
   // one folder (`folder`) or several (`folders`): each is read in turn and what they hold is put together
   const folderList = [...new Set([...(Array.isArray(input.folders) ? input.folders : []), input.folder].map((f) => String(f ?? '').trim()).filter(Boolean))].slice(0, MAX_FOLDERS);
@@ -420,6 +425,7 @@ export async function scanBrand(input = {}) {
     const body = guideDocs.map((d) => d.fonts.body).find(Boolean) ?? named.find((f) => f !== display) ?? display;
     if (display || body) fonts = { display, body };
   }
+  for (const d of guideDocs) wordSources.push({ text: d.snippet, weight: 1 });
   const guideTone = [...new Set(guideDocs.flatMap((d) => d.tone))].slice(0, 8);
   const guideBanned = [...new Set(guideDocs.flatMap((d) => d.banned))].slice(0, 12);
 
@@ -431,6 +437,7 @@ export async function scanBrand(input = {}) {
     addPalette(palette, w.palette);
     fonts = { display: w.fonts.display ?? fonts.display, body: w.fonts.body ?? fonts.body };
     Object.assign(meta, { site: w.meta });
+    wordSources.push(...(w.words ?? []));
   }
   let handle = '';
   if (String(input.instagram ?? '').trim()) {
@@ -449,13 +456,23 @@ export async function scanBrand(input = {}) {
   const name = String(input.name ?? '').trim() || (meta.site?.['og:site_name'] ?? '').trim();
   const bio = String(input.bio ?? '').trim();
   const noteParts = [bio ? `Bio: ${bio}` : '', caps.hashtags.length ? `Usual hashtags: ${caps.hashtags.join(' ')}` : ''].filter(Boolean);
+  // what field it is in: the words it uses about itself, counted; the owner can always change or add to this
+  const said0 = String(input.industry ?? '').trim();
+  const detected = detectIndustry(wordSources);
+  if (said0) { /* the owner named it, so detection only supplies the other possibilities */ } else if (detected.best && detected.confidence !== 'low') found.push(`It looks like a ${detected.best.label.toLowerCase()} business (${detected.confidence === 'high' ? 'clearly' : 'probably'}: found "${detected.best.evidence.slice(0, 4).join('", "')}").`);
+  else if (!said0 && detected.best) problems.push(`Could not tell what field this is in. The nearest is ${detected.best.label.toLowerCase()} (found "${detected.best.evidence.slice(0, 3).join('", "')}"): choose the field yourself below.`);
+  else if (!said0 && wordSources.some((x) => String(x.text ?? '').trim())) problems.push('Could not tell what field this is in from the words found: choose it yourself below.');
+  const said = String(input.industry ?? '').trim();
+  const industry = said ? cleanIndustry({ label: said }) : detected.best && detected.confidence !== 'low' ? { id: detected.best.id, label: detected.best.label, regulated: detected.best.regulated } : undefined;
+  if (said) found.push(`Field: ${industry.label} (as you said).`);
   const draft = {
     ...(name ? { name } : {}),
+    ...(industry ? { industry } : {}),
     ...(colors ? { colors } : {}),
     ...((fonts.display || fonts.body) ? { fonts: { ...(fonts.display ? { display: { family: fonts.display, source: folderFonts.includes(fonts.display) ? 'system' : 'google' } } : {}), ...(fonts.body ? { body: { family: fonts.body, source: folderFonts.includes(fonts.body) ? 'system' : 'google' } } : {}) } } : {}),
     voice: { tone: [...guideTone, caps.hints.emojiHeavy ? 'playful, with emoji' : null, caps.hints.exclaims ? 'upbeat' : null].filter(Boolean), bannedPhrases: guideBanned },
     links: { ...(handle ? { handle: `@${handle}` } : {}), ...(String(input.website ?? '').trim() ? { website: /^https?:\/\//i.test(String(input.website).trim()) ? String(input.website).trim() : `https://${String(input.website).trim()}` } : {}) },
     ...(noteParts.length ? { note: noteParts.join('\n') } : {}),
   };
-  return { draft, found, problems, hashtags: caps.hashtags, palette: [...palette].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([h]) => h) };
+  return { draft, found, problems, industry: detected, hashtags: caps.hashtags, palette: [...palette].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([h]) => h) };
 }

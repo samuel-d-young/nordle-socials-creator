@@ -138,7 +138,7 @@ test('the Create page: choose, see options, tick some, add them to the calendar 
     const title = await page.locator('.cr-opt .cr-title').first().textContent();
     await page.locator('[data-act="create-add-ideas"]').click();
     await page.waitForSelector('.cr-added');
-    const brand = (await page.evaluate(() => document.querySelector('.cr-head h2').textContent)).replace('Make posts for ', '');
+    const brand = (await page.evaluate(() => document.querySelector('.cr-head h2').textContent)).replace('For ', '');
     const projects = (await call('/projects')).body;
     let landed = null;
     for (const p of projects.projects ?? projects) {

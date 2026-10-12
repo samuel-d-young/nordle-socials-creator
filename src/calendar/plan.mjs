@@ -259,6 +259,7 @@ export function bannedPhrasesOf(brand, facts) {
 
 export function isRegulated(brand, cal) {
   if ((cal?.settings?.compliance ?? []).some((c) => /ahpra|health|medical/i.test(c))) return true;
+  if (brand?.industry?.id === 'dentistry' || brand?.industry?.id === 'health') return true;
   return /dental|dentist|orthodon|clinic|medical|physio|chiropract|optom|podiatr|psycholog|surgery/i.test(JSON.stringify([brand?.name, brand?.note, brand?.voice?.audience]));
 }
 
