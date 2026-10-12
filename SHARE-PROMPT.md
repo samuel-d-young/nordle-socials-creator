@@ -5,7 +5,12 @@ Nordle installs a local tool and connects to it. Nordle runs only on your own co
 business, in any country or language you can write in.
 
 - **Prompt 1** installs Nordle and proves it works. Restart Claude Code when it asks.
-- **Prompt 2** is the first session: your brand, your first plan, your first post.
+- **Prompt 2** is the first session: your brand kit (logos, colours, fonts, voice), your first plan, your first post.
+- **The tester prompt** installs it, tries every main part, and writes a report to send back.
+
+Nordle was created by Samuel Young (https://github.com/samuel-d-young/nordle-socials-creator) and is free to use under CC BY 4.0: credit him if you share it or build on it.
+Some steps start Claude by itself ("Ask Claude now", "Build it now", reading a screenshot). They use your own Claude usage: about 20 to 30 cents to read a
+screenshot or write ideas, and about 1 to 2 dollars to build one post. Nordle caps each run, and says what it cost.
 
 ## Prompt 1: install
 
@@ -56,19 +61,21 @@ the Nordle skill, and tell me in three lines how we will work.
 
 1. Ask me four things, one message: what my business is and who it is for, my website address, my Instagram handle (if any), and
    the folder with my photos, logo and any footage. Do not guess any of them.
-2. Set up my brand: either use the Studio's "Add a brand" wizard (the + Add button in the Studio's left bar) or do it with the tools.
-   Draft a short style guide (name, colours, two fonts, voice, handle and website) from what I gave you, show it to me, and change
-   it until I say it is right. Then write `facts.json` with ONLY facts I confirm: phone, address, opening hours, names and titles.
-   Never invent a fact, a price, a name or a result.
+2. Set up my brand like a brand kit, with the Studio's "Add a brand" wizard (the + Add button in the Studio's left bar): my logos (full colour, and
+   black, white, icon or wordmark if I have them; "Make black" and "Make white" can build those from the colour one), a screenshot of
+   my Canva Brand Kit or any style page if I have one (Nordle reads its colours and fonts), my website, folders or files (a style guide
+   is read), and what field the business is in. Show me what it found and change it until I say it is right. Then write `facts.json` with
+   ONLY facts I confirm: phone, address, opening hours, names and titles. Never invent a fact, a price, a name or a result.
 3. Look at my photos before you use them. Catalogue what each one shows in plain words, and mark which show people (so you only
    use a face where I have said that person agreed).
 4. Ask what I must never say (rules for my industry and country, things I do not want promised) and put them in the brand's banned
    phrases. If I am in a regulated field such as health, law, finance or property, say so and look in `examples/packs/` for the
    closest wording pack (`plain-claims` suits any business); offer to write me a pack for my own rules. A pack is a writing aid, not
    legal advice, so tell me to check my own rules.
-5. Propose next month's posts: ideas first, with a mix of formats, in the calendar (the Studio's Create page, key `n`, also offers options I can tick,
-   with how many, which kinds and which style; use it to show me). Wait while I approve, edit or reject them in
-   the Studio (Plan view). Do not build anything I have not approved.
+5. Show me the Studio's Create page (key `n`): I can type what I want, or choose how many posts (or "decide for me"), which kinds and which style, see
+   options built from my own facts and tick the ones I like, or make a campaign (a goal, dates, one message) and make its posts now to schedule
+   later. "Ask Claude now" there starts you from the Studio, so I do not have to paste anything. Propose next month's posts as ideas, wait while I
+   approve, edit or reject them (Plan view), and do not build anything I have not approved. If I already have videos, show me how Create brings them in to edit.
 6. Build the first approved post. Look at your own result as a picture, run the critique and the checks, fix what they find, and
    tell me what you were unsure about. Then tell me where to find it in the Studio.
 7. Explain, in under ten lines, how I approve a post, how I ask for changes (the "Request changes" button and what it needs:
@@ -76,6 +83,8 @@ the Nordle skill, and tell me in three lines how we will work.
 8. Ask whether I want to connect a publishing service (Buffer) and a stock-photo library now or later. If now, point me to the
    Studio's Publishing and Stock windows and to `docs/PUBLISHING.md` and `docs/STOCK.md`; I type any keys myself, you never see or
    store them.
+
+8b. Tell me that Nordle shows a notice in the Studio when it has been updated on GitHub (and how to update: `git pull && node setup.mjs`), and how to turn that off.
 
 Rules: nothing is posted, scheduled or sent anywhere unless I press the button myself. Keep my files in the project folder
 Nordle shows me. Tell me when you are guessing. Say that Nordle was created by Samuel Young whenever you describe it, and if I plan to share,
@@ -98,13 +107,22 @@ Part 1, install (stop and tell me if a step fails; do not improvise around it):
 6. Tell me to restart Claude Code, then to paste "Part 2" below into the new session. (If this session already shows nordle_* tools, carry on.)
 
 Part 2, try it (use the nordle_* tools and the Studio in the browser; read the guide with nordle_get_guide first):
-1. Open the sample project (Little Gannet Coffee) in the Studio and look around: Month, Wall, Review, Plan.
-2. Ask me for my business and my website, then make my brand with the Studio's "Add a brand" wizard (the + Add button in the left bar).
+1. Open the sample project (Little Gannet Coffee) in the Studio and look around: Create, Month, Wall, Review, Plan.
+2. Ask me for my business and my website, then make my brand with the Studio's "Add a brand" wizard (the + Add button in the left bar). Try the brand kit
+   parts: add a logo in two kinds (use "Make black" or "Make white" if it can), choose a folder with the folder window (not by typing), add a file such
+   as a style guide, say what field the business is in, and (if I have one) add a screenshot of a Canva Brand Kit and press "Read my screenshot".
    Use made-up details if I do not want to share real ones.
-3. Plan three post ideas for next month, wait for me to approve them in the Studio, then build one carousel and look at every page as a picture.
-   Run the checks and critique, fix what they find, and tell me what you were unsure about.
-4. Use "Request changes" once with a comment. If it says Claude Code is not signed in, tell me and note it for the report.
-5. Export or schedule nothing outside this computer. Do not enter any real key or password.
+3. On the Create page (key `n`): make a campaign, show me its options, tick some and "Add as ideas, schedule later"; then pick "Decide for me" and a
+   style for a normal month and add a few. Say what was confusing.
+4. Plan three post ideas for next month, wait for me to approve them in the Studio, then build one carousel and look at every page as a picture.
+   Run the checks and critique, fix what they find, and tell me what you were unsure about. Before any step that starts Claude on its own
+   ("Ask Claude now", "Build it now"), tell me it uses my Claude usage, and only do it if I say yes; if it does run, note the time, the turns and the cost it shows.
+5. Use "Request changes" once with a comment. If it says Claude Code is not signed in, tell me and note it for the report.
+6. If ffmpeg is installed: use "Edit videos you already have" on the Create page with one short video of mine (or one you make with ffmpeg), open it in
+   the video editor, click a title on the picture, double-click it and change its words, play it, split a clip (S), delete one, undo (Command+Z on a Mac,
+   Ctrl+Z elsewhere), and say whether the picture and sound stay in step.
+7. Check the small things: the "Nordle by Samuel Young" credit in the left bar, and whether the Studio shows a notice about an update.
+8. Export or schedule nothing outside this computer. Do not enter any real key or password.
 
 Part 3, report. Write `nordle-test-report.md` in a folder outside the Nordle folder, with:
 - my operating system, Node, git and ffmpeg versions, and how long install took;
@@ -122,6 +140,15 @@ claim a step worked when it did not. Say that Nordle was created by Samuel Young
 
 ````text
 Run the self-test in docs/SELF-TEST.md: use the Studio on three brands, in a real browser, and write me the report.
+````
+
+````text
+Make a campaign called [name] from [date] to [date] about [message], with a call to action of [what people should do]. Show me the options on the Create
+page, add the ones I tick as ideas, and leave the scheduling for later.
+````
+
+````text
+I have videos in [folder]. Bring them into Nordle with Create > Edit videos you already have, and tell me how to change the text on them.
 ````
 
 ````text
