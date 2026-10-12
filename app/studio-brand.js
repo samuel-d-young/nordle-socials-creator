@@ -237,7 +237,7 @@ function guideFromDraft(draft, name) {
 }
 
 /** Add a brand in a few steps. `onCreated(id)` runs once it exists (the Studio switches to it). */
-export function openAddBrand({ onCreated, openPublishing } = {}) {
+export function openAddBrand({ onCreated, openPublishing, openStock, openLibrary } = {}) {
   const m = modal('Add a brand');
   const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', logoNames: {}, logoPrev: {}, shotState: { names: [], previews: [], shot: null, busy: false, note: '' }, trainState: { names: [], previews: [], shot: null, busy: false, note: '' }, folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
   const STEPS = () => (st.mode === 'auto' ? ['The brand', 'Look for its style', 'Check it', 'Done'] : ['The brand', 'Its style', 'Done']);
@@ -376,7 +376,10 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
       h('ol', { class: 'wz-nexts' },
         item(1, 'Check its style guide', 'Open it any time from the brand’s ⋯ menu.', btn('Open style guide', { quiet: true, act: 'wz-open-guide', onclick: () => { m.close(); openGuide(st.id, { brandName: st.name }); } })),
         item(2, 'Connect where it posts', 'Choose its Buffer account and channels in Publishing.', openPublishing ? btn('Open Publishing', { quiet: true, act: 'wz-open-publishing', onclick: () => { m.close(); openPublishing(); } }) : null),
-        item(3, 'Add its logo and photos', `Put them in the brand’s assets folder (projects/${st.id}/assets), then ask Claude to plan the first month.`))];
+        item(3, 'Add its logo and photos', `Put them in the brand’s assets folder (projects/${st.id}/assets), and your own footage where Nordle can read it (it is never copied or moved).`),
+        item(4, 'Stock: photos, video and music you do not have', 'Search free libraries (Pexels, Pixabay, Freesound) with a free key you type in once, or point Nordle at a folder of stock you already own, such as Envato downloads. Files you choose are copied into this brand with their licence written down. Nordle never buys or signs in anywhere.', openStock ? btn('Open Stock', { quiet: true, act: 'wz-open-stock', onclick: () => { m.close(); openStock(st.id); } }) : null),
+        item(5, 'The Library: every brand and every post', 'The Library (in the left bar) lists each brand with all its carousels, graphics and videos as cards. Open one to edit it by hand, or press New post to start one yourself. Everything stays on this computer.', openLibrary ? btn('Open the Library', { quiet: true, act: 'wz-open-library', onclick: () => { m.close(); openLibrary(); } }) : null),
+        item(6, 'Then make your first posts', 'Press Create (key n): Nordle suggests a month of ideas, and Claude builds the ones you approve.'))];
   }
 
   function draw() {

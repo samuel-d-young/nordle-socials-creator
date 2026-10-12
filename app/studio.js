@@ -242,7 +242,7 @@ function renderRail() {
     })),
     h('div', { class: 'rail-sec' },
       h('div', { class: 'rail-sec-h' }, h('h2', { class: 'lbl' }, 'Brands'),
-        h('button', { class: 'rail-add', type: 'button', 'data-act': 'add-brand', title: 'Add a brand', 'aria-label': 'Add a brand', onclick: () => openAddBrand({ onCreated: (id) => setBrand(id), openPublishing: () => openConnect('buffer') }) }, icon('plus', 14), h('span', {}, 'Add'))),
+        h('button', { class: 'rail-add', type: 'button', 'data-act': 'add-brand', title: 'Add a brand', 'aria-label': 'Add a brand', onclick: () => openAddBrand({ onCreated: (id) => setBrand(id), openPublishing: () => openConnect('buffer'), openStock: (id) => openStock({ project: id }), openLibrary: () => { location.hash = '#/projects'; } }) }, icon('plus', 14), h('span', {}, 'Add'))),
       h('button', { class: `rb${S.brand === 'all' ? ' on' : ''}`, type: 'button', 'aria-pressed': String(S.brand === 'all'), onclick: () => setBrand('all') },
         h('span', { class: 'rb-ticks', 'aria-hidden': 'true' }, S.projects.map((p) => h('i', { style: { '--lane': p.color } }))), h('span', { class: 'rb-n' }, 'All brands'), needsAll ? h('span', { class: 'rb-c', title: 'Waiting for your review' }, String(needsAll)) : null),
       S.projects.map((p, i) => h('div', { class: 'rb-row' },

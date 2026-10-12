@@ -124,6 +124,7 @@ Part 2, try it (use the nordle_* tools and the Studio in the browser; read the g
    parts: add a logo in two kinds (use "Make black" or "Make white" if it can), choose a folder with the folder window (not by typing), add a file such
    as a style guide, say what field the business is in, and (if I have them) add a screenshot of a Canva Brand Kit and press "Read my screenshot", and two or three of my own finished posts under "Train it on your own posts" (press "Read my posts"). Tell me whether every colour and font in the screenshot came through, and whether the colours in the posts are the ones the brand kit reads as background, headline and accent.
    Use made-up details if I do not want to share real ones.
+   On the "Brand added" page, read what it says about Stock and the Library and tell me if either is unclear; press Open Stock and Open the Library once each.
 3. On the Create page (key `n`): make a campaign, show me its options, tick some and "Add as ideas, schedule later"; then pick "Decide for me" and a
    style for a normal month and add a few. In the Reels row try each "Made from" choice (Auto, Cut from footage, Motion graphics only, Motion graphics with a
    voice-over), what a reel uses and its length, and write something in the extra-info box; check it shows on the post (Edit, and the post's details). Say what was confusing.
