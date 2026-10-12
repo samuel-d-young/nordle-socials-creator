@@ -31,10 +31,10 @@ process.on('exit', () => { try { rmSync(base, { recursive: true, force: true });
 export const TODAY = '2026-10-05';
 
 /** A fresh copy of the workspace and its own server. */
-export async function studio(fn, { viewport = { width: 1440, height: 900 }, page: wantPage = false, scheme, reducedMotion, reviser, pickFolder, claudeRunner, pickFiles, importVideos, updateFetch, updateStateDir } = {}) {
+export async function studio(fn, { viewport = { width: 1440, height: 900 }, page: wantPage = false, scheme, reducedMotion, reviser, pickFolder, claudeRunner, pickFiles, importVideos, updateFetch, updateStateDir, brandReader } = {}) {
   const work = mkdtempSync(join(tmpdir(), 'nordle-studio-e2e-'));
   cpSync(join(base, 'projects'), join(work, 'projects'), { recursive: true });
-  const app = createNordleServer({ roots: [join(work, 'projects')], token: TOKEN, agentToken: AGENT, reviser, pickFolder, claudeRunner, pickFiles, importVideos, updateFetch: updateFetch ?? (async () => { throw new Error('no network in tests'); }), updateStateDir: updateStateDir ?? join(work, '.nordle-update') });
+  const app = createNordleServer({ roots: [join(work, 'projects')], token: TOKEN, agentToken: AGENT, reviser, pickFolder, claudeRunner, pickFiles, importVideos, brandReader, updateFetch: updateFetch ?? (async () => { throw new Error('no network in tests'); }), updateStateDir: updateStateDir ?? join(work, '.nordle-update') });
   const port = await app.listen(0);
   const call = async (path, method = 'GET', body, token = TOKEN) => {
     const res = await fetch(`http://127.0.0.1:${port}/api${path}`, { method, headers: { 'x-nordle-token': token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

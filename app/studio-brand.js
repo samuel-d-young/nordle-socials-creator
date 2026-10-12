@@ -6,6 +6,7 @@ import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { load } from './studio-store.js';
 import { folderPicker, notify } from './studio-ui.js';
+import { LOGO_KINDS, logoSlots, shotImport } from './studio-logos.js';
 
 const MAX_FOLDERS = 8;   // the same limit the server's scan applies (src/brand/scan.mjs)
 
@@ -67,6 +68,7 @@ function readView(g) {
     h('div', { class: 'bg-top' },
       h('div', {}, h('h3', { class: 'bg-name' }, g.name), h('p', { class: 'muted' }, [g.links.handle, g.links.website].filter(Boolean).join(' · ') || 'No handle or website added yet.')),
       pv.el),
+    Object.keys(g.logoFiles ?? {}).length ? h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Logos'), h('div', { class: 'logo-read' }, LOGO_KINDS.filter((k) => g.logoFiles[k.key]).map((k) => h('figure', { class: `logo-fig ${k.bg}` }, h('img', { src: `/p/${encodeURIComponent(g.id)}/${g.logoFiles[k.key].split('/').map(encodeURIComponent).join('/')}`, alt: `${k.label} logo` }), h('figcaption', {}, k.label))))) : null,
     h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Colours'), h('ul', { class: 'bg-sws' }, [...g.colors.core.filter((c) => c.value), ...g.colors.more].map(swatch))),
     h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Fonts'),
       h('p', {}, h('span', { class: 'muted' }, 'Headings: '), h('b', { style: { fontFamily: `'${cssFont(g.fonts.display.family)}', '${g.fonts.display.family}', Georgia, serif`, fontSize: '20px' } }, g.fonts.display.family || 'not set'), h('span', { class: 'muted' }, '   Text: '), h('b', { style: { fontFamily: `'${cssFont(g.fonts.body.family)}', '${g.fonts.body.family}', system-ui, sans-serif` } }, g.fonts.body.family || 'not set'))),
@@ -89,7 +91,7 @@ function readView(g) {
  */
 export function guideEditor(g) {
   const pv = preview();
-  const field = (label, control, hint) => h('label', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
+  const field = (label, control, hint) => h('div', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
   const name = h('input', { class: 'field', value: g.name ?? '', maxlength: 80, 'data-field': 'bg-name', 'aria-label': 'Brand name' });
   const colorRows = [];
   const colorsBox = h('div', { class: 'bg-colors' });
@@ -142,6 +144,7 @@ export function guideEditor(g) {
     h('div', { class: 'bg-top' }, h('div', { class: 'bg-grow' }, field('Brand name', name)), pv.el),
     h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Colours'), colorsBox,
       h('div', { class: 'bg-add' }, newName, newHex, btn('Add a colour', { quiet: true, act: 'bg-add-color', onclick: addColor }))),
+    g.id ? h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Logos'), logoSlots({ project: g.id, files: g.logoFiles ?? {} }), h('p', { class: 'muted bg-hint' }, 'Logos are saved as soon as you add them.')) : null,
     h('section', { class: 'bg-sec' }, h('h4', { class: 'lbl' }, 'Fonts'), fontList,
       h('div', { class: 'bg-grid' }, field('Headings', display), field('Where it comes from', dSrc), field('Text', body), field('Where it comes from', bSrc)),
       h('p', { class: 'muted bg-hint' }, 'Fraunces and Inter are built in. Any other Google font loads when you are online. Pick “Installed on this computer” for a font you have installed.')),
@@ -236,14 +239,14 @@ function guideFromDraft(draft, name) {
 /** Add a brand in a few steps. `onCreated(id)` runs once it exists (the Studio switches to it). */
 export function openAddBrand({ onCreated, openPublishing } = {}) {
   const m = modal('Add a brand');
-  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
+  const st = { step: 1, name: '', zone: ZONES[0], mode: 'auto', website: '', instagram: '', industry: '', logoNames: {}, logoPrev: {}, shotState: { names: [], previews: [], shot: null, busy: false, note: '' }, folder: '', folders: [], files: [], uploading: '', session: Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(''), bio: '', captions: '', scan: null, scanning: false, editor: null, guide: null, creating: false, id: null };
   const STEPS = () => (st.mode === 'auto' ? ['The brand', 'Look for its style', 'Check it', 'Done'] : ['The brand', 'Its style', 'Done']);
   const stepOf = () => (st.mode === 'manual' && st.step >= 3 ? st.step - 1 : st.step);
   const bar = () => h('ol', { class: 'wz-steps', 'aria-label': 'Steps' }, STEPS().map((t, i) => h('li', { class: i + 1 === stepOf() ? 'on' : i + 1 < stepOf() ? 'done' : '' }, h('span', { class: 'wz-n' }, i + 1 < stepOf() ? icon('check', 12) : String(i + 1)), t)));
-  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.industry.trim() || st.folders.length || st.files.length || st.bio.trim() || st.captions.trim());
+  const hasInput = () => !!(st.website.trim() || st.instagram.trim() || st.folder.trim() || st.industry.trim() || st.folders.length || st.files.length || Object.keys(st.logoNames).length || st.shotState.names.length || st.bio.trim() || st.captions.trim());
   const syncScan = () => { const b = m.foot.querySelector('[data-act="wz-scan"]'); if (b) b.disabled = st.scanning || !hasInput(); };   // the Look button wakes up as soon as something is filled in
   const input = (key, ph, extra = {}) => { const el = h('input', { class: 'field', value: st[key], placeholder: ph, 'data-field': `wz-${key}`, ...extra }); el.addEventListener('input', () => { st[key] = el.value; syncScan(); }); return el; };
-  const field = (label, control, hint) => h('label', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
+  const field = (label, control, hint) => h('div', { class: 'bg-f' }, h('span', { class: 'lbl-i' }, label), control, hint ? h('span', { class: 'muted bg-hint' }, hint) : null);
 
   function step1() {
     const name = input('name', 'e.g. Little Gannet Coffee', { maxlength: 80 });
@@ -323,6 +326,8 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
       field('What field is it in? (optional)', (() => { const el = input('industry', 'e.g. Dentistry, carpet cleaning, education'); el.setAttribute('list', 'wz-industries'); return h('span', { class: 'pick-folders' }, el, h('datalist', { id: 'wz-industries' }, INDUSTRY_IDEAS.map((f) => h('option', { value: f })))); })(), 'Leave it blank and Nordle works it out from the website and captions. Claude uses it to check the rules of that field.'),
       field('Website', input('website', 'https://littlegannet.example'), 'Colours, fonts and the share picture come from the page itself.'),
       field('Instagram', input('instagram', '@yourbrand or the page address'), 'Instagram often asks for a sign-in; if it will not show, paste the bio and captions below.'),
+      field('Logos', logoSlots({ session: st.session, staged: { names: st.logoNames, previews: st.logoPrev }, onChange: syncScan }), 'Add the full-colour logo and, if you have them, a black one, a white one, an icon and a wordmark. Pictures use the one that reads on their background. Colours are taken from them.'),
+      field('A screenshot of your brand page (optional)', shotImport({ session: st.session, state: st.shotState, onChange: () => { syncScan(); draw(); } }), 'For example your Canva Brand Kit page. Nordle reads the colours and fonts out of the picture. Claude Code must be signed in to read the fonts.'),
       field('Files (a style guide, a logo, fonts, photos)', files(), 'A written style guide (Markdown, text, CSS or HTML) is read for colours, fonts, tone and phrases to avoid. A PDF is kept with the brand but cannot be read yet. Added files stay with the brand.'),
       field('Folders on this computer', folders(), 'Logos, photos and font files, from one folder or several. A file with “logo” in its name gives the best colours.'),
       field('Bio (optional)', (() => { const t = h('textarea', { class: 'field', rows: 2, 'data-field': 'wz-bio' }); t.value = st.bio; t.addEventListener('input', () => { st.bio = t.value; syncScan(); }); return t; })()),
@@ -338,7 +343,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
   async function doScan() {
     st.scanning = true; draw();
     try {
-      st.scan = await api.post('/brand/scan', { name: st.name, industry: st.industry, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, bio: st.bio, captions: st.captions });
+      st.scan = await api.post('/brand/scan', { name: st.name, industry: st.industry, website: st.website, instagram: st.instagram, folder: st.folder, folders: st.folders, files: st.files.map((f) => f.name), uploadSession: st.session, logoFiles: st.logoNames, shot: st.shotState.shot, bio: st.bio, captions: st.captions });
       st.guide = guideFromDraft({ ...st.scan.draft, industryAlt: (st.scan.industry?.alternatives ?? []).map((a) => a.label) }, st.name); st.editor = null;
     } catch (e) { st.scan = { found: [], problems: [problem(e)], palette: [], draft: {} }; st.guide = guideFromDraft({}, st.name); st.editor = null; }
     st.scanning = false; draw();
@@ -355,7 +360,7 @@ export function openAddBrand({ onCreated, openPublishing } = {}) {
     try { patch = st.editor.read(); } catch (e) { notify(e.message, { kind: 'error' }); return; }
     st.creating = true; draw();
     try {
-      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: patch, files: st.files.map((f) => f.name), uploadSession: st.session });
+      const r = await api.post('/brand/create', { name: patch.name || st.name, timezone: st.zone, guide: patch, files: st.files.map((f) => f.name), logoFiles: st.logoNames, uploadSession: st.session });
       st.id = r.id;
       try { await load({ force: true }); } catch { /* the Studio finds it on its next refresh */ }
       onCreated?.(r.id);

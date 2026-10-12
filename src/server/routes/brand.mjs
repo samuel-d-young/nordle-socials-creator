@@ -3,12 +3,14 @@
 //   POST /api/brand/guide   (owner) { project, patch } -> { ok, guide }                   change name / colours / fonts / voice / links; checked against the brand schema
 //   POST /api/brand/scan    (owner) { name?, website?, instagram?, folder? | folders? (up to 8), captions?, bio? }
 //                                                      -> { draft, found:[text], problems:[text], hashtags, palette }   reads a local folder and web pages; saves nothing
+//   POST /api/brand/logo/upload?project=&variant=primary|black|white|icon|wordmark (owner, octet-stream) -> { ok, guide };  POST /api/brand/logo/derive { project, to:'black'|'white', from? };  POST /api/brand/logo/remove { project, variant }
+//   POST /api/brand/read-screenshots (owner) { uploadSession, files:[names] } -> { ok, shot:{ colors:[{hex,name?}], fonts:{heading,subheading,body}, tone, brandName, logoSeen, notes }, note? }   a screenshot of a brand page (a Canva Brand Kit), read by Claude; send `shot` back to /scan
 //   POST /api/brand/pick-folder (owner) { title? } -> { ok, path } | { ok, cancelled: true } | { ok: false, unavailable: true, message }   opens the system's folder window on this computer
 //   POST /api/brand/upload  (owner) octet-stream, x-filename + x-upload-session -> { ok, name, size }   stages a file for the wizard (style guide, logo, fonts, photos)
 //   POST /api/brand/create  (owner) { name, guide?, timezone? } -> { ok, id }              makes the project (brand.json + folders); guide = the reviewed draft
 // Claude's token may read a guide; changing one, scanning and creating are the owner's.
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync, renameSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -16,6 +18,8 @@ import { GuideError, brandFile, newBrand, saveGuide, toGuide, readBrand } from '
 import { MAX_UPLOADS, scanBrand } from '../../brand/scan.mjs';
 import { slug } from '../store.mjs';
 import { PickerError, pickFolder } from '../folder-picker.mjs';
+import { SHOT_EXT, cleanShot, readBrandScreenshots } from '../../brand/screenshot.mjs';
+import { LOGO_MAX_BYTES, LOGO_VARIANTS, deriveLogo, removeLogo, saveLogo } from '../../brand/logos.mjs';
 
 const validZone = (z) => { try { new Intl.DateTimeFormat('en-AU', { timeZone: z }); return true; } catch { return false; } };
 
@@ -49,7 +53,7 @@ export default {
   scope: 'root',
   key: 'brand',
   async handle(ctx) {
-    const { seg, method, url, req, res, store, sendJson, readJsonBody, readBody, need, needHuman, pickFolder: pick, HttpError } = ctx;
+    const { seg, method, url, req, res, store, sendJson, readJsonBody, readBody, need, needHuman, pickFolder: pick, HttpError, brandReader } = ctx;
     const sub = seg[1];
     try {
       if (sub === 'guide') {
@@ -69,8 +73,8 @@ export default {
         need(method === 'POST', 405, 'POST only.');
         needHuman();
         const b = await readJsonBody(req);
-        const { uploads: _ignored, files, uploadSession, ...rest } = b;
-        return sendJson(res, 200, { ok: true, ...(await scanBrand({ ...rest, uploads: stagedFiles(uploadSession, files) })) });
+        const { uploads: _ignored, logoPaths: _lp, files, uploadSession, logoFiles, shot, ...rest } = b;
+        return sendJson(res, 200, { ok: true, ...(await scanBrand({ ...rest, uploads: stagedFiles(uploadSession, files), logoPaths: stagedFiles(uploadSession, logoFiles && typeof logoFiles === 'object' ? Object.values(logoFiles) : []), shot: cleanShot(shot) })) });
       }
       if (sub === 'upload') {
         need(method === 'POST', 405, 'POST only.');
@@ -94,6 +98,35 @@ export default {
         for (let i = 2; existsSync(join(dir, final)); i++) final = `${base}-${i}${extname(name)}`;
         writeAtomic(join(dir, final), buf);
         return sendJson(res, 201, { ok: true, name: final, size: buf.length });
+      }
+      if (sub === 'read-screenshots') {
+        need(method === 'POST', 405, 'POST only.');
+        needHuman();
+        const b = await readJsonBody(req);
+        const files = stagedFiles(b.uploadSession, Array.isArray(b.files) ? b.files.filter((f) => SHOT_EXT.test(String(f))) : []);
+        need(files.length, 400, 'Add at least one screenshot first (PNG, JPG or WebP).');
+        const r = await readBrandScreenshots(files, { reader: brandReader ?? undefined });
+        return sendJson(res, 200, { ok: true, ...r });
+      }
+      if (sub === 'logo') {
+        need(method === 'POST', 405, 'POST only.');
+        needHuman();
+        const action = seg[2];
+        if (action === 'upload') {
+          const project = store.project(url.searchParams.get('project') ?? '');
+          need(project, 404, 'No such brand.');
+          need(String(req.headers['content-type'] ?? '').split(';')[0].trim() === 'application/octet-stream', 415, 'Upload the file as application/octet-stream.');
+          let raw = '';
+          try { raw = decodeURIComponent(String(req.headers['x-filename'] ?? '')); } catch { raw = ''; }
+          const buf = await readBody(req, LOGO_MAX_BYTES + 1024);
+          return sendJson(res, 201, { ok: true, guide: saveLogo(project.dir, String(url.searchParams.get('variant') ?? ''), basename(raw), buf) });
+        }
+        const b = await readJsonBody(req);
+        const project = store.project(String(b.project ?? ''));
+        need(project, 404, 'No such brand.');
+        if (action === 'derive') return sendJson(res, 200, { ok: true, guide: deriveLogo(project.dir, String(b.to ?? ''), typeof b.from === 'string' ? b.from : 'primary') });
+        if (action === 'remove') return sendJson(res, 200, { ok: true, guide: removeLogo(project.dir, String(b.variant ?? '')) });
+        throw new HttpError(404, 'Unknown logo action.');
       }
       if (sub === 'pick-folder') {
         need(method === 'POST', 405, 'POST only.');
@@ -125,6 +158,11 @@ export default {
         writeAtomic(brandFile(dir), `${JSON.stringify(brand, null, 2)}\n`);
         writeAtomic(join(dir, 'nordle.project.json'), `${JSON.stringify({ timezone: zone }, null, 2)}\n`);
         // files added during set-up (a style guide, a logo, fonts) stay with the brand
+        // logos chosen in the wizard ({ primary: 'logo.png', white: 'logo-white.svg' }): each is saved as its kind
+        for (const [variant, staged] of Object.entries(b.logoFiles && typeof b.logoFiles === 'object' ? b.logoFiles : {})) {
+          const [file] = stagedFiles(b.uploadSession, [staged]);
+          if (file) { try { saveLogo(dir, variant, basename(file), readFileSync(file)); } catch { /* a logo that is not usable is left out; the brand is still made */ } }
+        }
         const keep = stagedFiles(b.uploadSession, b.files);
         if (keep.length) {
           mkdirSync(join(dir, 'assets', 'brand'), { recursive: true });

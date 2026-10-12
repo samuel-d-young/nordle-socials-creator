@@ -47,6 +47,7 @@ export function toGuide(brand) {
     voice: { audience: brand.voice?.audience ?? '', tone: list(brand.voice?.tone), do: list(brand.voice?.do), dont: list(brand.voice?.dont), bannedPhrases: list(brand.voice?.bannedPhrases) },
     links: { handle: brand.links?.handle ?? '', website: brand.links?.website ?? '' },
     logos: Object.keys(brand.logos ?? {}),
+    logoFiles: { ...(brand.logos ?? {}) },
   };
 }
 
@@ -89,6 +90,16 @@ export function applyGuide(brand, patch) {
     const name = String(patch.name).trim();
     if (!name || name.length > 80) bad('/name', 'Give the brand a name (up to 80 characters).');
     next.name = name;
+  }
+  if (patch.logos !== undefined) {
+    const logos = { ...(next.logos ?? {}) };
+    for (const [key, rel] of Object.entries(patch.logos ?? {})) {
+      if (!/^[a-z][a-z0-9_-]{0,30}$/i.test(key)) bad(`/logos/${key}`, `"${key}" is not a logo name.`);
+      if (rel === null || rel === '') delete logos[key];
+      else if (typeof rel !== 'string' || !/^assets\/[\w .()-]+(?:\/[\w .()-]+)*\.(?:png|svg|jpe?g|webp)$/i.test(rel) || rel.includes('..')) bad(`/logos/${key}`, `"${rel}" is not a logo file inside the project's assets folder.`);
+      else logos[key] = rel;
+    }
+    if (Object.keys(logos).length) next.logos = logos; else delete next.logos;
   }
   if (patch.industry !== undefined) {
     const ind = cleanIndustry(patch.industry === null ? null : patch.industry);
@@ -153,6 +164,6 @@ export function newBrand(id, guide = {}) {
     voice: { tone: [], bannedPhrases: [] },
     motion: { personality: 'calm', ease: 'out-cubic' },
   };
-  return applyGuide(base, { colors: guide.colors, fonts: guide.fonts, voice: guide.voice, links: guide.links, note: guide.note, ...(guide.industry ? { industry: guide.industry } : {}) });
+  return applyGuide(base, { colors: guide.colors, fonts: guide.fonts, voice: guide.voice, links: guide.links, note: guide.note, ...(guide.industry ? { industry: guide.industry } : {}), ...(guide.logos ? { logos: guide.logos } : {}) });
 }
 

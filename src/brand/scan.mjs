@@ -409,6 +409,17 @@ export async function scanBrand(input = {}) {
   const folderList = [...new Set([...(Array.isArray(input.folders) ? input.folders : []), input.folder].map((f) => String(f ?? '').trim()).filter(Boolean))].slice(0, MAX_FOLDERS);
   const folderFonts = [];
   const guideDocs = [];
+  const shot = input.shot && typeof input.shot === 'object' ? input.shot : null;
+  if (shot?.colors?.length) {
+    shot.colors.forEach((c, i) => palette.set(c.hex.toUpperCase(), (palette.get(c.hex.toUpperCase()) ?? 0) + 300 - i * 8));
+    found.push(`Read ${shot.colors.length} colour${shot.colors.length === 1 ? '' : 's'} from your screenshot${shot.fallback ? ' (worked out from the pixels: check them)' : ''}.`);
+  }
+  // the logos the owner gave (a full-colour one, a black one ...): the truest colours there are, so they count most
+  const logoPaths = Array.isArray(input.logoPaths) ? input.logoPaths.filter((f) => typeof f === 'string' && existsSync(f)).slice(0, 5) : [];
+  for (const f of logoPaths) {
+    try { addPalette(palette, /\.svg$/i.test(f) ? svgPalette(readFileSync(f, 'utf8'), 500) : paletteOf([f], { weight: 6 })); } catch { /* an unreadable logo adds nothing */ }
+  }
+  if (logoPaths.length) found.push(`Colours were taken from your ${logoPaths.length === 1 ? 'logo' : `${logoPaths.length} logos`}.`);
   const uploaded = Array.isArray(input.uploads) ? input.uploads.filter((f) => typeof f === 'string' && existsSync(f)).slice(0, MAX_UPLOADS) : [];
   const sources = [...folderList.map((path) => ({ path, one: scanFolder(path) })), ...(uploaded.length ? [{ path: 'the files you added', one: scanFileList(uploaded, { where: 'the files you added' }) }] : [])];
   for (const { path, one } of sources) {
@@ -426,7 +437,11 @@ export async function scanBrand(input = {}) {
     if (display || body) fonts = { display, body };
   }
   for (const d of guideDocs) wordSources.push({ text: d.snippet, weight: 1 });
-  const guideTone = [...new Set(guideDocs.flatMap((d) => d.tone))].slice(0, 8);
+  if (shot?.fonts && (shot.fonts.heading || shot.fonts.subheading || shot.fonts.body)) {
+    fonts = { display: shot.fonts.heading ?? shot.fonts.subheading ?? fonts.display, body: shot.fonts.body ?? shot.fonts.subheading ?? fonts.body };
+    found.push(`Fonts from your screenshot: ${[...new Set([shot.fonts.heading, shot.fonts.subheading, shot.fonts.body].filter(Boolean))].join(', ')}.`);
+  } else if (shot?.fallback) problems.push('The fonts in your screenshot could not be read without Claude Code. Choose them yourself below.');
+  const guideTone = [...new Set([...guideDocs.flatMap((d) => d.tone), ...(shot?.tone ?? [])])].slice(0, 8);
   const guideBanned = [...new Set(guideDocs.flatMap((d) => d.banned))].slice(0, 12);
 
   if (String(input.website ?? '').trim()) {
@@ -453,7 +468,7 @@ export async function scanBrand(input = {}) {
   const { colors, notes } = colorsFromPalette(palette);
   problems.push(...notes.filter((n) => palette.size));
   if (!colors && !problems.length) problems.push('No colours could be found: add a folder with the logo, or a website, or set the colours by hand.');
-  const name = String(input.name ?? '').trim() || (meta.site?.['og:site_name'] ?? '').trim();
+  const name = String(input.name ?? '').trim() || (meta.site?.['og:site_name'] ?? '').trim() || (shot?.brandName ?? '');
   const bio = String(input.bio ?? '').trim();
   const noteParts = [bio ? `Bio: ${bio}` : '', caps.hashtags.length ? `Usual hashtags: ${caps.hashtags.join(' ')}` : ''].filter(Boolean);
   // what field it is in: the words it uses about itself, counted; the owner can always change or add to this

@@ -1439,3 +1439,26 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .upd-cmd { padding: 10px 12px; border: 2px solid var(--ink); border-radius: var(--radius); background: var(--paper); white-space: pre-wrap; word-break: break-all; font: 12.5px/1.4 var(--font-mono); }
 .rf-credit { font-size: 11px; opacity: .7; }
 .rf-credit:hover { opacity: 1; }
+
+/* logos and the screenshot import */
+.logo-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.logo-slot { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 2px solid var(--rule-strong); border-radius: var(--radius); background: var(--surface); }
+.logo-slot.has { border-color: var(--ink); }
+.logo-prev { height: 84px; display: grid; place-items: center; border-radius: 2px; border: 1px solid var(--rule); overflow: hidden; }
+.logo-prev.light { background: #fff; }
+.logo-prev.dark { background: #1b1d1f; }
+.logo-prev img { max-width: 90%; max-height: 90%; object-fit: contain; }
+.logo-meta { display: flex; flex-direction: column; font-size: 12px; }
+.logo-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.logo-read { display: flex; flex-wrap: wrap; gap: 10px; }
+.logo-fig { margin: 0; padding: 10px; border: 1px solid var(--rule-strong); border-radius: var(--radius); text-align: center; font-size: 11px; color: var(--ink-3); }
+.logo-fig.light { background: #fff; }
+.logo-fig.dark { background: #1b1d1f; color: #cfcfcf; }
+.logo-fig img { display: block; max-width: 120px; max-height: 60px; margin: 0 auto 4px; }
+.shot { display: flex; flex-direction: column; gap: 8px; }
+.shot-drop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 2px dashed var(--rule-strong); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.shot-drop.over { border-color: var(--ink); background: var(--surface); }
+.shot-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.shot-th { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.shot-th img { height: 90px; border: 1px solid var(--rule-strong); border-radius: 2px; }
+.shot-note { color: var(--proof); }

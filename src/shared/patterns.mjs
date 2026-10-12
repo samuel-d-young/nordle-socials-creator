@@ -498,7 +498,11 @@ export function composePage({ pattern, content = {}, brand, colourway, tone, siz
 export function logoFor(brand, toneName) {
   const lg = postStyle(brand).logo;
   const key = toneName === 'light' && lg.keyLight ? lg.keyLight : lg.key;
-  return key ? brand.logos?.[key] ?? null : null;
+  if (key) return brand.logos?.[key] ?? null;
+  // no logo chosen in the house style: a brand that has a white or a black version gets the one that reads on this background (white on dark, colour on light)
+  const L = brand.logos ?? {};
+  if (L.white || L.black) return toneName === 'dark' || toneName === 'accent' ? (L.white ?? L.primary ?? L.black ?? null) : (L.primary ?? L.black ?? L.white ?? null);
+  return null;
 }
 
 // ---- the brand's house style, applied on top of a pattern ----------------------------------------------------------------
