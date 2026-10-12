@@ -9,6 +9,7 @@
 import { accessSync, constants, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 
 const WIN = (platform) => platform === 'win32';
 // paths are written the way the TARGET computer writes them (so the Windows and Mac cases can both be tested anywhere)
@@ -97,4 +98,19 @@ export function missingClaudeMessage(bin, platform = process.platform) {
   return `Could not start Claude Code ("${bin}"). Nordle looked on the PATH, in the usual install folders and in the Claude desktop app, and did not find it. `
     + `If it is installed, set NORDLE_CLAUDE_BIN to its full path (open a terminal and run "which claude", or "where claude" on Windows, to see it) and restart Nordle. `
     + `If it is not, install it: ${install}. Then sign in once with: claude auth login.`;
+}
+
+
+/**
+ * Is this copy of Claude Code signed in? Asks the program itself (`claude auth status`), which only reads its own saved login and costs nothing.
+ * @returns {{ found: boolean, path: string|null, signedIn: boolean|null, how?: string, account?: string, error?: string }}
+ */
+export function claudeStatus({ run = spawnSync, found = claudeFound() } = {}) {
+  if (!found.path) return { found: false, path: null, signedIn: null, message: missingClaudeMessage('claude') };
+  const r = run(found.path, ['auth', 'status'], { encoding: 'utf8', windowsHide: true, timeout: 20000, ...(/\.(cmd|bat)$/i.test(found.path) ? { shell: true } : {}) });
+  if (r.error) return { found: true, path: found.path, how: found.how, signedIn: null, error: r.error.message };
+  let j = null;
+  try { j = JSON.parse(String(r.stdout ?? '').trim()); } catch { /* not JSON */ }
+  const signedIn = j ? j.loggedIn === true : /logged in|signed in/i.test(String(r.stdout)) && !/not logged in|not signed in/i.test(String(r.stdout));
+  return { found: true, path: found.path, how: found.how, signedIn, ...(j?.email ? { account: j.email } : {}), ...(!signedIn ? { message: `Claude Code is found at ${found.path} but is not signed in. In a terminal run: "${found.path}" auth login` } : {}) };
 }

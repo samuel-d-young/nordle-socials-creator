@@ -105,8 +105,12 @@ function imageImport({ session, state, onChange, kind }) {
     state.busy = false; state.note = ''; onChange();
   };
   const read = async () => {
-    state.busy = true; state.note = 'Claude is looking at your screenshot. This takes about half a minute.'; onChange();
+    state.busy = true; state.note = 'Checking that Claude Code is ready…'; onChange();
     try {
+      const ready = await api.get('/claude').catch(() => null);
+      if (ready && (!ready.found || ready.signedIn === false)) { state.busy = false; state.note = ready.message ?? 'Claude Code is not ready.'; state.blocked = true; return onChange(); }
+      state.blocked = false;
+      state.note = train ? 'Claude is looking at your posts. This takes about half a minute.' : 'Claude is looking at your screenshot. This takes about half a minute.'; onChange();
       const r = await api.post(train ? '/brand/read-examples' : '/brand/read-screenshots', { uploadSession: session, files: state.names });
       state.shot = train ? r.train : r.shot; state.note = r.note ?? '';
     } catch (e) { state.note = say(e); }

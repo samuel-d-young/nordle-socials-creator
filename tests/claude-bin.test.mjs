@@ -76,3 +76,19 @@ test('the runner starts a .cmd through a shell on Windows, and says the new mess
   assert.match(src, /\(cmd\|bat\)\$\/i\.test\(String\(bin\)\) \? \{ shell: true \}/);
   assert.match(src, /missingClaudeMessage\(bin\)/);
 });
+
+test('claudeStatus asks the program itself whether it is signed in, and says how to fix it when it is not', async () => {
+  const { claudeStatus } = await import('../src/calendar/claude-bin.mjs');
+  const found = { path: '/Users/me/.local/bin/claude', how: 'the PATH', tried: [] };
+  const ask = (stdout, extra = {}) => claudeStatus({ found, run: (cmd, args) => { assert.deepEqual([cmd, args], [found.path, ['auth', 'status']]); return { status: 0, stdout, ...extra }; } });
+  assert.deepEqual(ask('{"loggedIn": true, "email": "a@b.c"}'), { found: true, path: found.path, how: 'the PATH', signedIn: true, account: 'a@b.c' });
+  const out = ask('{"loggedIn": false}');
+  assert.equal(out.signedIn, false);
+  assert.match(out.message, /is not signed in\. In a terminal run: "\/Users\/me\/\.local\/bin\/claude" auth login/);
+  assert.equal(ask('Not logged in').signedIn, false);
+  assert.equal(ask('Logged in as someone').signedIn, true);
+  assert.equal(claudeStatus({ found, run: () => ({ error: new Error('spawn failed') }) }).signedIn, null);
+  const none = claudeStatus({ found: { path: null, how: '', tried: [] } });
+  assert.deepEqual([none.found, none.signedIn], [false, null]);
+  assert.match(none.message, /Could not start Claude Code/);
+});

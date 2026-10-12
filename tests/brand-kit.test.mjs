@@ -131,3 +131,22 @@ test('a brand that exists: logos are added, a white one is made from the colour 
     assert.equal(JSON.parse(readFileSync(join(proj, 'brand.json'), 'utf8')).logos.white, undefined);
   });
 });
+
+test('Add a brand: when Claude Code is not signed in, reading a screenshot says so at once and how to fix it, without starting anything', async () => {
+  const shot = file('signed-out.png', PNG);
+  let asked = 0;
+  await studioPage(async ({ page, open }) => {
+    await open(`#/s/month?today=${TODAY}`);
+    await page.locator('[data-act="add-brand"]').click();
+    await page.fill('[data-field="wz-name"]', 'Signed Out');
+    await page.locator('[data-act="wz-next"]').click();
+    await page.waitForSelector('[data-field="shot-import"]');
+    await page.setInputFiles('[data-field="shot-import"] [data-field="shot-file"]', shot);
+    await page.waitForSelector('[data-field="shot-import"] .shot-th img');
+    await page.locator('[data-act="shot-read"]').click();
+    await page.waitForFunction(() => /not signed in/.test(document.querySelector('[data-state="shot-note"]')?.textContent ?? ''));
+    assert.match(await page.locator('[data-state="shot-note"]').innerText(), /is not signed in\. In a terminal run: "\/x\/claude" auth login/);
+    assert.equal(asked, 0, 'nothing was read');
+    assert.equal(await page.locator('[data-state="shot-read"]').count(), 0);
+  }, { brandReader: async () => { asked += 1; return SAID; }, claudeStatusFn: () => ({ found: true, path: '/x/claude', signedIn: false, message: 'Claude Code is found at /x/claude but is not signed in. In a terminal run: "/x/claude" auth login' }) });
+});

@@ -64,8 +64,10 @@ function checkWritable() {
 async function checkClaude() {
   const { findClaude, missingClaudeMessage } = await import('../src/calendar/claude-bin.mjs');
   const f = findClaude();
+  const { claudeStatus } = await import('../src/calendar/claude-bin.mjs');
+  const st = f.path ? claudeStatus({ found: f }) : null;
   return f.path
-    ? { name: 'Claude Code', required: false, ok: true, detail: `${f.path} (found in ${f.how})` }
+    ? { name: 'Claude Code', required: false, ok: st.signedIn !== false, detail: `${f.path} (found in ${f.how}; ${st.signedIn === true ? `signed in` : st.signedIn === false ? 'NOT signed in' : 'sign-in could not be checked'})`, ...(st.signedIn === false ? { fix: st.message } : {}) }
     : { name: 'Claude Code', required: false, ok: false, detail: 'not found (needed for Ask Claude now, Build it now and reading screenshots)', fix: missingClaudeMessage('claude', platform) };
 }
 
