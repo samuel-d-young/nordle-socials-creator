@@ -22,7 +22,7 @@ import { industryRules } from '../brand/industry.mjs';
 let requiredChecks = (doc) => [
   { check: 'technical', by: ['auto'] }, { check: 'compliance', by: ['auto'] }, { check: 'facts', by: ['auto'] }, { check: 'copy', by: ['designer'] },
   { check: 'media-match', by: ['auto', 'designer', 'reviewer'] }, { check: 'brief', by: ['reviewer'] },
-  ...(doc.kind === 'video' ? [{ check: 'speech-cuts', by: ['auto', 'reviewer'] }, { check: 'broll', by: ['designer', 'reviewer'] }, { check: 'audio', by: ['auto'] }] : [{ check: 'design', by: ['auto'] }]),
+  ...(doc.kind === 'video' ? [{ check: 'motion', by: ['auto'] }, { check: 'speech-cuts', by: ['auto', 'reviewer'] }, { check: 'broll', by: ['designer', 'reviewer'] }, { check: 'audio', by: ['auto'] }] : [{ check: 'design', by: ['auto'] }]),
 ];
 try { const m = await import('../verify/store.mjs'); if (typeof m.requiredChecks === 'function') requiredChecks = m.requiredChecks; } catch { /* keep the plain list */ }
 
@@ -244,6 +244,27 @@ export function stockLines(stock, item) {
   return out;
 }
 
+/**
+ * Nordle's standard for every post Claude makes: go all out, and show what Claude can do. Not a style the owner switches on; it is how Nordle works.
+ * For video it is enforced by the motion check (src/verify/motion.mjs), for pictures by the design check.
+ */
+export function standardLines(item) {
+  const out = ['', '## The standard: go all out', ''];
+  if (item.format === 'reel' || item.format === 'story') {
+    out.push('Nordle\'s standard for every video, whatever its style, is the work of a top editor and motion designer. This post is a showcase of what Claude can do; build it that way:');
+    out.push('- Stop the scroll: something moves, or the hook line lands, in the first half second.');
+    out.push('- Edit to the words: cut on whole phrases, keep the pace up, and use cutaways that show what is being said.');
+    out.push('- Every piece of text arrives with intent: vary the entrances (blur-in, tracking-in, slide-in, scale-in, typewriter, word-by-word, draw for lines and rings) and stagger them; key words and numbers get their own beat (count-up for numbers).');
+    out.push('- Something is moving at every moment: footage playing, a slow push on a photo, a looping background (float, drift, pulse), a new element arriving. No still stretch over 2.5 s, except the closing card held up to 3.5 s.');
+    out.push('- Use the motion kit (`type: "motion"` scenes and docs/VIDEO.md "The motion kit") for titles, numbers, lists and endings, and your own animated layers where it does not reach.');
+    out.push('- Captions follow the words; music sits under speech; the reel ends on a closing card or logo.');
+    out.push('- The motion check (`nordle check`, check `motion`) scores this out of 100 and must pass (85). Then look at the contact sheet and stills yourself: if any moment is flat, crowded or cut off, improve it before you finish. Good enough is not the bar.');
+  } else {
+    out.push('Nordle\'s standard for every post is the work of a top designer. This post is a showcase of what Claude can do: a clear idea per page, real photos, strong hierarchy, varied layouts from page to page, generous spacing, and type that reads on a phone at a glance. The design check must pass (88), and then look at every page yourself and improve anything that is merely fine.');
+  }
+  return out;
+}
+
 export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT, stock = null } = {}) {
   const p = loadProject(projectDir);
   const item = p.cal.items.find((i) => i.id === itemId);
@@ -273,6 +294,7 @@ export function buildPrompt(projectDir, itemId, { mode, today, nordleRoot = ROOT
   const brief = [['Idea', item.idea], ['Hook', item.hook], ['Audience', item.audience ?? p.brand.voice?.audience], ['Occasion', item.occasion], ['Media plan', item.mediaPlan], ['Extra guidance from the owner (follow it)', item.guidance], ['Notes', item.notes]].filter(([, v]) => v);
   out.push(...brief.map(([k, v]) => `- ${k}: ${v}`));
   out.push(...reelPromptLines(item));
+  out.push(...standardLines(item));
   if (how === 'revise') {
     const open = (item.feedback ?? []).filter((f) => !f.resolved).map((f) => `(${f.at.slice(0, 10)}) ${f.comment}`);
     for (const l of String(item.notes ?? '').split('\n')) if (/^Changes requested:/i.test(l)) open.push(l.replace(/^Changes requested:\s*/i, ''));   // how the Studio records it when there is no review file

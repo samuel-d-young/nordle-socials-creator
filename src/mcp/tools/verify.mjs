@@ -1,7 +1,7 @@
 // Tools for checking your own work before the owner sees it: run the scripts, look at the pictures against the words, record your
 // judgement, get the independent reviewer's packet, and ask what is still missing.
 
-const CHECK_NAMES = ['technical', 'design', 'copy', 'compliance', 'facts', 'media-match', 'uniqueness', 'brief', 'speech-cuts', 'broll', 'audio'];
+const CHECK_NAMES = ['technical', 'design', 'copy', 'compliance', 'facts', 'media-match', 'uniqueness', 'brief', 'motion', 'speech-cuts', 'broll', 'audio'];
 const MARK = { pass: 'PASS', warn: 'WARN', fail: 'FAIL', skipped: 'SKIPPED' };
 
 function findingLines(findings, max = 30) {

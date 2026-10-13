@@ -23,9 +23,10 @@ import { shownText } from './transcript.mjs';
 import { clip, plural, stamp } from './text.mjs';
 import { buildTimeline } from './timeline.mjs';
 import { checkUniqueness, listDocs, postDateOf } from './uniqueness.mjs';
+import { motionReport } from './motion.mjs';
 import { packetDir, pageImages, videoStills } from './visuals.mjs';
 
-export const CHECKS = ['technical', 'design', 'copy', 'compliance', 'facts', 'media-match', 'uniqueness', 'brief', 'speech-cuts', 'broll', 'audio'];
+export const CHECKS = ['technical', 'design', 'copy', 'compliance', 'facts', 'media-match', 'uniqueness', 'brief', 'motion', 'speech-cuts', 'broll', 'audio'];
 const EXPLAIN = {
   technical: 'Renders every size and looks for cut-off text, contrast, safe zones and broken files.',
   design: 'Grades hierarchy, spacing, alignment and balance out of 100.',
@@ -35,6 +36,7 @@ const EXPLAIN = {
   'media-match': 'Every caption and piece of on-screen text is true of the picture or clip under it.',
   uniqueness: 'No repeated photo, hook, caption or headline within the month.',
   brief: 'Does the post do what the brief asked.',
+  motion: 'Videos only: edited and animated like a motion designer made it. No text that just appears, no dead air, a hook in the first half second, varied entrances, a moving background on graphics, a proper ending. Score out of 100, pass 85.',
   'speech-cuts': 'No speaker is cut off; every cut sits on a sentence boundary.',
   broll: 'Cutaways fit what is being said and the voice carries on under them.',
   audio: 'Loudness around -14 LUFS, no clipping, music gives way to speech.',
@@ -167,6 +169,11 @@ export async function checkPost(projectDir, docId, { browser, only, record = tru
   }
 
   if (doc.kind === 'video') {
+    if (wants('motion')) {
+      const r = motionReport(doc);
+      const fail = r.findings.some((f) => f.level === 'error') || r.score < r.passScore;
+      put('motion', r.findings, { score: r.score, status: fail ? 'fail' : r.findings.some((f) => f.level === 'warn') ? 'warn' : 'pass', summary: `motion score ${r.score}/100 (pass mark ${r.passScore}); longest still stretch ${r.stats.longestStill} s; ${r.stats.entrances.length} kinds of entrance; ${summarise(r.findings)}` });
+    }
     if (wants('speech-cuts')) {
       const r = speechCuts(doc, { projectDir, timeline, measure, catalog });
       put('speech-cuts', r.findings, { status: r.skipped && !r.findings.some((f) => f.level !== 'info') ? 'pass' : undefined, summary: r.skipped ?? `${r.cuts.length} cuts looked at; ${summarise(r.findings.filter((f) => f.level !== 'info'))}`, data: { cuts: r.cuts, hook: r.hook } });

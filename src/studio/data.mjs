@@ -72,6 +72,7 @@ export const CHECK_LABELS = {
   'media-match': 'Words match the picture',
   brief: 'Does what the idea asked',
   design: 'Design quality',
+  motion: 'Motion like a designer made it',
   'speech-cuts': 'Nobody cut off mid-sentence',
   broll: 'Cutaways fit what is said',
   audio: 'Sound levels',

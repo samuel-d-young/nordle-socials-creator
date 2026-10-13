@@ -30,6 +30,8 @@ export function requiredChecks(doc) {
     { check: 'brief', by: ['reviewer'] },
   ];
   if (doc.kind !== 'video') base.push({ check: 'design', by: ['auto'] });
+  // every video is held to the motion standard (a score from the document; the build prompt also has the designer look at the result)
+  if (doc.kind === 'video') base.push({ check: 'motion', by: ['auto'] });
   if (doc.kind === 'video') base.push({ check: 'speech-cuts', by: ['auto', 'reviewer'] }, { check: 'broll', by: ['auto', 'designer', 'reviewer'] }, { check: 'audio', by: ['auto'] });
   return base;
 }

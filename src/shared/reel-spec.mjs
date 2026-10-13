@@ -155,7 +155,7 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
       layers.push(withTime(scrim, start, end, [{ preset: 'fade-in', duration: 0.3 }, { preset: 'fade-out', duration: 0.25 }]));
     }
     const block = blocks.stack(`s${i + 1}-text`, { anchor, x, y, w: 100 - x - Math.round((size.safe?.right ?? 0.12) * 100) }, kids.map((k) => ({ ...k, style: { ...k.style, shadow: { color: '#000000aa', blur: 18, y: 3 }, ...(k.style ?? {}) } })), { gap: 22 });
-    layers.push(withTime(block, start + 0.1, end, [{ preset: 'rise-in', duration: 0.5, params: { distance: 36 } }, { preset: 'fade-out', duration: 0.25 }]));
+    layers.push(withTime(block, start + 0.1, end, [{ preset: 'rise-in', duration: 0.55, params: { distance: 36 } }, { preset: 'blur-in', duration: 0.5, params: { amount: 14 } }, { preset: 'blur-out', duration: 0.25 }]));
   };
 
   /** A branded full-screen card: a pattern's page drawn as timed layers (its background becomes a full-page shape). */
@@ -171,7 +171,11 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
     if (sc.bare) return; // only the card's background: the scene's own "layers" (spec.layers) draw the rest
     let k = 0;
     for (const l of composed.page.layers) {
-      layers.push(withTime(prefixIds(l, `s${i + 1}-`), start + 0.15 + 0.08 * Math.min(k++, 4), end, [{ preset: 'rise-in', duration: 0.45, params: { distance: 30 } }, { preset: 'fade-out', duration: 0.2 }]));
+      // the first element (usually the headline) lands with a little overshoot; the rest rise and sharpen in after it, one by one
+      const first = k === 0;
+      layers.push(withTime(prefixIds(l, `s${i + 1}-`), start + 0.15 + 0.09 * Math.min(k++, 5), end, first
+        ? [{ preset: 'scale-in', duration: 0.55, params: { from: 0.88 }, ease: 'out-back' }, { preset: 'blur-in', duration: 0.5, params: { amount: 12 } }, { preset: 'fade-out', duration: 0.2 }]
+        : [{ preset: 'rise-in', duration: 0.45, params: { distance: 30 } }, { preset: 'blur-in', duration: 0.45, params: { amount: 10 } }, { preset: 'fade-out', duration: 0.2 }]));
     }
   };
 
@@ -188,8 +192,8 @@ export function buildReelDoc(spec, { brand, platforms, transcripts = {} }) {
     const top = p.position === 'top' ? Math.round((size.safe?.top ?? 0.13) * refH + 24) : Math.round(refH - (size.safe?.bottom ?? 0.2) * refH - 24 - H);
     const at = start + (p.at ?? 0.3);
     const { panel, parts } = closingCard({ id: `s${i + 1}-end`, size, brand, tc: toneColours(roles, 'light'), f, roles, top, content: p });
-    layers.push(withTime(panel, at, end, [{ preset: 'rise-in', duration: 0.5, params: { distance: 90 } }]));
-    parts.forEach((l, k) => layers.push(withTime(l, at + 0.12 + 0.07 * k, end, [{ preset: 'rise-in', duration: 0.45, params: { distance: 28 } }])));
+    layers.push(withTime(panel, at, end, [{ preset: 'rise-in', duration: 0.6, params: { distance: 90 }, ease: 'out-back' }]));
+    parts.forEach((l, k) => layers.push(withTime(l, at + 0.15 + 0.08 * k, end, [{ preset: k === 0 ? 'tracking-in' : 'rise-in', duration: 0.5, params: k === 0 ? { from: 0.35 } : { distance: 28 } }, { preset: 'blur-in', duration: 0.45, params: { amount: 10 } }])));
   };
 
   // `coverFrame` (a project path to a picture) puts the reel's own cover on its very last frames, so that frame can be chosen as the cover in the publishing service

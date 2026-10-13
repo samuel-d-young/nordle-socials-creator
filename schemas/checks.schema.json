@@ -19,7 +19,7 @@
       "additionalProperties": false,
       "properties": {
         "check": {
-          "enum": ["design", "technical", "copy", "compliance", "facts", "media-match", "speech-cuts", "broll", "audio", "brief", "uniqueness"],
+          "enum": ["design", "technical", "copy", "compliance", "facts", "media-match", "motion", "speech-cuts", "broll", "audio", "brief", "uniqueness"],
           "description": "design = critique score; technical = verify; copy = caption and alt text; compliance = pack rules; facts = every phone, address, price, name and number in the words comes from facts.json or the brief; media-match = every caption/text claim is true of the photo or clip it sits on; speech-cuts = no speaker cut off mid-sentence; broll = cutaways make sense for what is being said; audio = levels, ducking, music; brief = does it do what the idea asked; uniqueness = no repeated photo or hook within the month."
         },
         "by": { "enum": ["auto", "designer", "reviewer", "owner"], "description": "auto = a script; designer = the Claude that built it; reviewer = a separate Claude that did not build it and looked fresh; owner = the person." },

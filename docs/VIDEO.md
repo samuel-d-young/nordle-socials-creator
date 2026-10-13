@@ -225,6 +225,10 @@ default to ending when the layer ends). Presets:
 (default: the brand's `motion.ease`). Or keyframes: `{"keyframes":[{"t","prop","value","ease"}]}` with `prop` one of `opacity`, `scale`,
 `rotate`, `x`, `y`, `w`, `h` (x, y, w, h in % of the canvas). Animations belong to top-level layers (a group animates as one).
 
+## The motion check (Nordle's standard)
+
+Every video must pass the `motion` check (`src/verify/motion.mjs`, part of `nordle check`): a score out of 100 from the document alone, pass mark 85. It fails text that appears with no entrance, stretches where nothing moves (warn from 2.5 s, fail from 4 s; a closing card may hold for 3.5 s and the cover frame is ignored), a still first half second, entrances that are all the same, graphics with nothing alive behind them, and a missing closing card. The reel builder's own defaults (titles, cards, closing panels) and every motion-kit scene are made to pass it.
+
 ## Checks the plan makes (also `video check`)
 
 Blocking: a source or mount that is missing, a clip past the end of its footage, overlapping clips on one track. Warnings and errors

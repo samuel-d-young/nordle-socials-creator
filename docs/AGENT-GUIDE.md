@@ -3,6 +3,18 @@
 Nordle is a local editor for social posts: single graphics, carousels and (later) video. The owner and you edit the same
 document. This guide is what the `nordle_get_guide` tool returns, and what the Nordle skill is built from.
 
+## The standard: go all out
+
+Everything you make in Nordle is a showcase of what Claude can do. This is not a style the owner has to ask for; it is how Nordle works.
+- **Video** (every reel and story, cut from footage or made of graphics): edit and animate like a top editor and motion designer. Movement or the hook in the
+  first half second; cuts on whole phrases; every piece of text arrives with intent, with varied, staggered entrances (blur-in, tracking-in, slide-in, scale-in,
+  typewriter, word-by-word, draw, count-up for numbers); something moving at every moment (no still stretch over 2.5 s, except a closing card held up to 3.5 s);
+  the motion kit for titles, numbers, lists and endings; captions on speech; music under it; a closing card or logo at the end.
+  The **motion** check (`nordle check`) scores this out of 100 from the document and must pass (85); it fails text that just appears, dead air, a still
+  opening, entrances that are all the same, graphics with nothing alive behind them, and a missing ending.
+- **Pictures** (carousels, posts): the work of a top designer, and the design check must pass (88).
+- Then look at the sheet, stills and pages yourself. If anything is flat, crowded or merely fine, improve it before you say it is done.
+
 ## The workflow
 
 1. **Know the brand.** `nordle_get_brand` first. Use the brand's colours and fonts by token, never by hex or font name.

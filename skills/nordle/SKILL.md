@@ -13,6 +13,10 @@ live in the editor and decides what stays.
 If the `nordle_*` tools are not available, tell the owner to add them (from the Nordle folder):
 `claude mcp add nordle -- node mcp.mjs`, then restart Claude Code. Do not try to edit the project files by hand.
 
+## The standard
+
+Everything you make in Nordle should show what Claude can do: go all out. Video is edited and animated like a top motion designer (movement in the first half second, varied staggered entrances, something always moving, the motion kit, a proper ending) and must pass the `motion` check (85); pictures must pass the `design` check (88). Look at the result yourself and improve anything merely fine. Details: `nordle_get_guide`, "The standard: go all out".
+
 ## Every time
 
 1. **Read the guide once** with `nordle_get_guide` if you have not this session. It has the document format, the design and
