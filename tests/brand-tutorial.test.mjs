@@ -79,7 +79,7 @@ test('Create page: the brand the posts are for can be chosen right there, whatev
   await studioPage(async ({ page, open }) => {
     await makeBrand(page, open, 'Chooser Two');   // the left bar now shows this new brand
     await page.locator('[data-act="wz-done"]').click();
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-state="brand-pick"]');
     const chips = await page.$$eval('[data-state="brand-pick"] .cr-chip', (b) => b.map((x) => [x.dataset.brand, x.getAttribute('aria-pressed')]));
     assert.ok(chips.length >= 2, `a chip per brand: ${chips.length}`);

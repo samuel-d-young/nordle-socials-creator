@@ -101,7 +101,7 @@ test('importing: the files stay put, a mount is written, each video becomes a bu
 test('the Create page: Choose videos, see them listed, bring them in, and open one in the video editor', { skip, timeout: 180000 }, async () => {
   const v = clip('page-test.mp4', 2);
   await studioPage(async ({ page, open }) => {
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-section="videos"]');
     assert.equal(await page.locator('[data-act="create-import-videos"]').isDisabled(), true, 'nothing chosen yet');
     await page.locator('[data-act="create-pick-videos"]').click();

@@ -119,7 +119,7 @@ test('the route: anyone with a token can ask; a bad month is refused; the answer
 
 test('the Create page: choose, see options, tick some, add them to the calendar approved or as ideas; "Decide for me" is on first', async () => {
   await studioPage(async ({ page, open, call }) => {
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-act="create-suggest"]');
     assert.equal(await page.locator('[data-act="create-decide"]').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('[data-act="create-mix"]').getAttribute('aria-pressed'), 'true');

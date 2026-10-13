@@ -104,7 +104,7 @@ test('Claude can tag an idea it proposes with the campaign; an unknown campaign 
 
 test('the Create page: make a campaign, see its options, add them as ideas to schedule later; they carry the campaign and nothing is scheduled', async () => {
   await studioPage(async ({ page, open, call }) => {
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-act="camp-new"]');
     await page.locator('[data-act="camp-new"]').click();
     await page.waitForSelector('[data-section="new-campaign"]');

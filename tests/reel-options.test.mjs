@@ -88,7 +88,7 @@ test('what Claude is told: Auto decides from what exists, motion forbids footage
 
 test('the Create page: reel choices and extra info are saved on the reels it adds', async () => {
   await studioPage(async ({ page, open, call }) => {
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-state="reel-options"]');
     await page.locator('[data-reel-style="motion"]').click();
     await page.locator('[data-reel-seconds="20"]').click();

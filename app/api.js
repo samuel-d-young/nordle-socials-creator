@@ -25,6 +25,7 @@ async function request(method, path, body, headers = {}) {
 export const api = {
   get: (path) => request('GET', path),
   post: (path, body = {}) => request('POST', path, body),
+  patch: (path, body = {}) => request('PATCH', path, body),
   del: (path) => request('DELETE', path),
   async upload(project, file) {
     return request('POST', `/projects/${project}/assets`, file, { 'content-type': 'application/octet-stream', 'x-filename': encodeURIComponent(file.name) });

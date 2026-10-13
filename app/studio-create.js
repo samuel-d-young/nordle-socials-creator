@@ -6,6 +6,7 @@ import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, addMonths, dateFmt, monthOf, project, load } from './studio-store.js';
 import { reelOptions } from './studio-reel.js';
+import { simpleView } from './studio-create-simple.js';
 import { reelSummary } from '/src/shared/reel-options.mjs';
 import { FORMAT_LABEL, claudeSignIn, elapsed, emptyState, glyph, notify, plural } from './studio-ui.js';
 
@@ -32,6 +33,11 @@ function chooseBrand(id, redraw) {
   redraw();
 }
 const nextMonth = () => addMonths(monthOf(S.today), 1);
+
+/** Simple (three steps) or Advanced (every control). Remembered in this browser; Simple until the person picks Advanced. */
+const MODE_KEY = 'nordle.create.mode';
+let mode = (() => { try { return localStorage.getItem(MODE_KEY) === 'advanced' ? 'advanced' : 'simple'; } catch { return 'simple'; } })();
+function setMode(m, redraw) { mode = m; try { localStorage.setItem(MODE_KEY, m); } catch { /* private window: it lasts until the page reloads */ } redraw(); }
 
 async function suggest(redraw) {
   const id = brandId();
@@ -141,7 +147,7 @@ function videosCard(pr, redraw) {
         chip('One post for each video', vid.mode === 'each', () => { vid.mode = 'each'; redraw(); }, { 'data-vmode': 'each' }),
         chip('Join them into one', vid.mode === 'together', () => { vid.mode = 'together'; redraw(); }, { 'data-vmode': 'together' }))),
     h('div', { class: 'cr-go' },
-      h('button', { class: 'btn primary start', type: 'button', 'data-act': 'create-import-videos', disabled: vid.busy || !vid.paths.length, onclick: () => bringIn(redraw) }, vid.busy ? 'Working…' : `Bring ${vid.paths.length === 1 ? 'it' : vid.paths.length ? 'them' : 'them'} into Nordle`),
+      h('button', { class: 'btn primary cr-big', type: 'button', 'data-act': 'create-import-videos', disabled: vid.busy || !vid.paths.length, onclick: () => bringIn(redraw) }, vid.busy ? 'Working…' : `Bring ${vid.paths.length === 1 ? 'it' : vid.paths.length ? 'them' : 'them'} into Nordle`),
       vid.note ? h('span', { class: vid.busy ? 'muted' : 'bad', role: 'status', 'data-state': 'video-note' }, vid.note) : null),
     vid.done ? h('ul', { class: 'cr-opts', 'data-state': 'videos-done' }, vid.done.map((p) => h('li', { class: 'cr-opt on' },
       h('span', { class: 'cr-opt-main' }, h('span', { class: 'cr-opt-body' },
@@ -259,7 +265,7 @@ function controls(pr, redraw) {
         ? ` Your results are connected (${plural(learned.posts, 'post')} measured). ${st.result.learnedLine ?? 'No clear winner yet, so the mix stays balanced.'}`
         : ' Connect your results in Insights and Nordle will lean toward the formats and themes that did best. Until then it uses your brand, its facts and the calendar.'))),
     h('div', { class: 'cr-go' },
-      h('button', { class: 'btn primary start', type: 'button', 'data-act': 'create-suggest', disabled: st.loading, onclick: () => suggest(redraw) }, st.loading ? 'Working…' : (st.result ? 'Show me new options' : 'Show me options'))));
+      h('button', { class: 'btn primary cr-big', type: 'button', 'data-act': 'create-suggest', disabled: st.loading, onclick: () => suggest(redraw) }, st.loading ? 'Working…' : (st.result ? 'Show me new options' : 'Show me options'))));
 }
 
 const STYLES_FALLBACK = [
@@ -302,12 +308,26 @@ export function renderCreate(root, ctx) {
       h('button', { class: 'btn quiet', type: 'button', 'data-act': 'create-copy', onclick: () => copyRequest(r.request) }, icon('clipboard', 14), 'Ask Claude to improve these')),
     st.added ? h('p', { class: 'cr-added', role: 'status' }, `${plural(st.added.done, 'post')} ${st.added.approved ? 'added and approved' : 'added as ideas'}. `, st.added.note, ' ', h('a', { href: '#/s/plan' }, 'Open the plan')) : null) : null;
 
+  // an address can ask for a mode (…/create?mode=advanced), for links and tests; it is remembered like a click
+  const asked = /[?&]mode=(simple|advanced)\b/.exec(location.hash)?.[1];
+  if (asked && asked !== mode) { mode = asked; try { localStorage.setItem(MODE_KEY, mode); } catch { /* fine */ } }
+  const modes = h('div', { class: 'cr-mode', role: 'group', 'aria-label': 'Simple or advanced' },
+    chip('Simple', mode === 'simple', () => setMode('simple', redraw), { 'data-mode': 'simple', title: 'Three steps: say what you want, pick from the board, Claude makes them' }),
+    chip('Advanced', mode === 'advanced', () => setMode('advanced', redraw), { 'data-mode': 'advanced', title: 'Every control: campaigns, months, styles, reel options, learning from results, your own videos' }));
+  const brandRow = S.projects.length > 1 ? h('div', { class: 'cr-row cr-brands', 'data-state': 'brand-pick' }, h('span', { class: 'lbl-i' }, 'Brand'),
+    h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Which brand the posts are for' }, S.projects.map((p) => chip(p.name, p.id === pr.id, () => chooseBrand(p.id, redraw), { 'data-brand': p.id })))) : null;
+  if (mode === 'simple') {
+    root.replaceChildren(h('div', { class: 'create simple', 'data-state': 'create-simple' },
+      h('header', { class: 'cr-head' }, h('div', { class: 'cr-head-top' }, h('h2', {}, `Make posts for ${pr.name}`), modes), brandRow),
+      ...simpleView(pr, redraw),
+      h('p', { class: 'muted sp-more' }, 'Campaigns, choosing the month, reel options, learning from your results and editing videos you already have are in ', h('button', { class: 'linklike', type: 'button', 'data-act': 'to-advanced', onclick: () => setMode('advanced', redraw) }, 'Advanced'), '.')));
+    return;
+  }
   if (!st.job) { st.job = { running: null, last: null }; checkJob(redraw); }
   root.replaceChildren(h('div', { class: 'create' },
     h('header', { class: 'cr-head' },
-      h('h2', {}, `For ${pr.name}`),
-      S.projects.length > 1 ? h('div', { class: 'cr-row cr-brands', 'data-state': 'brand-pick' }, h('span', { class: 'lbl-i' }, 'Brand'),
-        h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Which brand the posts are for' }, S.projects.map((p) => chip(p.name, p.id === pr.id, () => chooseBrand(p.id, redraw), { 'data-brand': p.id })))) : null,
+      h('div', { class: 'cr-head-top' }, h('h2', {}, `For ${pr.name}`), modes),
+      brandRow,
       h('p', { class: 'muted' }, 'Start with a few words, or let Nordle suggest posts for the next month. You choose what goes on the calendar; nothing is posted.')),
     ask, st.newCamp ? campaignForm(pr, redraw) : null, controls(pr, redraw), videosCard(pr, redraw), st.error ? h('p', { class: 'cr-err', role: 'alert' }, st.error) : null, results));
 }

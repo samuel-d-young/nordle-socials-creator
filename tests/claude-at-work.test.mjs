@@ -129,7 +129,7 @@ test('the Studio: a queued post shows its line and a Build it now button; "Ask C
     assert.match(await page.locator('.build-line').first().innerText(), /Ready to build|Waiting its turn/);
     assert.equal(await page.locator('[data-act="build-now"]').count(), 1);
 
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-act="create-run"]');
     await page.fill('[data-field="create-prompt"]', 'Two reels about the team');
     await page.locator('[data-act="create-run"]').click();

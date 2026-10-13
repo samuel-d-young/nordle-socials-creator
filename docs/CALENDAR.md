@@ -207,6 +207,14 @@ Set them in the Create page (Reels row and the extra-info box; they go on every 
 
 ## The Create page (Make posts)
 
+**Simple and Advanced.** The page opens in **Simple** mode (`app/studio-create-simple.js`), three steps shown across the top:
+
+1. **Say what you want**: one sentence, plus what kind (or let Nordle choose) and how many. The sentence is read the way a person means it ("three reels introducing the team" sets three, reels and the team style: `readAsk`). Starter chips fill in a sentence.
+2. **Pick from the board**: every idea is drawn as a strip of frames in the brand's colours (a reel's hook, shots with rough seconds and end card; a carousel's cover, slides and last slide: `framesFor`), so it can be judged before anything is built. **Keep** it, ask for **Another like this** (a different idea of the same kind, from spares fetched with the first ones), or pin a **Note for Claude** on it (it becomes that post's `guidance`). **Show me ideas** is free and instant (from the brand's facts, occasions and mix); **Let Claude write them** has Claude write them from the exact words (it uses the owner's Claude usage) and puts them on the same board.
+3. **Claude makes them**: **Make them now** puts them on the calendar approved and in the build queue, one at a time, and the page follows their progress; **Save for later** keeps them as ideas in the Plan.
+
+**Advanced** keeps every control described below (campaigns, months, styles, reel options, learning from results, your own videos). The choice is remembered in the browser, and an address can ask for one (`#/s/create?mode=advanced`). Tests: `tests/create-simple.test.mjs`.
+
 The Studio's **Create** view (press `n`) is the quick way to fill the calendar. It has two ways in:
 
 1. **Tell Claude what you want**: a box for a few words ("three reels about the team, one carousel on what to expect at a first visit"). *Copy this for Claude*

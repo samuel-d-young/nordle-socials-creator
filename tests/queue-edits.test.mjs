@@ -108,7 +108,7 @@ test('while Claude works on the Create page, going to another page stays there: 
   const gate = new Promise((r) => { release = r; });
   const claudeRunner = { propose: async () => { await gate; return { ran: [{ outcome: 'proposed', added: ['a'] }] }; }, build: async () => ({ ran: [] }) };
   await studioPage(async ({ page, open }) => {
-    await open(`#/s/create?today=${TODAY}`);
+    await open(`#/s/create?today=${TODAY}&mode=advanced`);
     await page.waitForSelector('[data-act="create-run"]');
     await page.locator('[data-act="create-run"]').click();
     await page.waitForSelector('.build-line[data-state="working"]');
@@ -121,7 +121,7 @@ test('while Claude works on the Create page, going to another page stays there: 
     await page.waitForTimeout(3800);   // the job finishing is not a reason to move either
     assert.equal(await page.locator('.create').count(), 0);
     assert.match(await page.evaluate(() => location.hash), /\/s\/month/);
-    await page.evaluate(() => { location.hash = '#/s/create?today=2026-10-05'; });
+    await page.evaluate(() => { location.hash = '#/s/create?today=2026-10-05&mode=advanced'; });
     await page.waitForSelector('.create');   // and it is there when asked for, with the result
   }, { claudeRunner });
 });
