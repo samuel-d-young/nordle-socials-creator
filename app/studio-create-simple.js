@@ -16,14 +16,6 @@ export const sm = { text: '', kind: 'auto', count: 3, cards: [], reserve: [], pi
 
 const KINDS = [['auto', 'Let Nordle choose'], ['reel', 'Reels'], ['carousel', 'Carousels'], ['post', 'Single posts']];
 const COUNTS = [[1, 'One'], [3, 'Three'], [8, 'A month']];
-const STARTERS = [
-  ['Introduce the team', 'team', 'A reel introducing someone from the team'],
-  ['Explain something', 'educate', 'A carousel explaining something people often ask about'],
-  ['Answer a question', 'faq', 'Answer one real question people ask us'],
-  ['Behind the scenes', 'behind', 'Show how things are really done here'],
-  ['An occasion coming up', 'seasonal', 'Something for a date or season coming up'],
-  ['A gentle invitation', 'invite', 'A soft invitation to book, call or visit'],
-];
 const nextMonth = () => addMonths(monthOf(S.today), 1);
 
 /** Read the sentence the way a person means it: "three reels about the team" sets the kind, the number and the style. Choices made with the chips win. */
@@ -205,7 +197,6 @@ function askCard(pr, redraw) {
   return h('section', { class: 'cr-card sp-card', 'aria-label': 'What do you want to post?', 'data-section': 'simple-ask' },
     h('h3', { class: 'sp-q' }, 'What do you want to post?'),
     t,
-    h('div', { class: 'cr-chips sp-starters', role: 'group', 'aria-label': 'Start from' }, STARTERS.map(([label, , text]) => chip(label, false, () => { sm.text = text; redraw(); queueMicrotask(() => document.querySelector('[data-field="simple-ask"]')?.focus()); }, { 'data-starter': label }))),
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'Kind'),
       h('div', { class: 'cr-chips', role: 'group', 'aria-label': 'Kind of post' }, KINDS.map(([k, label]) => chip(label, sm.kind === k, () => { sm.kind = k; redraw(); }, { 'data-kind': k })))),
     h('div', { class: 'cr-row' }, h('span', { class: 'lbl-i' }, 'How many'),

@@ -1484,7 +1484,6 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 .sp-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 13px; }
 .sp-q { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
 .sp-ask { font-size: 17px; line-height: 1.4; min-height: 64px; }
-.sp-starters .cr-chip { font-weight: 600; }
 .sp-go { align-items: center; }
 .sp-help, .sp-cost { font-size: 13px; }
 .sp-more { text-align: center; font-size: 13px; }
