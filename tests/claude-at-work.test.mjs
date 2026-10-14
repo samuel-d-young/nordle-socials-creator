@@ -163,3 +163,12 @@ test('while Claude is on a post: its picture loops with an animation, the top ba
     await page.waitForFunction(() => !document.querySelector('.th.working'), null, { timeout: 40000 });
   });
 });
+
+test('reels get more room than picture posts ($5, 90 turns, 45 minutes); a brand\'s own budget still wins; a long reel is never taken for a stuck run', async () => {
+  const { buildLimits, staleAfter, BUILD_BUDGET_USD, DEFAULT_TIMEOUT_MS } = await import('../src/calendar/run.mjs');
+  assert.deepEqual(buildLimits({ format: 'reel' }, {}), { maxBudgetUsd: 5, maxTurns: 90, timeoutMs: 45 * 60 * 1000 });
+  assert.deepEqual(buildLimits({ format: 'carousel' }, {}), { maxBudgetUsd: BUILD_BUDGET_USD, maxTurns: 60, timeoutMs: DEFAULT_TIMEOUT_MS });
+  assert.equal(buildLimits({ format: 'reel' }, { maxBudgetUsd: 3 }).maxBudgetUsd, 3, 'the brand setting wins');
+  assert.equal(buildLimits({ format: 'reel' }, {}, { maxTurns: 10, timeoutMs: 1000 }).maxTurns, 10, 'a caller\'s own limits win');
+  assert.ok(staleAfter(DEFAULT_TIMEOUT_MS) > 45 * 60 * 1000, 'a reel still inside its 45 minutes is not stale');
+});

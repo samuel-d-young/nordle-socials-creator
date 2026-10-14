@@ -259,7 +259,7 @@ function board(pr, redraw) {
       h('span', { class: 'cr-count' }, n ? `${plural(n, 'post')} picked` : 'Pick at least one'),
       h('button', { class: 'btn go', type: 'button', 'data-act': 'simple-make', disabled: !n || !!sm.busy, onclick: () => make(pr, redraw, { now: true }), title: 'They go on the calendar and Claude builds them now, one at a time' }, sm.busy === 'making' ? 'Starting…' : `Make ${n === 1 ? 'it' : 'them'} now`),
       h('button', { class: 'btn', type: 'button', 'data-act': 'simple-save', disabled: !n || !!sm.busy, onclick: () => make(pr, redraw, { now: false }), title: 'They wait in the Plan as ideas. Nothing is built until you say' }, 'Save for later'),
-      h('span', { class: 'muted sp-cost' }, n ? `Claude builds each one with your Claude usage (about $1 to $2 a post).` : '')) : null);
+      h('span', { class: 'muted sp-cost' }, n ? `Claude builds each one with your Claude usage (about $1 to $2 a post, up to $5 for a reel).` : '')) : null);
 }
 
 function progress() {

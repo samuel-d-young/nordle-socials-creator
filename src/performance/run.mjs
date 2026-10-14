@@ -49,7 +49,7 @@ export async function runReview({
   const args = (mcpFile) => claudeArgs({ mcpFile, maxTurns, tools: REVIEW_TOOLS, model });
   if (dryRun) return { ...result, dryRun: [{ period: due.period, command: [claudeBin(), ...args('<temp mcp config>')], promptChars: prompt.length, prompt }] };
 
-  const lock = acquireRunLock(dir, { mode: 'review', item: null }, { staleMs: timeoutMs * 1.5 + 120000 });
+  const lock = acquireRunLock(dir, { mode: 'review', item: null }, { staleMs: Math.max(timeoutMs, 45 * 60 * 1000) * 1.5 + 120000 });   // never take over a reel build that is still within its time
   if (!lock.ok) return { ...result, locked: lock.holder };
   const tmp = mkdtempSync(join(tmpdir(), 'nordle-review-'));
   try {

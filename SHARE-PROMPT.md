@@ -10,7 +10,7 @@ business, in any country or language you can write in.
 
 Nordle was created by Samuel Young (https://github.com/samuel-d-young/nordle-socials-creator) and is free to use under CC BY 4.0: credit him if you share it or build on it.
 Some steps start Claude by itself ("Ask Claude now", "Build it now", reading a screenshot). They use your own Claude usage: about 20 to 30 cents to read a
-screenshot or write ideas, and about 1 to 2 dollars to build one post. Nordle caps each run, and says what it cost.
+screenshot or write ideas, about 1 to 2 dollars to build a picture post, and up to 5 dollars for a reel. Nordle caps each run, and says what it cost.
 
 ## The short version (paste this one)
 

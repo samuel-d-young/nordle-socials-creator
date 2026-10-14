@@ -28,6 +28,24 @@ export const PROPOSE_MAX_TURNS = 25;
 // What a run may cost. A claude -p run stops by itself at the budget, so a stuck run cannot quietly use a lot of the owner's allowance.
 export const BUILD_BUDGET_USD = 2.5;
 export const PROPOSE_BUDGET_USD = 1;
+// A reel does much more than a picture post (find footage, cut, animate, render, a second reviewer), so it gets more room. The owner asked for this after a
+// reel stopped at the $2.50 cap part way through. A brand's own settings.maxBudgetUsd still wins.
+export const REEL_BUILD_BUDGET_USD = 5;
+export const REEL_MAX_TURNS = 90;
+export const REEL_TIMEOUT_MS = 45 * 60 * 1000;
+
+/** How long before a build that holds the brand counts as dead: longer than the longest run (a reel), so a working reel is never taken for a stuck one. */
+export const staleAfter = (timeoutMs) => Math.max(timeoutMs, timeoutMs === DEFAULT_TIMEOUT_MS ? REEL_TIMEOUT_MS : 0) * 1.5 + 120000;
+
+/** The limits for building one item: reels get the reel limits unless the caller or the brand set their own. */
+export function buildLimits(item, settings = {}, { maxTurns = DEFAULT_MAX_TURNS, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const reel = item?.format === 'reel';
+  return {
+    maxBudgetUsd: settings.maxBudgetUsd ?? (reel ? REEL_BUILD_BUDGET_USD : BUILD_BUDGET_USD),
+    maxTurns: reel && maxTurns === DEFAULT_MAX_TURNS ? REEL_MAX_TURNS : maxTurns,
+    timeoutMs: reel && timeoutMs === DEFAULT_TIMEOUT_MS ? REEL_TIMEOUT_MS : timeoutMs,
+  };
+}
 // Sonnet at medium effort builds a post well for far less than the biggest model at full effort; the owner can change both per brand (settings.claudeModel, claudeEffort)
 export const DEFAULT_MODEL = 'sonnet';
 export const DEFAULT_EFFORT = 'medium';
@@ -245,17 +263,18 @@ export async function runDue({
   if (dryRun) {
     result.dryRun = queue.slice(0, limit).map(({ item, mode }) => {
       const prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
-      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD })], promptChars: prompt.length, prompt };
+      const lim = buildLimits(item, p.settings, { maxTurns, timeoutMs });
+      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns: lim.maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd })], promptChars: prompt.length, prompt };
     });
     return result;
   }
 
-  const lock = acquireRunLock(dir, { mode: 'build' }, { staleMs: timeoutMs * 1.5 + 120000 });
+  const lock = acquireRunLock(dir, { mode: 'build' }, { staleMs: staleAfter(timeoutMs) });
   if (!lock.ok) return { ...result, locked: lock.holder };
   let tmp;
   try {
     // with the lock held nobody else is building, so anything still marked "building" was left by a run that died
-    const recovered = await recoverStale(dir, now, timeoutMs * 1.5 + 120000);
+    const recovered = await recoverStale(dir, now, staleAfter(timeoutMs));
     if (recovered.length) {
       log(`Put back items a previous run left half-built: ${recovered.join(', ')}`);
       ({ p, queue } = look());
@@ -278,9 +297,10 @@ export async function runDue({
       let prompt, args, run, verdict;
       try {
         prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
-        args = claudeArgs({ mcpFile, maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? BUILD_BUDGET_USD });
+        const lim = buildLimits(item, p.settings, { maxTurns, timeoutMs });
+        args = claudeArgs({ mcpFile, maxTurns: lim.maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd });
         const env = { ...process.env, NORDLE_AGENT_RUN: '1' };
-        run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env, prompt, timeoutMs, signal });
+        run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env, prompt, timeoutMs: lim.timeoutMs, signal });
         run.parsed = parseClaudeOutput(run.stdout);
         if (run.aborted) {
           // the owner took the request back (Undo already put the item back as it was): leave the calendar alone
@@ -340,7 +360,7 @@ export async function runPropose({
   const prompt = proposePrompt(dir, { months, today: day, nordleRoot }) + (extra ? `\n${String(extra).slice(0, 6000)}` : '');
   if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD })], promptChars: prompt.length, prompt }] };
 
-  const lock = acquireRunLock(dir, { mode: 'propose', item: null }, { staleMs: timeoutMs * 1.5 + 120000 });
+  const lock = acquireRunLock(dir, { mode: 'propose', item: null }, { staleMs: staleAfter(timeoutMs) });
   if (!lock.ok) return { ...result, locked: lock.holder };
   const tmp = mkdtempSync(join(tmpdir(), 'nordle-run-'));
   try {
