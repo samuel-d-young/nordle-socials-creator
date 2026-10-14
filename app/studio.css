@@ -324,7 +324,7 @@ kbd { font: 500 11px/1 var(--font-mono); padding: 2px 5px 1px; border: 1px solid
 .selbar .btn.quiet { color: var(--on-ink); }
 .selbar .btn.quiet:hover:not(:disabled) { background: color-mix(in srgb, var(--on-ink) 14%, transparent); color: var(--on-ink); }
 .notices { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 24px); }
-.notice { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; background: var(--ink); color: var(--on-ink); border-radius: var(--radius); box-shadow: var(--lift); animation: rise var(--t-slow) var(--ease) both; max-width: 100%; }
+.notice { pointer-events: none; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; background: var(--ink); color: var(--on-ink); border-radius: var(--radius); box-shadow: var(--lift); animation: rise var(--t-slow) var(--ease) both; max-width: 100%; }
 .notice.error { background: var(--proof); color: var(--on-color); }
 .notice-text { line-height: 1.35; }
 .notice-act { display: inline-flex; align-items: center; gap: 6px; border: 1px solid color-mix(in srgb, var(--on-ink) 40%, transparent); background: transparent; color: inherit; border-radius: var(--radius); padding: 4px 10px; font-weight: 560; }
@@ -1510,3 +1510,44 @@ dialog.edit-here[open] { display: flex; flex-direction: column; }
 @media (max-width: 720px) { .sp-step { font-size: 12px; } .sp-q { font-size: 19px; } }
 /* the Create page's main buttons (not ".start": that is the masthead's Start reviewing, which phones and an open post sheet hide) */
 .btn.primary.cr-big { min-height: 44px; padding: 0 18px; font-size: 14px; font-weight: 560; gap: 10px; }
+
+/* the "being made" banner at the top of every page (studio-making.js) */
+.working { flex-direction: column; align-items: stretch; gap: 0; padding: 0; }
+.mk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 28px; min-height: 38px; }
+.mk-sum { flex: 1; min-width: 0; font-size: 14px; }
+.mk-sum .bad { color: var(--bad, #c0392b); font-weight: 700; }
+.mk-toggle { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-weight: 700; }
+.mk-panel { padding: 4px 28px 14px; display: flex; flex-direction: column; gap: 12px; max-height: min(60vh, 520px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--hot) 45%, transparent); }
+.mk-sec h4 { margin: 8px 0 6px; }
+.mk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mk-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 8px; }
+.mk-thumb { flex: none; width: 34px; height: 42px; border-radius: 5px; overflow: hidden; display: grid; place-items: center; background: color-mix(in srgb, var(--lane) 18%, var(--paper)); box-shadow: inset 3px 0 0 var(--lane); }
+.mk-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.mk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mk-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.mk-what { font-size: 12.5px; color: var(--muted, inherit); }
+.mk-brand { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.mk-brand i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.mk-acts { display: flex; gap: 6px; flex: none; }
+.mk-wait { margin: 0; font-size: 13px; }
+@media (max-width: 720px) { .mk-bar, .mk-panel { padding-left: 14px; padding-right: 14px; } .mk-row { flex-wrap: wrap; } .mk-acts { width: 100%; justify-content: flex-end; } }
+
+/* notices sit over the page without blocking it: only their buttons take clicks, so a box under a notice can still be clicked and typed in */
+.notice .notice-act, .notice .notice-x, .notice a, .notice button { pointer-events: auto; }
+
+/* posts Claude is making (or about to): the List row, and the chip used in any view */
+.mk-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
+.mk-chip.mk-now { color: var(--on-hot, var(--ink)); background: var(--hot, var(--accent)); padding: 2px 9px 2px 6px; border-radius: 999px; }
+.mk-chip.mk-line { color: var(--ink); background: color-mix(in srgb, var(--hot, var(--accent)) 16%, var(--paper)); padding: 2px 9px; border-radius: 999px; border: 1.5px dashed var(--hot, var(--accent)); }
+.mk-chip.mk-stopped, .mk-chip.mk-failed { color: var(--bad, #b3261e); }
+.mk-chip .spin { width: 12px; height: 12px; }
+.mk-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--hot, var(--accent)); display: inline-block; }
+.lr.making { box-shadow: inset 4px 0 0 var(--hot, var(--accent)); }
+.lr.mk-row-now { background: color-mix(in srgb, var(--hot, var(--accent)) 9%, var(--surface)); overflow: hidden; }
+.lr.mk-row-now::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--hot, var(--accent)) 22%, transparent) 50%, transparent 70%); background-size: 220% 100%; animation: mk-sweep 1.8s linear infinite; }
+.lr.mk-row-now .c-title .m { color: var(--ink); font-weight: 700; }
+.lr.mk-row-line { background: color-mix(in srgb, var(--hot, var(--accent)) 5%, var(--surface)); }
+.lr.mk-row-failed, .lr.mk-row-stopped { box-shadow: inset 4px 0 0 var(--bad, #b3261e); }
+@keyframes mk-sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) { .lr.mk-row-now::after { animation: none; background: none; } }
+.mk-what { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

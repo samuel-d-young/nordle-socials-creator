@@ -307,3 +307,51 @@ export function claudeSignIn({ onReady, label = 'Sign in to Claude' } = {}) {
   paint('idle');
   return box;
 }
+
+/**
+ * Redraw part of the page without taking the text box away from someone typing in it. The Studio redraws itself while Claude works (job checks, the
+ * banner, the regular refresh); without this, each redraw replaced the box being typed in and the cursor was lost. The box is found again by its
+ * data-field (or label, name or id) and gets its focus, cursor, selection and scroll back. What was typed is kept by the page's own state.
+ */
+export function keepTyping(root, draw) {
+  const a = document.activeElement;
+  const editable = a instanceof HTMLElement && root?.contains(a) && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) && a.type !== 'checkbox' && a.type !== 'radio';
+  const keyOf = (x) => x.dataset?.field || x.getAttribute('aria-label') || x.getAttribute('name') || x.id || '';
+  const key = editable ? keyOf(a) : '';
+  const sel = key && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd, a.selectionDirection ?? 'none'] : null;
+  const scroll = key ? a.scrollTop : 0;
+  const result = draw();
+  if (!key || !root.isConnected) return result;
+  if (document.activeElement && document.activeElement !== document.body && document.activeElement !== a && root.contains(document.activeElement)) return result;   // the redraw moved focus on purpose
+  const next = [...root.querySelectorAll('input, textarea, select, [contenteditable="true"]')].find((x) => keyOf(x) === key);
+  if (next && next !== document.activeElement) {
+    next.focus({ preventScroll: true });
+    if (sel && typeof next.setSelectionRange === 'function') { try { next.setSelectionRange(...sel); } catch { /* this kind of input has no cursor */ } }
+    next.scrollTop = scroll;
+  }
+  return result;
+}
+
+/**
+ * Is Claude making this post, or about to? { key: 'now' | 'line' | 'stopped' | 'failed', label, since? } or null. Read from the post's build block, so
+ * every view says the same thing: being made now, in line (and where), changes waiting, stopped part way, or did not finish.
+ */
+export function makingState(p) {
+  const b = p?.build;
+  if (!b) return null;
+  if (p.status === 'building' && b.active) return { key: 'now', label: `${p.revising ? 'Changing now' : 'Being made now'}${b.pending ? ` · ${b.pending === 1 ? 'a change' : `${b.pending} changes`} queued` : ''}`, since: b.since };
+  if (b.waiting) return { key: 'line', label: b.waiting === 1 ? 'Next in line' : `In line · ${b.waiting - 1} ahead` };
+  if (b.pending) return { key: 'line', label: `${b.pending === 1 ? 'A change' : `${b.pending} changes`} queued` };
+  if (p.status === 'building' && b.stalled) return { key: 'stopped', label: 'Stopped part way' };
+  if (p.status === 'approved' && b.lastError) return { key: 'failed', label: 'Did not finish' };
+  return null;
+}
+
+/** The status chip for a post Claude is making (or is about to): a spinner and the time it has been going, or its place in line. */
+export function makingChip(p) {
+  const m = makingState(p);
+  if (!m) return null;
+  return h('span', { class: `st mk-chip mk-${m.key}`, 'data-state': `making-${m.key}`, title: p.build?.lastError ?? '' },
+    m.key === 'now' ? h('i', { class: 'spin', 'aria-hidden': 'true' }) : m.key === 'line' ? h('i', { class: 'mk-dot', 'aria-hidden': 'true' }) : icon('alert', 13),
+    h('span', {}, m.label, m.since ? ` · ${elapsed(m.since)}` : ''));
+}

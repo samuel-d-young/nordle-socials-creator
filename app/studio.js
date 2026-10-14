@@ -7,7 +7,7 @@ import {
   S, VIEWS, STATUS_GROUPS, addMonths, brandCounts, buildQueue, dateFmt, figures, inBrand, load, matches, months, monthOf, patchPost, project, subscribe, update, visible,
 } from './studio-store.js';
 import {
-  claudeSignIn, cycleThemeGlobal, elapsed, emptyState, hideTip, kbd, notify, skeleton, themeMode,
+  claudeSignIn, cycleThemeGlobal, elapsed, emptyState, hideTip, keepTyping, kbd, notify, skeleton, themeMode,
 } from './studio-ui.js';
 import { releaseViewer, activeViewer, mediaViewer } from './studio-media.js';
 import { renderMonth, isPhone, monthSpan, scrollToMonth, scrollAgenda } from './studio-month.js';
@@ -15,6 +15,7 @@ import { renderWall, resetWall, revealAll } from './studio-wall.js';
 import { renderList, sorted, resetList } from './studio-list.js';
 import { renderPlan } from './studio-plan.js';
 import { renderCreate } from './studio-create.js';
+import { making, collect as makingNow, paintMakingBanner, refreshMaking } from './studio-making.js';
 import { renderInsights } from './insights.js';
 import { renderTrash } from './studio-trash.js';
 import * as Q from './studio-queue.js';
@@ -461,10 +462,10 @@ function renderDetailSheet() {
     // the decisions sit under the picture and its words; only "Open in editor" and "Remove" stay at the bottom
     const parts = D.actions(d, post, { afterAction: refresh, onResolved: closeDetail, split: true });
     const dock = parts.dock.childElementCount ? h('div', { class: 'd-dock' }, parts.dock) : null;   // nothing at the bottom when there is nothing to put there
-    target.replaceChildren(...[
+    keepTyping(el.detail, () => target.replaceChildren(...[
       h('div', { class: 'd-scroll' },
         viewer.el, D.videoNotice(d, post, refresh), parts.decide, D.head(d, post), cp.el, D.caption(d, post, { onChanged: refresh }), D.why(d, post), D.checks(d, post), D.pairs(d, post), D.history(d, post)),
-      dock].filter(Boolean));
+      dock].filter(Boolean)));
     if (first) el.detail.querySelector('.d-scroll')?.scrollTo?.(0, 0);
   }).catch((e) => { if (token === detailToken) target.replaceChildren(D.errorBlock(e.message, () => { sigs.detail = ''; update(); })); });
 }
@@ -512,18 +513,33 @@ function announceFinished() {
   }
 }
 
-function render() {
+const redrawBanner = () => { if (el.working) paintMakingBanner(el.working, ctx, redrawBanner); };
+/** While Claude is making something, look every 5 seconds (the banner's times and the build lines move); otherwise the 15-second poll is enough. */
+let makingTick = 0;
+function watchMaking() {
+  clearInterval(makingTick);
+  let n = 0;
+  makingTick = setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    const busy = making.data && (makingNow().now.length || makingNow().line.length);
+    if (!busy && n++ % 3) return;
+    const before = JSON.stringify(making.data?.jobs ?? []);
+    await refreshMaking();
+    if (JSON.stringify(making.data?.jobs ?? []) !== before) await load({ force: true }).catch(() => {});
+    redrawBanner();
+  }, 5000);
+}
+
+// every redraw keeps the person who is typing where they were (keepTyping)
+function render() { if (!active) return; keepTyping(el.studio, renderAll); }
+function renderAll() {
   if (!active) return;
   announceFinished();
   el.studio.classList.toggle('is-queue', S.view === 'queue');
   el.studio.classList.toggle('with-detail', S.open && S.view !== 'queue');
   el.studio.dataset.view = S.view;
-  const live = S.posts.filter((p) => p.build?.active);
-  el.working.classList.toggle('hidden', !live.length);
-  if (live.length) {
-    const first = live[0];
-    el.working.replaceChildren(h('i', { class: 'spin', 'aria-hidden': 'true' }), h('span', {}, h('b', {}, first.build.mode === 'change' ? 'Claude is changing ' : 'Claude is building '), `“${first.title}”`, first.build.since ? ` · ${elapsed(first.build.since)}` : '', live.length > 1 ? ` · and ${live.length - 1} more` : ''), h('button', { class: 'linklike', type: 'button', onclick: () => select(first.uid, { open: true }) }, 'Open it'));
-  }
+  // what Claude is making, how many are in line, what did not finish, what just finished (studio-making.js); hidden when there is nothing to say
+  paintMakingBanner(el.working, ctx, redrawBanner);
   el.banner.classList.toggle('hidden', !S.offline);
   if (S.offline) el.banner.replaceChildren(icon('alert', 15), h('span', {}, 'Nordle is not answering. This is the last copy it sent.'), h('button', { class: 'linklike', onclick: () => load({ force: true }) }, 'Try again'));
   if (S.load !== 'ready') { cached('boot', `${S.load}|${S.error}`, renderBoot); renderRail0(); return; }
@@ -711,7 +727,7 @@ export function showStudio(hash) {
   if (first) {
     Object.keys(sigs).forEach((k) => delete sigs[k]);
     update({ load: S.load === 'ready' ? 'ready' : 'loading' });
-    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); startUpdateChecks(); });
+    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); startUpdateChecks(); refreshMaking().then(redrawBanner); watchMaking(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) { load(); refreshAuto(); } }, 15000);
   } else {

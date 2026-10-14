@@ -8,7 +8,7 @@ import { S, addMonths, dateFmt, monthOf, project, load } from './studio-store.js
 import { reelOptions } from './studio-reel.js';
 import { simpleView } from './studio-create-simple.js';
 import { reelSummary } from '/src/shared/reel-options.mjs';
-import { FORMAT_LABEL, claudeSignIn, elapsed, emptyState, glyph, notify, plural } from './studio-ui.js';
+import { FORMAT_LABEL, claudeSignIn, elapsed, emptyState, glyph, keepTyping, notify, plural } from './studio-ui.js';
 
 const FORMATS = ['reel', 'carousel', 'post', 'story'];
 const FORMAT_WORD = { reel: 'Reels', carousel: 'Carousels', post: 'Posts', story: 'Stories' };
@@ -278,7 +278,7 @@ const STYLES_FALLBACK = [
 let renderAgain = null;
 export function renderCreate(root, ctx) {
   // timers and finished requests call this later: if the person has gone to another page by then, it must not paint Create back over it
-  const redraw = () => { if (S.view === 'create') renderCreate(root, ctx); };
+  const redraw = () => { if (S.view === 'create') keepTyping(root, () => renderCreate(root, ctx)); };
   renderAgain = redraw;
   const id = brandId();
   const pr = id && project(id);

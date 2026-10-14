@@ -2,7 +2,7 @@
 
 import { h, icon } from './dom.js';
 import { S, dateFmt, project, update, visible } from './studio-store.js';
-import { brandName, brandTick, checkDots, emptyState, FORMAT_LABEL, glyph, postThumb, scoreBadge, statusChip, statusOf } from './studio-ui.js';
+import { brandName, brandTick, checkDots, emptyState, FORMAT_LABEL, glyph, makingChip, makingState, postThumb, scoreBadge, statusChip, statusOf } from './studio-ui.js';
 
 const ROW = 46;
 const HEAD = 34;
@@ -34,15 +34,16 @@ export function sorted() {
 function row(p, i, ctx) {
   const picked = S.picked.has(p.uid);
   const pr = project(p.project);
-  const el = h('div', { class: `lr${picked ? ' picked' : ''}`, role: 'row', style: { transform: `translateY(${i * ROW}px)` }, dataset: { uid: p.uid, i: String(i) }, onclick: (e) => { if (!e.target.closest('input')) ctx.open(p.uid); } },
+  const mk = makingState(p);   // being made, in line, stopped or failed: the whole row says so, not only a small picture
+  const el = h('div', { class: `lr${picked ? ' picked' : ''}${mk ? ` making mk-row-${mk.key}` : ''}`, role: 'row', 'data-making': mk?.key, style: { transform: `translateY(${i * ROW}px)` }, dataset: { uid: p.uid, i: String(i) }, onclick: (e) => { if (!e.target.closest('input')) ctx.open(p.uid); } },
     h('span', { class: 'c-pick' }, h('input', { type: 'checkbox', checked: picked, 'aria-label': `Select ${p.title}`, onchange: (e) => ctx.pick(p.uid, e.target.checked) })),
     h('span', { class: 'c-pic' }, postThumb(p, { w: 96 })),
     h('span', { class: 'c-date' }, p.date ? dateFmt.day(p.date) : 'Not set'),
     h('span', { class: 'c-brand', title: pr?.name }, brandTick(p.project), h('span', {}, pr?.name ?? p.project)),
     h('span', { class: 'c-fmt' }, glyph(p.format, 13), h('span', {}, FORMAT_LABEL[p.format] ?? p.format)),
-    h('span', { class: 'c-title' }, h('span', { class: 't' }, p.title), h('span', { class: 'm' }, `${pr?.short ?? ''} · ${p.date ? dateFmt.day(p.date) : 'no date'}`)),
+    h('span', { class: 'c-title' }, h('span', { class: 't' }, p.title), h('span', { class: 'm' }, mk?.key === 'now' ? 'Claude is making this right now' : `${pr?.short ?? ''} · ${p.date ? dateFmt.day(p.date) : 'no date'}`)),
     h('span', { class: 'c-pillar' }, pr?.settings.pillars.find((x) => x.id === p.pillar)?.name ?? p.pillar ?? ''),
-    h('span', { class: 'c-status' }, statusChip(p)),
+    h('span', { class: 'c-status' }, makingChip(p) ?? statusChip(p)),
     h('span', { class: 'c-score' }, scoreBadge(p)),
     h('span', { class: 'c-act' }, h('button', { type: 'button', title: 'Remove this post', 'aria-label': `Remove ${p.title}`, onclick: (e) => { e.stopPropagation(); ctx.remove([p]); } }, icon('trash', 15))),
     h('span', { class: 'c-checks' }, checkDots(p.checks)));

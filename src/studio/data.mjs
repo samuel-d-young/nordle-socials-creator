@@ -335,6 +335,7 @@ function summarize(project, lane, item, docId, calendar) {
     openComments,
     pendingChanges,
     builtAt,
+    finishedAt: item?.run?.state === 'built' ? item.run.lastAt ?? null : null,   // when Claude finished building it (linkDoc), for "just finished"
     updated: item?.updated ?? builtAt,
     hasCaption: !!caption,
     calendar: !!item,

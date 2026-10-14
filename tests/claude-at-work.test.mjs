@@ -153,7 +153,7 @@ test('while Claude is on a post: its picture loops with an animation, the top ba
       await page.waitForSelector('.th.working', { timeout: 20000 });
       assert.ok((await page.locator('.th.working .th-claude i').count()) >= 3, 'three dots loop on the picture');
       assert.equal(await page.locator('.th.working').first().evaluate((el) => getComputedStyle(el, '::after').animationName), 'nv-sweep', 'and a light sweeps across it, over and over');
-      assert.match(await page.locator('.working .spin + span').first().innerText(), /Claude is building/);
+      assert.match(await page.locator('.working [data-state="making-summary"]').innerText(), /Making “/, 'the banner at the top says what is being made');
       await page.evaluate((u) => { location.hash = `#/s/list?today=2026-10-05&post=${encodeURIComponent(u)}`; }, `${project}:${item.id}`);
       await page.waitForSelector('.build-line.live .dots');
       assert.equal(await page.locator('.build-line.live').evaluate((el) => getComputedStyle(el, '::after').animationName), 'nv-slide');

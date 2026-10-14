@@ -91,6 +91,9 @@ export function createReviser({ run = runDue, retryMs = 30000, maxWaits = 60, lo
       return started;
     },
 
+    /** Each revision that is waiting or running, for the Studio's "being made" banner: [{ uid, state: 'queued' | 'waiting' | 'running' }]. */
+    states: () => [...jobs].map(([uid, j]) => ({ uid, state: j.state })),
+
     running: (uid) => jobs.has(uid),
     pending: () => [...jobs.keys()],
 

@@ -11,6 +11,7 @@ import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, addMonths, dateFmt, load, monthOf } from './studio-store.js';
 import { FORMAT_LABEL, buildLine, claudeSignIn, elapsed, glyph, notify, plural } from './studio-ui.js';
+import { making, refreshMaking } from './studio-making.js';
 
 export const sm = { text: '', kind: 'auto', count: 3, cards: [], reserve: [], picked: new Set(), notes: {}, open: null, busy: '', error: '', short: '', made: [], claude: null, timer: 0, brand: null };
 
@@ -165,6 +166,7 @@ async function make(pr, redraw, { now }) {
     }
     if (now) for (const m of made) await api.post(`${base}/run`, { action: 'build', item: m.itemId });
     sm.made = made.map((m) => ({ ...m, uid: `${pr.id}:${m.itemId}`, now }));
+    if (now) { await refreshMaking(); making.open = true; }   // the banner at the top opens on the list, so the posts can be followed from any page
     sm.cards = sm.cards.filter((c) => !sm.picked.has(c.key));
     sm.picked = new Set();
     await load({ force: true });
@@ -274,7 +276,7 @@ function progress() {
   return h('section', { class: 'cr-card sp-progress', 'aria-label': 'Being made', 'data-state': 'simple-progress' },
     h('h3', { class: 'lbl' }, sm.made.some((m) => m.now) ? 'Claude is making these' : 'Saved for later'),
     h('ul', { class: 'sp-mades' }, rows),
-    h('p', { class: 'muted' }, 'You can leave this page: each post shows on the calendar, and a notice says when one is ready. ', h('a', { href: '#/s/plan' }, 'Open the plan')));
+    h('p', { class: 'muted' }, 'You can leave this page: the bar at the top of every page shows what is being made and what is next, and a notice says when each one is ready. ', h('a', { href: '#/s/plan' }, 'Open the plan')));
 }
 
 /** The whole Simple page body (the header with the brand and the mode switch is drawn by studio-create.js). */

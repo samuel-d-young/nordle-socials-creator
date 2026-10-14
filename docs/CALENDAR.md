@@ -192,6 +192,10 @@ use `POST .../items/<id>` for edits until PATCH is allowed through.
 HTTP and MCP surfaces including everything the agent token must not be able to do. The tests set `NORDLE_CLAUDE_BIN` to a path that does not exist, so a
 bug cannot start the real Claude.
 
+## Seeing what is being made
+
+A small banner at the top of every Studio page (`app/studio-making.js`, data from `GET /api/making` plus the posts) says what Claude is making now and for how long, how many are in line, what did not finish and what finished in the last hour; **Show all** opens the list under it (Making now, In line in order, Did not finish with Try again, Just finished with Review it). It looks again every 5 seconds while something is being made. On the List page, a row being made has an orange edge, a moving sweep and "Being made now"; one waiting says "Next in line" or "In line · N ahead" (`makingState` / `makingChip` in `app/studio-ui.js`). The Studio redraws itself often while Claude works; `keepTyping()` keeps the box being typed in, with its cursor, through every redraw, and notices only take clicks on their buttons. Tests: `tests/making-banner.test.mjs`, `tests/typing-and-list.test.mjs`.
+
 ## Waiting in line while Claude is busy
 
 Nothing is refused because Claude is already working. **Build it now** and **Ask Claude now** join a line for the brand (`src/calendar/jobs.mjs`: one at a time, up to 20, the same request is never queued twice) and start by themselves; if another run holds the brand (a revision, another process) they wait and try again (`retryWhileLocked`). **Request changes** on a post that is being built is kept as `pendingChanges` on the item; when the build is linked (`linkDoc`) the post goes straight to `changes` with those notes and the Studio starts the designer on it (`reviser.sweep`, run after every Studio-started build and every 20 seconds). The post says "In line" and "N changes are queued". There is no Undo for a queued change.
