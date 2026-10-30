@@ -6,9 +6,9 @@ A local social-media studio where **Claude is the designer** and you are the art
 the posts (carousels, single graphics, **reels cut from your real footage**), writes the captions, and **checks its own
 work**; you open the Studio, step through what is ready, and approve, ask for changes, or move things around yourself.
 
-<p align="center"><img src="docs/images/studio-month.png" alt="The Nordle Studio: a month of posts for three made-up brands, in colour-coded lanes" width="920"></p>
+<p align="center"><img src="docs/images/studio-month.png" alt="The Nordle Studio: November for four brands in colour-coded lanes, three made-up and one real (Nostalgia Creative Co.)" width="920"></p>
 
-*The Studio, showing a month for three made-up brands. Every brand, post and number in the screenshots in this README is invented.*
+*The Studio, showing November for four brands: three made-up ones, and Nostalgia Creative Co., the author's own shop, with its real posts in the yellow lane. Apart from the Nostalgia and Dental Story pictures (marked as such), every brand, post and number in the screenshots in this README is invented.*
 
 What makes it different from a template tool:
 
@@ -50,6 +50,35 @@ All of this was made by Nordle from the made-up Little Gannet Coffee sample bran
 
 *A five-page carousel, one graphic in two sizes, and a motion-graphics reel with no footage (a small GIF preview). How to make them again: [examples/gallery](examples/gallery/README.md).*
 
+### From real brands
+
+**Nostalgia Creative Co.**, the author's own shop of 3D-print generators. Nordle planned these posts, kept them in review and scheduled the approved ones; the pictures themselves were drawn by the brand's own tools and brought in. A five-slide carousel, a story and a reel (a GIF preview, 15 seconds):
+
+<p align="center">
+<img src="examples/gallery/nostalgia/dice-towers-1.jpg" width="19%" alt="Carousel slide 1: Dice towers, explained">
+<img src="examples/gallery/nostalgia/dice-towers-2.jpg" width="19%" alt="Carousel slide 2: What it does">
+<img src="examples/gallery/nostalgia/dice-towers-3.jpg" width="19%" alt="Carousel slide 3: Why players use one">
+<img src="examples/gallery/nostalgia/dice-towers-4.jpg" width="19%" alt="Carousel slide 4: This one screws together">
+<img src="examples/gallery/nostalgia/dice-towers-5.jpg" width="19%" alt="Carousel slide 5: Try one, the first 3 towers free">
+</p>
+
+<p align="center">
+<img src="examples/gallery/nostalgia/story-this-or-that.jpg" height="400" alt="A story: this or that, printed or wood">
+<img src="examples/gallery/nostalgia/reel-will-it-float.gif" height="400" alt="A 15-second reel: a toy pirate ship is tipped over in a test and rights itself, for each of several ships">
+</p>
+
+**Dental Story**, the author's social-media agency for dental practices. Reels cut from real footage of a practice (its surgery, its waiting room, a model in a hand), with the cuts on the beat of the music and the house look of the account. Only frames with no faces, patients, names or signs are shown here.
+
+<p align="center">
+<img src="examples/gallery/real-footage/skip-the-fear.jpg" height="330" alt="A reel frame over a surgery chair: Post about sugar and teeth, skip the fear">
+<img src="examples/gallery/real-footage/one-calm-thing.jpg" height="330" alt="A reel frame of a hand holding a model of teeth: Teach one calm thing">
+<img src="examples/gallery/real-footage/calm-beats-spooky.jpg" height="330" alt="A reel frame of an empty surgery: Calm beats spooky">
+<img src="examples/gallery/real-footage/look-at-three-things.jpg" height="330" alt="A reel frame over a laptop in the surgery: Look at three things">
+<img src="examples/gallery/real-footage/check-the-first-photo.jpg" height="330" alt="A reel frame of an empty waiting room: Check the first photo">
+</p>
+
+*The Nostalgia Creative Co. and Dental Story pictures belong to their owner and are shown as examples. Unlike the code, they are not licensed for reuse (see [LICENSES.md](LICENSES.md)).*
+
 ## A look around
 
 **Review queue.** Steps through what is waiting: approve, ask for changes with pins on the picture, or reject. The caption, checks and comments sit beside the post.
@@ -71,6 +100,12 @@ All of this was made by Nordle from the made-up Little Gannet Coffee sample bran
 **The editor.** Pick any post and change it by hand: text, images, shapes, every size at once, safe zones, and a lock on anything Claude must not touch.
 
 <img src="docs/images/editor-carousel.png" alt="The picture editor with a carousel cover open, its pages on the left and properties on the right" width="900">
+
+**A real brand, a real month.** This is Nordle holding November for [Nostalgia Creative Co.](https://www.instagram.com/nostalgia.creative.co/), the author's own shop of 3D-print generators: carousels, reels and stories for Instagram, Facebook and TikTok. Most of the pictures were drawn by the brand's own tools and brought in; Nordle plans the month, keeps every post in review and schedules the approved ones through Buffer. A few posts that are not announced yet are left out of these screenshots.
+
+<img src="docs/images/real-nostalgia-month.png" alt="Nordle's month calendar for Nostalgia Creative Co., November 2026, full of Game Storage, Dice Tower and Pirate Ship posts" width="900">
+
+<img src="docs/images/real-nostalgia-wall.png" alt="The wall for the first week of November: carousels and reels waiting for review" width="900">
 
 ## Install (two minutes)
 

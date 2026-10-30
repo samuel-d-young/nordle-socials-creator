@@ -1,7 +1,7 @@
 # Gallery: what Nordle makes
 
-Everything here was made by Nordle from the **made-up Little Gannet Coffee** sample brand (`samples/little-gannet`): the brand, the
-shop, the drinks and the numbers are invented. Each post is one small JSON document; the same document comes out in every size.
+Everything in the first table was made by Nordle from the **made-up Little Gannet Coffee** sample brand (`samples/little-gannet`): the brand, the
+shop, the drinks and the numbers are invented. The pictures from real brands are further down. Each post is one small JSON document; the same document comes out in every size.
 
 | File | What it is |
 |---|---|
@@ -9,6 +9,16 @@ shop, the drinks and the numbers are invented. Each post is one small JSON docum
 | `graphic-open-late-4x5.png`, `story-open-late-9x16.png` | One graphic, drawn in two sizes from one document (`open-late-story.json`) |
 | `reel-harbour-morning.gif` | A 13-second motion-graphics reel with no footage: kinetic type, a counting number with a drawn ring, a list, bars and a logo sting. The GIF is a small preview; the real file is a 1080 x 1920 mp4 |
 | `reel-harbour-morning.json` | The reel spec the reel was made from |
+
+## From real brands
+
+These are not made from the sample, so you cannot make them again from this repo; they are here to show what Nordle holds for a real brand. They are the author's own brands' work and are **not** licensed for reuse (see `LICENSES.md`).
+
+| File | What it is |
+|---|---|
+| `nostalgia/dice-towers-1.jpg` ... `dice-towers-5.jpg` | A five-slide carousel for Nostalgia Creative Co. (a shop of 3D-print generators), planned, reviewed and scheduled in Nordle; the pictures were drawn by the brand's own generator and brought in |
+| `nostalgia/story-this-or-that.jpg`, `nostalgia/reel-will-it-float.gif` | A story and a 15-second reel (a GIF preview) for the same brand |
+| `real-footage/*.jpg` | Frames of Dental Story reels cut from real footage of a dental practice, chosen to show no faces, patients, names or signs |
 
 ## Make them yourself
 
