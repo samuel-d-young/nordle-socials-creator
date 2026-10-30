@@ -513,7 +513,7 @@ test('Automatic scheduling: the Publishing window has a switch that saves at onc
     await page.waitForSelector('dialog.wide [data-section="auto-schedule"]');
     assert.equal(await page.locator('dialog [data-field="auto-on"]').isChecked(), false);
     assert.equal(await page.locator('dialog [data-act="auto-now"]').count(), 0, 'nothing to look at while it is off');
-    await page.check('dialog [data-field="auto-on"]');
+    await page.click('dialog [data-field="auto-on"]');             // a click, not check(): check() looks at the box again afterwards, and by then the saved form may have been drawn again
     await page.waitForSelector('dialog [data-act="auto-now"]');
     assert.deepEqual(sent, [{ enabled: true }], 'saved at once, without pressing Save');
     // once saved it folds into one read-only card; changing it asks first
