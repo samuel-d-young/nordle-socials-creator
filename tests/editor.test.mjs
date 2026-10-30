@@ -182,7 +182,9 @@ test('adding a text box, a shape and an image; duplicating, reordering and delet
     await page.click('.tools button:has-text("Image")');
     await page.locator('dialog .export-grid a').first().click();
     await settle(page);
-    assert.equal((await doc()).pages[0].layers.at(-1).type, 'image');
+    let last = null;                                              // the picture is added once it has loaded, which is a little later on a slow computer
+    for (let i = 0; i < 40 && last !== 'image'; i++) { last = (await doc()).pages[0].layers.at(-1).type; if (last !== 'image') await page.waitForTimeout(150); }
+    assert.equal(last, 'image');
   });
 });
 

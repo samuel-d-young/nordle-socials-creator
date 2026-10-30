@@ -115,13 +115,22 @@ function setView(view, { push = true } = {}) {
 // ---- the order of the brands: the rail, the month's lanes and the all-brands Insights follow it. It is shown at once, then kept on this computer. ----------
 
 let orderSaves = Promise.resolve();
+/** The brand the owner just moved with the keyboard keeps the focus however many times the left bar is redrawn in the next moment (a redraw drops the focus to the page). */
+let keepFocus = null;
+function refocusBrand() {
+  if (!keepFocus || Date.now() > keepFocus.until) { keepFocus = null; return; }
+  const now = document.activeElement;
+  if (now && now !== document.body && !el.rail?.contains(now)) return;       // the person went somewhere else: leave them there
+  const target = document.querySelector(`.rb-row[data-brand="${keepFocus.id}"] .rb`);
+  if (target && target !== now) target.focus();
+}
 /** Put the brands in `ids` order (a brand left out keeps its place after the others). Saves go one after another, so the last choice is the one kept. */
 function setBrandOrder(ids, { focus } = {}) {
   const byId = new Map(S.projects.map((p) => [p.id, p]));
   const next = ids.map((id) => byId.get(id)).filter(Boolean);
   if (next.length !== S.projects.length || next.every((p, i) => p === S.projects[i])) return undefined;
   update({ projects: next, orderPending: S.orderPending + 1 });
-  if (focus) requestAnimationFrame(() => document.querySelector(`.rb-row[data-brand="${focus}"] .rb`)?.focus());
+  if (focus) { keepFocus = { id: focus, until: Date.now() + 2500 }; requestAnimationFrame(refocusBrand); }
   const order = next.map((p) => p.id);
   orderSaves = orderSaves.then(async () => {
     let failed = null;
@@ -310,6 +319,7 @@ function renderRail() {
       h('button', { class: 'rf', type: 'button', 'data-act': 'open-claude-account', onclick: openClaudeAccount, title: 'The Claude account Nordle uses: see who it is, sign out, or switch to another' }, icon('sparkle', 15), h('span', {}, 'Claude account')),
       h('a', { class: 'rf', href: '#/projects', 'data-act': 'open-all-posts', title: 'All posts: every brand and every post as cards. Open one to edit it by hand, or start a new post.' }, icon('home', 15), h('span', {}, 'All posts')),
       h('a', { class: 'rf rf-credit', href: 'https://github.com/samuel-d-young/nordle-socials-creator', target: '_blank', rel: 'noopener', title: 'Nordle was created by Samuel Young and is free to use under CC BY 4.0. Credit him if you share it or build on it.' }, h('span', {}, 'Nordle by Samuel Young'))));
+  refocusBrand();
 }
 
 /** "Media hosting is set up: Cloudflare R2, bucket nordle-posts" once a hosting bucket is saved, else ''. The rail shows it so it is never a surprise. */

@@ -83,7 +83,9 @@ test('the left bar: Move down in a brand\'s menu, Alt + arrow, and dragging; the
     await page.keyboard.press('Alt+ArrowUp');
     await page.waitForFunction(([x]) => document.querySelector('.rb-row')?.dataset.brand === x, [a]);
     assert.deepEqual(await railIds(page), [a, b]);
-    assert.equal(await page.evaluate(() => document.activeElement?.closest('.rb-row')?.dataset.brand), a, 'the moved brand keeps the focus, so the next arrow moves it again');
+    await page.waitForFunction(([x]) => document.activeElement?.closest('.rb-row')?.dataset.brand === x, [a], { timeout: 10000 });     // the moved brand keeps the focus, so the next arrow moves it again
+    await page.waitForTimeout(600);                                                                                                         // ... through a second redraw of the bar (the final refresh after the save)
+    assert.equal(await page.evaluate(() => document.activeElement?.closest('.rb-row')?.dataset.brand), a, 'and it still has it after the bar was redrawn');
 
     // dragging one brand onto another puts it in that place
     await htmlDrag(page, `.rb-row[data-brand="${a}"]`, `.rb-row[data-brand="${b}"]`);
