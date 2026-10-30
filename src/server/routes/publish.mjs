@@ -37,6 +37,7 @@
 //        asks Buffer (read only) whether each scheduled post is still there; state is Buffer's own (scheduled, sent, ...) or 'missing' (deleted there)
 //   POST /api/publish/unschedule (owner) {uid, channels?:[..]}  -> { ok, status, removed }   takes missing channels back so the post can be scheduled again (all channels when none are named)
 //   POST /api/publish/sync-posts (owner) {project}  -> { ok, fetched, total, requests, rate, pulledAt, incomplete? }   pulls the posts the brand has sent, with results (a few requests)
+//   GET  /api/publish/buffer-overview?days=7|28|90 -> { days, autoPull, brands:[{ project, connected, channelCount, hasPull, pulledAt, now:{posts,withNumbers,engagement,audience}, before:{..}, audienceKey, usualEngagement, top:[{text,engagement,audience,lift}], series:[{from,posts}], channels:[{service,posts}], lastPostAt }] }   every brand side by side (local files only)
 //   GET  /api/publish/best-times?project=&count=  -> { ok, pulledAt, analysis, suggestions:[{iso,label,lift,n,confidence,reason}] }   when to post, from those posts (local files only)
 //   GET  /api/publish/auto-schedule         -> { enabled, daysAhead, stories, recent:[{uid,title,at,ok,message}], problems:[{uid,message,tries,stopped,nextTry}], pausedUntil }
 //   POST /api/publish/auto-schedule (owner) { enabled?, daysAhead? (1 to 30, default 7), stories?, now? }   the owner's standing instruction: signed-off posts whose slot is within
@@ -51,7 +52,7 @@ import { autoScheduleTick, autoStatus, saveAutoSettings } from '../../publish/au
 import { checkScheduled, readSentPosts, syncSentPosts, unscheduleMissing } from '../../publish/remote.mjs';
 import { analyseTimes, suggestSlots } from '../../performance/best-time.mjs';
 import { listPlatforms, savePlatformKey } from '../../publish/platforms.mjs';
-import { bufferTotals, importBufferMetrics } from '../../performance/from-buffer.mjs';
+import { bufferOverview, bufferTotals, importBufferMetrics } from '../../performance/from-buffer.mjs';
 import { importFromBuffer } from '../../publish/buffer-import.mjs';
 import { pullOptions } from '../../publish/pull-options.mjs';
 import { loadProject } from '../../calendar/service.mjs';
@@ -138,6 +139,16 @@ export default {
         const project = store.project(url.searchParams.get('project') ?? '');
         need(project, 404, 'No such project.');
         return sendJson(res, 200, { ok: true, ...bufferTotals(project.dir, { days: Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 28)) }) });
+      }
+      if (sub === 'buffer-overview') {
+        // every brand side by side for the all-brands Insights screen: local files only, no request to Buffer
+        need(method === 'GET', 405, 'GET only.');
+        const days = [7, 28, 90].includes(Number(url.searchParams.get('days'))) ? Number(url.searchParams.get('days')) : 28;
+        const brands = store.scan().map((p) => {
+          const s = resolveSettings(loadSettings(), 'buffer', p.id);
+          return { project: p.id, connected: Boolean(s.token), channelCount: new Set((s.channels ?? []).map((c) => c.id)).size, ...bufferOverview(p.dir, { days }) };
+        });
+        return sendJson(res, 200, { ok: true, days, autoPull: pullOptions(), brands });
       }
       if (sub === 'best-times') {
         need(method === 'GET', 405, 'GET only.');

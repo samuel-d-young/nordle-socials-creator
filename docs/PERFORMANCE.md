@@ -159,13 +159,22 @@ command-line steps refuse, a log under `history/calendar-runs/`, and **it never 
 * `<project>/reviews/<period>.md` and `.json`.
 * Calendar settings: `review: { cadence: weekly|monthly, weekday?, autoReview? }`.
 * Command line: `node nordle.mjs performance import | add | report | review-prompt | save-review | due | history | apply-mix`.
-* Studio: **Insights** in the rail (`g i`); the period is in the address bar (`?ip=2026-10`).
+* Studio: **Insights** in the rail (`g i`); the period is in the address bar (`?ip=2026-10`). With **All brands** chosen it is a screen of its own
+  (`app/insights-overview.js`, `GET /api/publish/buffer-overview?days=7|28|90`, `bufferOverview` in `src/performance/from-buffer.mjs`): one row a
+  brand with the posts sent, the reach (or views) and engagement they got against the same length of time before, how often it posts and how long
+  since the last post, and what the calendar holds for the next two weeks; "Needs a look" (no Buffer numbers yet, not read for a day or more, nothing
+  posted for 10 days and nothing scheduled, a review due); and the posts that beat their own brand's usual (engagement over that brand's median post,
+  only when at least five posts have results). It reads the Buffer pull on disk and never asks Buffer for anything; "Update all from Buffer" asks for
+  each connected brand the same way the per-brand button does. A change against before is only shown when both stretches have results for most of
+  their posts, so a stretch that is still waiting for its results does not look like a fall. A brand's own scored posts and its review stay on that
+  brand's page (**Open**).
 * Claude's tools: `nordle_performance_report`, `nordle_performance_prompt`, `nordle_performance_save_review`, `nordle_performance_add`. There is
   no tool to import a file or apply a mix.
 * HTTP: `/api/projects/<p>/performance/...`; every shape is documented at the top of `src/server/routes/performance.mjs`.
 
 ## Tests
 
-`tests/performance.test.mjs`: the importer (headers, delimiters, dates, matching, ambiguity, duplicates, dry run), the maths (percentiles,
+`tests/insights-overview.test.mjs`: the all-brands screen (`bufferOverview`, its route, the rows, the change rule, what needs a look, the best posts,
+the narrow layout). `tests/performance.test.mjs`: the importer (headers, delimiters, dates, matching, ambiguity, duplicates, dry run), the maths (percentiles,
 the rank test, evidence labels), scoring relative to the account, small-n flags, segments, due logic, the plan rules (including built and
 past items), the prompt, the headless review with a fake Claude, the command line, and who may do what over HTTP and MCP.

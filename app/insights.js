@@ -1,4 +1,4 @@
-// Insights: how the posts did, what to do about it. One brand at a time (all brands: a summary of each).
+// Insights: how the posts did, what to do about it. One brand at a time; "All brands" is its own screen (insights-overview.js: every brand side by side).
 // Numbers come from the owner (an exported CSV, or typed in); scores are relative to the account's own history; every group shows its
 // n and says "directional only" under 5 posts. The review (written by Claude, saved under reviews/) is shown below the numbers.
 // Data: GET /api/projects/<p>/performance/{report,reviews,reviews/<period>,prompt,metrics}; POST .../{metrics,import,reviews/<period>/apply-mix}.
@@ -9,6 +9,7 @@ import { api } from './api.js';
 import { S, addMonths, dateFmt, load, monthOf, project } from './studio-store.js';
 import { FORMAT_LABEL, emptyState, glyph, notify, plural, skeleton, thumbUrl } from './studio-ui.js';
 import { timesPanel, totalsPanel } from './insights-times.js';
+import { renderOverview } from './insights-overview.js';
 
 // ---- periods (the same rules as src/performance/period.mjs) ---------------------------------------------------------------------------
 
@@ -443,7 +444,7 @@ function groupsSection(report) {
     moreBars.length ? h('details', { class: 'ins-fold' }, h('summary', {}, h('span', { class: 'lbl' }, 'More ways to group')), h('div', { class: 'ins-dims' }, moreBars)) : null);
 }
 
-function brandSection(pr, ctx, token, { summary = false } = {}) {
+function brandSection(pr, ctx, token) {
   const period = periodNow();
   const box = h('div', { class: 'ins-body' }, skeleton(4));
   const section = h('section', { class: 'ins-brand', style: { '--lane': pr.color }, id: `ins-${pr.id}` },
@@ -453,16 +454,10 @@ function brandSection(pr, ctx, token, { summary = false } = {}) {
         h('button', { class: 'btn', type: 'button', onclick: () => addResults(pr, null, () => { bust(); ctx.rerender(); }) }, 'Add results'),
         h('button', { class: 'btn', type: 'button', onclick: () => importCsv(pr, () => { bust(); ctx.rerender(); }) }, 'Import CSV'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => copyReviewPrompt(pr, period), title: 'Copies a request for Claude: the numbers, the rules of evidence and what to save. Paste it to Claude.' }, icon('clipboard', 14), 'Run a review with Claude'))),
-    summary ? null : totalsPanel(pr),
-    summary ? null : timesPanel(pr),
+    totalsPanel(pr),
+    timesPanel(pr),
     box);
-  if (summary) {
-    section.querySelector('.ins-hacts').replaceChildren(h('button', { class: 'btn', type: 'button', onclick: () => ctx.setBrand(pr.id) }, 'Open insights', icon('chevR', 14)));
-    Promise.all([getReport(pr, period), getReviews(pr)]).then(([report, reviews]) => {
-      if (token !== st.token) return;
-      box.replaceChildren(...[reviews.due.configured && reviews.due.due ? h('div', { class: 'ins-due', role: 'status' }, h('span', {}, reviews.due.message)) : null, headline(report, pr)].filter(Boolean));
-    }).catch((e) => { if (token === st.token) box.replaceChildren(h('p', { class: 'ins-err' }, e.message)); });
-  } else fillBrand(box, pr, ctx, token);
+  fillBrand(box, pr, ctx, token);
   return section;
 }
 
@@ -477,10 +472,14 @@ export function renderInsights(root, ctx) {
   const lanes = S.brand === 'all' ? S.projects : [project(S.brand)].filter(Boolean);
   if (!lanes.length) { root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Add a brand from the left bar, then follow how its posts do here.' })); return; }
   const token = ++st.token;
+  if (S.brand === 'all' && lanes.length > 1) {      // every brand side by side: its own screen (posts and audience from Buffer), not one scored summary per brand
+    renderOverview(root, ctx, { lanes, alive: () => token === st.token, dueOf: async (pr) => (await getReviews(pr)).due });
+    return;
+  }
   const period = periodNow();
   root.replaceChildren(h('div', { class: 'ins' },
     h('div', { class: 'ins-top' },
       h('p', { class: 'ins-lede' }, 'What worked, what did not, and what to post next. Scores compare each post with the same account\'s own history, so a small account and a big one are judged fairly.'),
       periodPicker(period, ctx)),
-    lanes.map((pr) => brandSection(pr, ctx, token, { summary: S.brand === 'all' && lanes.length > 1 }))));
+    lanes.map((pr) => brandSection(pr, ctx, token))));
 }

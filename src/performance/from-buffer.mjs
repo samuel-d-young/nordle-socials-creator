@@ -103,3 +103,69 @@ export function bufferTotals(projectDir, { days = 28, now = Date.now() } = {}) {
   }
   return { pulledAt: sent.pulledAt, days, ...total, byService, hasPull: existsSync(join(projectDir, 'performance', 'buffer-posts.json')) };
 }
+
+// ---- the all-brands overview --------------------------------------------------------------------------------------------------------
+
+const ENGAGEMENT = ['likes', 'comments', 'shares', 'saves'];
+const engagementOf = (n) => ENGAGEMENT.reduce((t, k) => t + (n[k] ?? 0), 0);
+const median = (xs) => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; };
+/** A caption on one line, cut at a word with an ellipsis when it is long. */
+const oneLine = (t, max = 140) => {
+  const s = String(t ?? '').replace(/\s+/g, ' ').trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max), at = cut.lastIndexOf(' ');
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[\s,;:.\-–—]+$/, '')}…`;
+};
+
+/**
+ * What the all-brands Insights screen shows for one brand, from the pull alone (no request to Buffer): how many posts went out in the
+ * last `days` days and in the window before it, the audience and engagement they got, the posts that beat the brand's own usual, posts per
+ * week, the channels used and how long since the last post. A post's lift is its engagement over this brand's median post in the same
+ * window, and is only given when at least five posts have numbers (fewer is not a usual to compare with).
+ */
+export function bufferOverview(projectDir, { days = 28, now = Date.now() } = {}) {
+  const sent = readSentPosts(projectDir);
+  const at = (x) => Date.parse(x.sentAt ?? x.dueAt ?? '');
+  const inWindow = (from, to) => sent.posts.filter((x) => { const t = at(x); return t >= from && t < to; });
+  const sum = (list) => {
+    const out = { posts: list.length, withNumbers: 0, metrics: {}, engagement: 0 };
+    for (const x of list) {
+      const n = mapNumbers(x.m);
+      if (!hasSignal(n)) continue;
+      out.withNumbers++; out.engagement += engagementOf(n);
+      for (const [k, v] of Object.entries(n)) out.metrics[k] = (out.metrics[k] ?? 0) + v;
+    }
+    return out;
+  };
+  const span = days * 86400000;
+  const inNow = inWindow(now - span, now + 1), inBefore = inWindow(now - 2 * span, now - span);
+  const a = sum(inNow), b = sum(inBefore);
+  const audienceKey = (a.metrics.reach ?? 0) > 0 ? 'reach' : (a.metrics.views ?? 0) > 0 ? 'views' : null;
+
+  const scored = inNow.map((x) => ({ x, n: mapNumbers(x.m) })).filter((r) => hasSignal(r.n)).map((r) => ({ ...r, eng: engagementOf(r.n) }));
+  const usual = median(scored.map((r) => r.eng));
+  const top = [...scored].sort((p, q) => q.eng - p.eng || (q.n[audienceKey ?? 'reach'] ?? 0) - (p.n[audienceKey ?? 'reach'] ?? 0)).slice(0, 3).map((r) => ({
+    id: r.x.id, service: r.x.service ?? 'other', sentAt: r.x.sentAt ?? r.x.dueAt ?? null, text: oneLine(r.x.text), engagement: r.eng,
+    audience: audienceKey ? r.n[audienceKey] ?? null : null, lift: scored.length >= 5 && usual > 0 ? Math.round((r.eng / usual) * 10) / 10 : null,
+  }));
+
+  // posts per bucket, oldest first: one a day for a short window, otherwise one a week
+  const len = (days <= 14 ? 1 : 7) * 86400000, count = Math.min(13, Math.ceil(span / len));
+  const series = Array.from({ length: count }, (_, i) => {
+    const to = now + 1 - (count - 1 - i) * len, from = to - len;
+    const list = inWindow(Math.max(from, now - span), to);
+    return { from: new Date(from).toISOString().slice(0, 10), posts: list.length, audience: audienceKey ? list.reduce((t, x) => t + (mapNumbers(x.m)[audienceKey] ?? 0), 0) : 0 };
+  });
+  const channels = {};
+  for (const x of inNow) channels[x.service ?? 'other'] = (channels[x.service ?? 'other'] ?? 0) + 1;
+  const last = sent.posts.reduce((m, x) => Math.max(m, at(x) || 0), 0);
+  return {
+    days, pulledAt: sent.pulledAt, hasPull: existsSync(join(projectDir, 'performance', 'buffer-posts.json')),
+    now: { posts: a.posts, withNumbers: a.withNumbers, engagement: a.engagement, audience: audienceKey ? a.metrics[audienceKey] : null, follows: a.metrics.follows ?? null },
+    before: { posts: b.posts, withNumbers: b.withNumbers, engagement: b.engagement, audience: audienceKey ? b.metrics[audienceKey] ?? 0 : null, follows: b.metrics.follows ?? null },
+    audienceKey, usualEngagement: a.withNumbers ? Math.round((a.engagement / a.withNumbers) * 10) / 10 : null,
+    usualEngagementBefore: b.withNumbers ? Math.round((b.engagement / b.withNumbers) * 10) / 10 : null,
+    top, series, channels: Object.entries(channels).sort((p, q) => q[1] - p[1]).map(([service, posts]) => ({ service, posts })),
+    lastPostAt: last ? new Date(last).toISOString() : null,
+  };
+}
