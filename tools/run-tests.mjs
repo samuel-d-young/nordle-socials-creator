@@ -30,6 +30,15 @@ function run(file) {
   });
 }
 const failures = (out) => [...out.matchAll(/^\s*not ok \d+ - (.*)$/gm)].map((m) => m[1].slice(0, 140));
+// The report of each failed test, from its "not ok" line to the "..." that closes it: the assertion, expected/actual and the stack.
+function failureBlocks(out) {
+  const lines = out.split('\n'), keep = [];
+  for (let i = 0; i < lines.length && keep.length < 120; i++) {
+    if (!/^\s*not ok \d+ /.test(lines[i])) continue;
+    for (; i < lines.length && keep.length < 120; i++) { keep.push(lines[i]); if (/^\s*\.\.\.\s*$/.test(lines[i])) break; }
+  }
+  return keep.length ? keep : lines.slice(-40);
+}
 const counts = (out) => ({ tests: Number(/^# tests (\d+)/m.exec(out)?.[1] ?? 0), pass: Number(/^# pass (\d+)/m.exec(out)?.[1] ?? 0) });
 
 const queue = [...files];
@@ -53,6 +62,6 @@ console.log(`\n${files.length} test files, ${total} tests counted in the last ru
 if (flaky.length) { console.log(`\n${flaky.length} file(s) failed once and passed on a second run alone (timing under load):`); for (const r of flaky) console.log(`  ${r.file}: ${r.first.join(' | ')}`); }
 if (bad.length) {
   console.log(`\n${bad.length} file(s) FAILED every time:`);
-  for (const r of bad) { console.log(`  ${r.file}: ${r.last.join(' | ') || 'no test name found'}`); console.log(r.out.split('\n').filter((l) => /not ok|error|Error|expected|actual|\+|-/.test(l)).slice(0, 25).map((l) => `    ${l}`).join('\n')); }
+  for (const r of bad) { console.log(`  ${r.file}: ${r.last.join(' | ') || 'no test name found'}`); console.log(failureBlocks(r.out).map((l) => `    ${l}`).join('\n')); }
   process.exit(1);
 }
