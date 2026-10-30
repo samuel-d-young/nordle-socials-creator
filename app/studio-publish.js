@@ -909,14 +909,31 @@ export async function openConnect(adapterId = 'buffer') {
   // Automatic scheduling: the owner's standing instruction. Each change is saved at once (it does not wait for Save).
   let auto = pub.auto;
   if (!auto) api.get('/publish/auto-schedule').then((r) => { auto = pub.auto = r; draw(); }, () => {});
+  // Changes are saved one after another: a second choice made while the first is still being saved waits its turn, and the page keeps showing it.
+  // (Saving them side by side let the slower first reply redraw the switches with old values, so the second choice looked undone.)
+  let waiting = null, saving = false;
   async function setAuto(patch) {
+    waiting = { ...(waiting ?? {}), ...patch };
+    auto = pub.auto = { ...auto, ...patch };
+    if (saving) return;
+    saving = true;
     try {
-      auto = pub.auto = await api.post('/publish/auto-schedule', patch);
-      unlocked.delete('auto');
-      if (patch.enabled !== undefined) notify(patch.enabled ? `Approved posts will go to Buffer on their own, ${plural(auto.daysAhead, 'day')} before their time.` : 'Automatic scheduling is off.', { kind: 'ok' });
-      autoChanged(); update();
-    } catch (e) { message = e.message; }
-    draw();
+      while (waiting) {
+        const now = waiting; waiting = null;
+        try {
+          const saved = await api.post('/publish/auto-schedule', now);
+          auto = pub.auto = waiting ? { ...saved, ...waiting } : saved;
+          unlocked.delete('auto');
+          if (now.enabled !== undefined) notify(now.enabled ? `Approved posts will go to Buffer on their own, ${plural(saved.daysAhead, 'day')} before their time.` : 'Automatic scheduling is off.', { kind: 'ok' });
+          autoChanged(); update();
+        } catch (e) {
+          message = e.message;
+          waiting = null;
+          try { auto = pub.auto = await api.get('/publish/auto-schedule'); } catch { /* keep what the page shows */ }
+        }
+        if (!waiting) draw();
+      }
+    } finally { saving = false; }
   }
   async function lookNow() {
     try {

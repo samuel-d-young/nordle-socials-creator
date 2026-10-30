@@ -462,6 +462,36 @@ test('Insights has a "When to post" section: the best times coming up, days and 
   });
 });
 
+test('Automatic scheduling: two quick changes do not overwrite each other, even when the first reply is slow and old', async () => {
+  await studioPage(async ({ page, open }) => {
+    let auto = { ok: true, enabled: false, daysAhead: 7, stories: true, recent: [], problems: [], pausedUntil: null };
+    const sent = [];
+    await fakeAdapters(page, [buffer({ configured: true, channels: [{ id: 'c1', name: 'The shop', service: 'instagram' }], options: { mediaBaseUrl: 'https://media.example.test/nordle' }, selected: {} }), BUNDLE], async (route, url) => {
+      if (!url.pathname.endsWith('/auto-schedule')) return false;
+      if (route.request().method() === 'POST') {
+        const b = route.request().postDataJSON(); sent.push(b); auto = { ...auto, ...b };
+        const reply = { ...auto };                                                   // what the server said when it handled THIS change
+        if (sent.length === 1) await new Promise((r) => setTimeout(r, 1200));        // the first reply is the slow one, and by then it is out of date
+        await route.fulfill({ json: reply });
+        return true;
+      }
+      await route.fulfill({ json: auto });
+      return true;
+    });
+    await open(`#/s/month?today=${TODAY}`);
+    await page.click('.rail-foot .rf:has-text("Publishing")');
+    await page.waitForSelector('dialog.wide [data-section="auto-schedule"]');
+    await page.locator('dialog [data-field="auto-on"]').click();                     // the first change (its reply is slow)
+    await page.evaluate(() => document.querySelector('dialog [data-field="auto-stories"]').click());   // the second, made at once while the first is still being saved
+    await page.waitForFunction(() => /Stories\s*(not made|also made)/.test(document.querySelector('dialog.wide')?.innerText ?? ''), null, { timeout: 15000 });
+    await page.waitForTimeout(1800);                                                 // long enough for any late, old reply to have redrawn the page
+    assert.match(await page.locator('dialog.wide').innerText(), /Stories\s*not made/, 'the second choice (no Stories) is what the page ends up showing');
+    assert.deepEqual(sent.at(-1), { stories: false }, 'and it was saved');
+    assert.equal(auto.enabled, true);
+    assert.equal(auto.stories, false);
+  });
+});
+
 test('Automatic scheduling: the Publishing window has a switch that saves at once; an approved post says when it goes to Buffer by itself, or why it could not', async () => {
   await studioPage(async ({ page, open, call }) => {
     let auto = { ok: true, enabled: false, daysAhead: 7, stories: true, recent: [], problems: [], pausedUntil: null };
