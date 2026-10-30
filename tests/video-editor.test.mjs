@@ -192,6 +192,7 @@ test('click selects; S splits at the playhead; Delete ripples and the length upd
     await page.keyboard.press('Control+z'); await settle();
     await page.keyboard.press('Control+z'); await settle();
     assert.deepEqual(await doc(), original);
+    await page.waitForFunction(() => document.querySelectorAll('.vt-clip').length === 5, null, { timeout: 15000 });   // the document is back at once; the timeline redraws a moment later (slow on a busy macOS runner)
     assert.equal(await page.locator('.vt-clip').count(), 5);
     // redo brings the split back
     await page.keyboard.press('Control+y'); await settle();

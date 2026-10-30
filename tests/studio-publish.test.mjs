@@ -15,7 +15,7 @@ const pick = async (page, uid) => {
   const box = page.locator(`.wc[data-uid="${uid}"] input[type=checkbox]`);
   await box.scrollIntoViewIfNeeded();
   await page.waitForTimeout(150);
-  await box.click({ force: true });
+  await box.evaluate((el) => el.click());      // ticks it without depending on what sits over the box (a tile redrawing under a pointer click lost the tick on slow runners)
 };
 
 const BUNDLE = { id: 'bundle', name: 'Export folder', configured: true, needs: [], channels: [], note: 'Writes the pictures, captions and a schedule file to a folder.', selected: {}, options: {} };
@@ -526,7 +526,7 @@ test('Automatic scheduling: the Publishing window has a switch that saves at onc
     assert.deepEqual(sent.at(-1), { daysAhead: 10 });
     assert.match(await page.locator('dialog [data-section="auto"]').innerText(), /10 days before/);
     await unlock();
-    await page.uncheck('dialog [data-field="auto-stories"]');
+    await page.click('dialog [data-field="auto-stories"]');       // a click, not uncheck(): uncheck looks at the box again afterwards, and by then the saved form has folded away
     await page.waitForFunction(() => !document.querySelector('[data-field="auto-stories"]'));
     assert.deepEqual(sent.at(-1), { stories: false });
 
