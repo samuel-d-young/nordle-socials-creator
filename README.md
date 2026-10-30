@@ -72,6 +72,12 @@ All of this was made by Nordle from the made-up Little Gannet Coffee sample bran
 
 <img src="docs/images/editor-carousel.png" alt="The picture editor with a carousel cover open, its pages on the left and properties on the right" width="900">
 
+**A real brand, a real month.** This is Nordle holding November for [Nostalgia Creative Co.](https://www.instagram.com/nostalgia.creative.co/), the author's own shop of 3D-print generators: carousels, reels and stories for Instagram, Facebook and TikTok. Most of the pictures were drawn by the brand's own tools and brought in; Nordle plans the month, keeps every post in review and schedules the approved ones through Buffer. A few posts that are not announced yet are left out of these screenshots.
+
+<img src="docs/images/real-nostalgia-month.png" alt="Nordle's month calendar for Nostalgia Creative Co., November 2026, full of Game Storage, Dice Tower and Pirate Ship posts" width="900">
+
+<img src="docs/images/real-nostalgia-wall.png" alt="The wall for the first week of November: carousels and reels waiting for review" width="900">
+
 ## Install (two minutes)
 
 You need:
