@@ -30,7 +30,7 @@ jobs:
         run: npx playwright-core install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
       - run: node tools/doctor.mjs --ci
       - run: npm run validate
-      - name: Tests (a file that fails is run once more on its own: the browser tests are timing-sensitive on slow runners)
+      - name: Tests (a file that fails is run once more on its own, because the browser tests are timing-sensitive on slow runners)
         run: node tools/run-tests.mjs
       - name: Render the sample project and keep the contact sheets
         run: node nordle.mjs verify samples/little-gannet
@@ -62,6 +62,6 @@ jobs:
       - run: npx playwright-core install chromium
       - run: node tools/doctor.mjs --ci
       - run: npm run validate
-      - name: Tests (a file that fails is run once more on its own: the browser tests are timing-sensitive on slow runners)
+      - name: Tests (a file that fails is run once more on its own, because the browser tests are timing-sensitive on slow runners)
         run: node tools/run-tests.mjs
       - run: node nordle.mjs verify samples/little-gannet
