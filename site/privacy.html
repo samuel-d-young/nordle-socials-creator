@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Nordle privacy policy</title>
+<meta name="description" content="How Nordle, the free open-source social media studio, handles information, including what it does when you sign in with Buffer.">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<div class="wrap">
+  <p class="brand"><a href="./" style="text-decoration:none">Nordle<i>.</i></a></p>
+  <h1 class="lede">Privacy policy</h1>
+  <p class="small">Effective 30 October 2026</p>
+
+  <p>Nordle is a free, open-source social media studio that runs on your own computer. It was created by Samuel Young. This policy explains what Nordle does with information, in particular when you sign in with Buffer. In this policy, &ldquo;we&rdquo; means Samuel Young, the author of Nordle. It applies to the Nordle software and to the pages Nordle publishes at <a href="https://samuel-d-young.github.io/nordle-socials-creator/">samuel-d-young.github.io/nordle-socials-creator</a>.</p>
+  <p><strong>In short:</strong> Nordle does not send your content, your Buffer sign-in or anything about you to us. We run no Nordle server that receives your information, we have no Nordle accounts, and we do not sell or share personal information.</p>
+
+  <h2 id="where">1. Where your information lives</h2>
+  <p>Nordle runs a small program on your computer that only answers to your own computer (it listens on 127.0.0.1). Your brands, photos, videos, captions, calendar, notes and settings are files in the Nordle folder on your computer. They are not uploaded to us.</p>
+  <p>Because Nordle is open source, you can read exactly what it does at <a href="https://github.com/samuel-d-young/nordle-socials-creator">github.com/samuel-d-young/nordle-socials-creator</a>. If you run a copy that someone else has changed, that person&rsquo;s policy applies to their copy, not this one.</p>
+
+  <h2 id="buffer">2. Signing in with Buffer</h2>
+  <p>Nordle can connect to your Buffer account so it can schedule posts you have approved and show how your posts did. You can sign in with Buffer (OAuth) or paste a Buffer API key that you create yourself.</p>
+  <p><strong>What Nordle asks Buffer for.</strong> Permission to read your Buffer account, organisations and channels; to read your posts and queue; to create and manage posts and queue; and to keep you signed in without asking again (offline access). Buffer shows you the exact list on its own consent screen before you agree. Nordle does not use your Buffer ideas, snippets or channel settings.</p>
+  <p><strong>What Nordle does with it.</strong> It lists your channels so you can choose where a brand posts; creates, moves or removes posts that you scheduled from Nordle; reads your scheduled and sent posts and the results Buffer reports for them, so Insights and the calendar match what is really in Buffer; and copies posts you made by hand in Buffer onto your local calendar, read only (Nordle does not change those in Buffer). You can switch the reading off or change how often it happens in Nordle (Insights, Options).</p>
+  <p><strong>Where your Buffer sign-in is kept.</strong> Your access token and refresh token are saved in a settings file in the Nordle folder on your computer (kept out of the Nordle project files and never shown on a web page), and are sent only to Buffer (auth.buffer.com and api.buffer.com). They are never sent to us. Buffer&rsquo;s own privacy policy covers what Buffer holds about you.</p>
+  <p><strong>Stopping it.</strong> Choose Disconnect in Nordle to forget the tokens. To also withdraw Nordle&rsquo;s permission, remove it in your Buffer settings; Nordle will then ask you to sign in again if you want to reconnect.</p>
+
+  <h2 id="hosted">3. The web pages we host for Nordle</h2>
+  <p>Buffer requires an HTTPS address to send you back to after you sign in. For that, Nordle uses a small static page on GitHub Pages (samuel-d-young.github.io/nordle-socials-creator), the same site as this page. It receives a one-time code in the address, passes your browser straight on to your own computer, and keeps nothing: no cookies, no storage, no analytics, no scripts from anyone else. The code is useless without a secret that never leaves your computer.</p>
+  <p>GitHub, which hosts those pages, may record ordinary web request information (such as your IP address and browser) under its own privacy statement. We do not receive it.</p>
+
+  <h2 id="others">4. Other connections Nordle makes</h2>
+  <p>Nordle only connects to anyone else when you use a feature that needs it:</p>
+  <ul>
+    <li><strong>GitHub, to check for updates.</strong> At most once every six hours Nordle asks GitHub whether a newer version exists. It sends nothing about you or your work. You can turn it off with NORDLE_NO_UPDATE_CHECK=1 or in the update notice.</li>
+    <li><strong>Claude Code.</strong> When you ask Nordle to plan, design or check posts, it starts Claude Code on your computer. Claude Code sends the material it needs to Anthropic under your own Claude account and Anthropic&rsquo;s terms and privacy policy. Nordle does not receive or relay it.</li>
+    <li><strong>Stock libraries.</strong> If you add Pexels, Pixabay, Freesound or similar with your own key, Nordle sends your searches and key to that library. The key is kept in a file on your computer and is never shown again in the page.</li>
+    <li><strong>Websites you point it at.</strong> When you ask Nordle to read a website or a public Instagram preview to draft a brand style guide, it fetches those public pages.</li>
+    <li><strong>Your own storage.</strong> Buffer needs a public web address for each picture or video. If you set up media hosting, Nordle uploads those files to the storage bucket you chose (for example Cloudflare R2 or Amazon S3), not to us.</li>
+  </ul>
+
+  <h2 id="collect">5. What we collect</h2>
+  <p>Nothing, through Nordle itself. We have no analytics, no telemetry and no user accounts for Nordle. If you open a GitHub issue or otherwise contact us, we receive what you choose to send, and we use it only to reply and to fix the problem.</p>
+
+  <h2 id="security">6. How it is protected</h2>
+  <p>Nordle only answers to your own computer, checks the web address used to reach it, and needs a secret that is new each time Nordle starts. These are protections for how Nordle is normally used, not a guarantee against other software already running on your computer. The details, and what is not guaranteed, are in the <a href="https://github.com/samuel-d-young/nordle-socials-creator/blob/main/SECURITY.md">security notes</a>. To report a security problem, use GitHub&rsquo;s private vulnerability reporting on the repository (Security tab, &ldquo;Report a vulnerability&rdquo;).</p>
+
+  <h2 id="access">7. Access, deletion and how long things are kept</h2>
+  <p>We hold none of your Nordle information, so there is nothing for us to return or delete. On your computer, everything stays until you delete it: remove a brand in Nordle, or delete the Nordle folder, to remove your files, settings and Buffer sign-in. Buffer access tokens expire within about an hour and are renewed while you stay connected; they stop being renewed when you disconnect.</p>
+
+  <h2 id="children">8. Children</h2>
+  <p>Nordle is a tool for people who run social media accounts. It is not directed at children, and we do not knowingly collect information from them.</p>
+
+  <h2 id="law">9. Australian law, questions and complaints</h2>
+  <p>Where it applies, we handle personal information in line with the <em>Privacy Act 1988</em> (Cth) and the Australian Privacy Principles. Questions about this policy: open an issue at <a href="https://github.com/samuel-d-young/nordle-socials-creator/issues">github.com/samuel-d-young/nordle-socials-creator/issues</a> (please do not put private information in it; for anything private, use the private vulnerability reporting described above). If you are not satisfied with our response, you can complain to the Office of the Australian Information Commissioner at oaic.gov.au.</p>
+
+  <h2 id="changes">10. Changes to this policy</h2>
+  <p>If Nordle changes in a way that affects this policy, we will update this page and its effective date. The date at the top always reflects the current version.</p>
+
+  <footer>
+    <p><a href="./">Back to Nordle</a>. Nordle was created by Samuel Young, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+  </footer>
+</div>
+</body>
+</html>
