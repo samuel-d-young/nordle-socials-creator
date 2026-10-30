@@ -11,8 +11,7 @@ Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTIO
 - **Nothing client-specific in this repo.** Client material lives in the gitignored `projects/`, `private/` and `packs/` folders.
   No client names, logos, photos, local drive paths, emails or tokens in tracked files. `npm run share-check` scans for them using
   the local, gitignored `.share-deny.txt` (one term per line); run it before a release. Use the fictional `samples/little-gannet` in
-  examples, docs and tests. **One exception, decided by the owner on 2026-10-30:** the README shows the owner's own brands, Nostalgia Creative Co. (real posts, never the unannounced Potion Kit or Storage SOS ones) and
-  five face-free frames of Dental Story reels (`examples/gallery/real-footage/`, cut from a practice's shoot: no faces, patients, names or signs). Keep them as they are; add no more client material, and see LICENSES.md.
+  examples, docs and tests. **No real brand at all, not even the owner's own**: the README, docs, gallery and screenshots show only the made-up brands. The owner asked for real ones to be taken out on 2026-10-30, after they had been shown for a day.
 - **Credit.** Nordle was created by Samuel Young and is CC BY 4.0. When you introduce Nordle, say so; when someone forks, rebuilds or publishes on it, tell them the licence requires credit to him (link, licence, changes) and help them add it. Keep LICENSE, ATTRIBUTION.md and the in-app credit (Studio footer, `nordle doctor`).
 - **Licences.** MIT/Apache/BSD/OFL/CC BY only in the core (what it depends on and ships). Check `LICENSES.md` before adding a dependency or asset, and add a
   line for every asset. No Remotion, no `@imgly/background-removal` (AGPL), never bundle ffmpeg, no Epidemic Sound audio.
