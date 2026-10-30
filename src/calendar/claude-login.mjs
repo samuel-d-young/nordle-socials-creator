@@ -4,6 +4,7 @@
 
 import { spawn as nodeSpawn, spawnSync } from 'node:child_process';
 import { claudeFound, claudeStatus } from './claude-bin.mjs';
+import { launchPlan } from './winshell.mjs';
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const URL_RE = /https?:\/\/[^\s"'<>]+/i;
@@ -31,7 +32,8 @@ export function startLogin({ spawn = nodeSpawn, found = claudeFound(), status = 
     current = null;
   };
   try {
-    cur.child = spawn(found.path, ['auth', 'login', '--claudeai'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], ...(/\.(cmd|bat)$/i.test(found.path) ? { shell: true } : {}) });
+    const plan = launchPlan(found.path, ['auth', 'login', '--claudeai']);
+    cur.child = spawn(plan.command, plan.args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], ...plan.options });
   } catch (e) { finish('failed', { error: e.message }); return { state: 'failed', error: e.message }; }
   const seen = (d) => { const m = URL_RE.exec(String(d)); if (m && !cur.url) cur.url = m[0].replace(/[.,)]+$/, ''); };
   cur.child.stdout?.on('data', seen);
@@ -66,7 +68,8 @@ export function cancelLogin() {
 export function logoutClaude({ run = spawnSync, found = claudeFound(), status = claudeStatus } = {}) {
   if (!found.path) return { ok: false, error: 'Claude Code is not installed on this computer, so there is nothing to sign out of.' };
   cancelLogin();
-  const r = run(found.path, ['auth', 'logout'], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...(/\.(cmd|bat)$/i.test(found.path) ? { shell: true } : {}) });
+  const plan = launchPlan(found.path, ['auth', 'logout']);
+  const r = run(plan.command, plan.args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...plan.options });
   if (r.error) return { ok: false, error: `Claude Code could not sign out: ${r.error.message}` };
   const now = status({ found });
   if (now.signedIn === true) return { ok: false, error: 'Claude Code still says it is signed in. Try again, or run: claude auth logout' };

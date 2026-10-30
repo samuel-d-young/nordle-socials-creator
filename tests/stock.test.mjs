@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { ROOT } from '../tools/validate.mjs';
 import { createNordleServer } from '../src/server/http.mjs';
 import { Store } from '../src/server/store.mjs';
-import { assertPublicHttps, extensionFor, StockError } from '../src/stock/net.mjs';
+import { assertPublicHttps, extensionFor, plainHeadersOnly, safeFetch, StockError } from '../src/stock/net.mjs';
 import { PRESETS } from '../src/stock/presets.mjs';
 import { definitionProblems, restLibrary } from '../src/stock/rest.mjs';
 import { configure, getStockItem, listLibraries, saveStockSettings, searchStock } from '../src/stock/index.mjs';
@@ -111,6 +111,45 @@ test('the address guard: https and public only; redirects are checked; the file 
   assert.equal(extensionFor('video', 'application/octet-stream', 'https://x.com/clip.exe'), null);
   assert.equal(extensionFor('sfx', 'audio/mpeg', 'https://x.com/a'), 'mp3');
   assert.equal(extensionFor('music', 'video/mp4', 'https://x.com/a'), null);
+});
+
+test('a redirect to another site does not take the key with it; a redirect inside the same site does', async () => {
+  const seen = [];
+  const hops = {
+    'https://api.library.example/v1/file': { status: 302, location: 'https://cdn.library.example/f.jpg' },        // another host
+    'https://cdn.library.example/f.jpg': { status: 302, location: 'https://api.library.example/v1/other' },        // and back again
+    'https://api.library.example/v1/other': { status: 200 },
+    'https://api.library.example/v1/same': { status: 302, location: '/v1/same-2' },                                 // same site
+    'https://api.library.example/v1/same-2': { status: 302, location: 'https://api.library.example:8443/v1/port' },  // same host, other port: another origin
+    'https://api.library.example:8443/v1/port': { status: 200 },
+  };
+  const fetchImpl = async (url, init) => {
+    seen.push({ url: String(url), headers: { ...(init.headers ?? {}) } });
+    const h = hops[String(url)] ?? { status: 404 };
+    return { status: h.status, ok: h.status === 200, headers: { get: (n) => (n.toLowerCase() === 'location' ? h.location ?? null : null) } };
+  };
+  const headers = { accept: 'application/json', 'user-agent': 'Nordle (stock search)', Authorization: 'Bearer test-key-not-real', 'X-Api-Key': 'test-key-not-real', cookie: 'a=b' };
+  const hop = (u) => seen.find((s) => s.url === u).headers;
+
+  await safeFetch('https://api.library.example/v1/file', { headers }, { fetchImpl });
+  assert.deepEqual(Object.keys(hop('https://api.library.example/v1/file')).sort(), Object.keys(headers).sort(), 'the library that was asked gets everything');
+  assert.deepEqual(hop('https://cdn.library.example/f.jpg'), { accept: 'application/json', 'user-agent': 'Nordle (stock search)' }, 'another host gets only the plain headers');
+  assert.deepEqual(hop('https://api.library.example/v1/other'), { accept: 'application/json', 'user-agent': 'Nordle (stock search)' }, 'and they stay off when it comes back');
+
+  seen.length = 0;
+  await safeFetch('https://api.library.example/v1/same', { headers }, { fetchImpl });
+  assert.ok('Authorization' in hop('https://api.library.example/v1/same-2'), 'same origin: kept');
+  assert.deepEqual(Object.keys(hop('https://api.library.example:8443/v1/port')).sort(), ['accept', 'user-agent'], 'another port is another origin');
+
+  // other shapes of headers, and no headers at all
+  seen.length = 0;
+  await safeFetch('https://api.library.example/v1/file', { headers: new Headers({ 'X-Api-Key': 'k', Accept: 'image/*' }) }, { fetchImpl });
+  assert.deepEqual(hop('https://cdn.library.example/f.jpg'), { accept: 'image/*' });
+  seen.length = 0;
+  await safeFetch('https://api.library.example/v1/file', {}, { fetchImpl });
+  assert.equal(seen.length, 3);
+  assert.ok(seen.every((s) => Object.keys(s.headers).length === 0));
+  assert.deepEqual(plainHeadersOnly({ Accept: 'a', 'x-api-key': 'k', 'User-Agent': 'u', 'Accept-Language': 'en' }), { Accept: 'a', 'User-Agent': 'u', 'Accept-Language': 'en' });
 });
 
 // ---- searching ------------------------------------------------------------------------------------------------------------------------

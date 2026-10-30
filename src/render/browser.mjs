@@ -13,15 +13,29 @@ const TYPES = {
   '.gif': 'image/gif', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf',
 };
 
+const truthy = (v) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim());
+
+/**
+ * Should Chromium run inside its own sandbox? The renderer decodes pictures, SVGs and fonts that came from outside (a stock library, a scanned website, a cloned
+ * project), so the sandbox is on wherever it works: Windows and macOS by default. On Linux it is off unless NORDLE_CHROMIUM_SANDBOX=1, because containers and CI
+ * runners usually cannot create the namespaces it needs. NORDLE_NO_CHROMIUM_SANDBOX=1 turns it off everywhere (playwright adds --no-sandbox unless it is true).
+ */
+export function chromiumSandboxOn({ platform = process.platform, env = process.env } = {}) {
+  if (truthy(env.NORDLE_NO_CHROMIUM_SANDBOX)) return false;
+  if (platform === 'win32' || platform === 'darwin') return true;
+  return truthy(env.NORDLE_CHROMIUM_SANDBOX);
+}
+
 export async function openBrowser() {
   const attempts = [{}, { channel: 'chrome' }, { channel: 'msedge' }];
+  const chromiumSandbox = chromiumSandboxOn();
   let last;
   for (const opts of attempts) {
     try {
-      return await chromium.launch({ headless: true, args: ['--force-color-profile=srgb', '--font-render-hinting=none'], ...opts });
+      return await chromium.launch({ headless: true, chromiumSandbox, args: ['--force-color-profile=srgb', '--font-render-hinting=none'], ...opts });
     } catch (e) { last = e; }
   }
-  throw new Error(`No browser available for rendering. Run: npx playwright-core install chromium\n(${String(last?.message).split('\n')[0]})`);
+  throw new Error(`No browser available for rendering. Run: npx playwright-core install chromium\n(${String(last?.message).split('\n')[0]})${chromiumSandbox ? '\nChromium runs in its sandbox here; if the sandbox is what fails, set NORDLE_NO_CHROMIUM_SANDBOX=1.' : ''}`);
 }
 
 /** Resolve a request path under a base folder, refusing anything that escapes it (including through symlinks). */

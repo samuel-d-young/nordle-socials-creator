@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { ROOT } from '../tools/validate.mjs';
-import { openBrowser, newCanvas } from '../src/render/browser.mjs';
+import { openBrowser, newCanvas, chromiumSandboxOn } from '../src/render/browser.mjs';
 import { renderDocument } from '../src/render/render.mjs';
 import { verifyDocument } from '../src/render/verify.mjs';
 import { parseColour, backdropLuminance } from '../src/render/checks.mjs';
@@ -179,4 +179,13 @@ test('colour parsing and backdrop sampling', () => {
   png.data.fill(255);
   const lum = backdropLuminance(png, { x: 0, y: 0, w: 10, h: 10 }, 1);
   assert.ok(lum.low > 0.99 && lum.high > 0.99);
+});
+
+test('the browser keeps its sandbox on Windows and macOS, Linux asks for it, and either can be switched off', () => {
+  const on = (platform, env = {}) => chromiumSandboxOn({ platform, env });
+  assert.deepEqual(['win32', 'darwin'].map((p) => on(p)), [true, true]);
+  assert.equal(on('linux'), false, 'containers and CI runners usually cannot use it');
+  assert.equal(on('linux', { NORDLE_CHROMIUM_SANDBOX: '1' }), true);
+  for (const p of ['win32', 'darwin', 'linux']) assert.equal(on(p, { NORDLE_NO_CHROMIUM_SANDBOX: '1', NORDLE_CHROMIUM_SANDBOX: '1' }), false, `${p}: the opt-out wins`);
+  assert.equal(on('win32', { NORDLE_NO_CHROMIUM_SANDBOX: '0' }), true);
 });

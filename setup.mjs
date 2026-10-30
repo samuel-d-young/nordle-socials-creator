@@ -12,6 +12,8 @@ import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cmdLine, launchPlan } from './src/calendar/winshell.mjs';
+import { findClaude } from './src/calendar/claude-bin.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)));
 const args = new Set(process.argv.slice(2));
@@ -19,10 +21,26 @@ const dry = args.has('--dry-run');
 const win = process.platform === 'win32';
 
 const say = (s) => console.log(s);
+/**
+ * What to start for `cmd`. On Windows npm and npx are .cmd files and Claude Code may be one, and a .cmd only starts through cmd.exe, which reads `&`, `%`, `^` and
+ * spaces in an argument (a folder with a space in its name, say) as commands. So: npm and npx run their own JavaScript with this Node (no shell); Claude Code
+ * goes through launchPlan; the last resort is a command line in which every argument is escaped.
+ */
+function plan(cmd, a) {
+  if (!win) return { command: cmd, args: a, options: {} };
+  if (cmd === 'npm' || cmd === 'npx') {
+    const cli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', `${cmd}-cli.js`);
+    if (existsSync(cli)) return { command: process.execPath, args: [cli, ...a], options: {} };
+    return { command: cmdLine(cmd, a), args: [], options: { shell: true } };
+  }
+  if (cmd === 'claude') return launchPlan(findClaude().path ?? 'claude', a);
+  return { command: cmd, args: a, options: {} };
+}
 const run = (cmd, a, opts = {}) => {
   say(`  $ ${cmd} ${a.join(' ')}`);
   if (dry) return { status: 0 };
-  const r = spawnSync(cmd, a, { cwd: ROOT, encoding: 'utf8', windowsHide: true, shell: win && ['npm', 'npx', 'claude'].includes(cmd), ...opts });
+  const p = plan(cmd, a);
+  const r = spawnSync(p.command, p.args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, ...p.options, ...opts });
   if (r.error) return { status: 1, error: r.error.message };
   return r;
 };

@@ -112,6 +112,15 @@ test('thumbnails: PNGs are shrunk off the main thread and cached; paths are cont
     for (const bad of ['../brand.json', 'review/x.png', 'history/x.png', 'out/../../x.png', '.hidden/x.png', 'C:/x.png', 'out\\huge\\big.png', 'brand.json', 'docs/' + p.docId + '.json', '']) {
       assert.equal((await get(bad, 200)).status, 404, `refused: ${bad}`);
     }
+    // Hidden folders with a real picture inside, under every spelling (names are case-insensitive on Windows and macOS).
+    for (const hidden of ['review', 'history', 'checks', 'trash']) {
+      mkdirSync(join(dir, hidden), { recursive: true });
+      writeFileSync(join(dir, hidden, 'x.png'), PNG.sync.write(big));
+    }
+    for (const bad of ['review/x.png', 'Review/x.png', 'REVIEW/x.png', 'History/x.png', 'CHECKS/x.png', 'Trash/x.png', 'review::$INDEX_ALLOCATION/x.png', 'review./x.png', 'review /x.png']) {
+      assert.equal((await get(bad, 200)).status, 404, `hidden folder served: ${bad}`);
+    }
+    assert.equal((await get('out/huge/big.png', 200)).status, 200, 'an ordinary picture is still served');
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/studio/thumb?project=${p.project}&path=out`, {})).status, 401);
   });
 });

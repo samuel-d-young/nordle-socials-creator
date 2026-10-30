@@ -10,6 +10,7 @@ import { accessSync, constants, existsSync, readdirSync, statSync } from 'node:f
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { launchPlan } from './winshell.mjs';
 
 const WIN = (platform) => platform === 'win32';
 // paths are written the way the TARGET computer writes them (so the Windows and Mac cases can both be tested anywhere)
@@ -107,7 +108,8 @@ export function missingClaudeMessage(bin, platform = process.platform) {
  */
 export function claudeStatus({ run = spawnSync, found = claudeFound() } = {}) {
   if (!found.path) return { found: false, path: null, signedIn: null, message: missingClaudeMessage('claude') };
-  const r = run(found.path, ['auth', 'status'], { encoding: 'utf8', windowsHide: true, timeout: 20000, ...(/\.(cmd|bat)$/i.test(found.path) ? { shell: true } : {}) });
+  const plan = launchPlan(found.path, ['auth', 'status']);
+  const r = run(plan.command, plan.args, { encoding: 'utf8', windowsHide: true, timeout: 20000, ...plan.options });
   if (r.error) return { found: true, path: found.path, how: found.how, signedIn: null, error: r.error.message };
   let j = null;
   try { j = JSON.parse(String(r.stdout ?? '').trim()); } catch { /* not JSON */ }

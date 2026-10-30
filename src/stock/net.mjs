@@ -49,14 +49,27 @@ export function assertPublicHttps(value, what = 'The address') {
   return u;
 }
 
-/** fetch with each redirect checked by hand. */
+// The headers that may follow a redirect to another site: plain ones about what we accept. Anything else (an API key, Authorization, a cookie) was meant for the
+// library that was asked, not for wherever it sends us next.
+const PLAIN_HEADERS = new Set(['accept', 'accept-language', 'user-agent']);
+export function plainHeadersOnly(headers) {
+  if (!headers) return headers;
+  const entries = typeof headers.entries === 'function' && !Array.isArray(headers) ? [...headers.entries()] : Array.isArray(headers) ? headers : Object.entries(headers);
+  return Object.fromEntries(entries.filter(([name]) => PLAIN_HEADERS.has(String(name).toLowerCase())));
+}
+
+/** fetch with each redirect checked by hand. Headers other than plain ones are sent to the address asked for, and to its own site only: not on to another one. */
 export async function safeFetch(url, init = {}, { fetchImpl = fetch, maxRedirects = 3, timeoutMs = 30000 } = {}) {
   let target = assertPublicHttps(url).href;
+  const home = new URL(target).origin;
+  let headers = init.headers;
   for (let hop = 0; ; hop++) {
-    const res = await fetchImpl(target, { ...init, redirect: 'manual', signal: init.signal ?? AbortSignal.timeout(timeoutMs) });
+    const res = await fetchImpl(target, { ...init, ...(headers === undefined ? {} : { headers }), redirect: 'manual', signal: init.signal ?? AbortSignal.timeout(timeoutMs) });
     if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
       if (hop >= maxRedirects) throw new StockError(502, 'The library sent the request round in circles.');
-      target = assertPublicHttps(new URL(res.headers.get('location'), target).href, 'A redirect').href;
+      const next = assertPublicHttps(new URL(res.headers.get('location'), target).href, 'A redirect');
+      if (next.origin !== home) headers = plainHeadersOnly(init.headers);   // once it has left the site it asked, it stays stripped
+      target = next.href;
       continue;
     }
     return res;

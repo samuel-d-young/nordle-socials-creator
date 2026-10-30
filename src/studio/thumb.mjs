@@ -8,6 +8,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
+import { isHiddenSegment, oddSegment } from '../server/hidden-paths.mjs';
 
 const CACHE_DIR = join(tmpdir(), 'nordle-studio-thumbs');
 export const WIDTHS = [96, 160, 240, 360, 480, 720, 1080];
@@ -24,8 +25,8 @@ export function snapWidth(w) {
 export function pictureInProject(projectDir, rel) {
   if (typeof rel !== 'string' || !rel || rel.length > 400 || /[\\\0]/.test(rel) || /^[a-zA-Z]:/.test(rel) || rel.startsWith('/')) return null;
   const parts = rel.split('/');
-  if (parts.some((p) => p === '' || p === '..' || p.startsWith('.'))) return null;
-  if (HIDDEN.has(parts[0])) return null;
+  if (parts.some((p) => p === '' || p === '..' || p.startsWith('.') || oddSegment(p))) return null;
+  if (isHiddenSegment(parts[0], HIDDEN)) return null;   // case-insensitive: Review/ is review/ on Windows and macOS
   if (!TYPES[extname(parts.at(-1)).toLowerCase()]) return null;
   const base = resolve(projectDir);
   const abs = resolve(base, ...parts);

@@ -71,10 +71,16 @@ test('nowhere: no path, the places tried are listed, and the message says what t
   assert.match(missingClaudeMessage('claude', 'win32'), /install\.ps1/);
 });
 
-test('the runner starts a .cmd through a shell on Windows, and says the new message when the program is missing', () => {
+test('the runner starts a .cmd through launchPlan (never a bare shell: true), and says the new message when the program is missing', () => {
   const src = readFileSync(join(import.meta.dirname, '..', 'src', 'calendar', 'run.mjs'), 'utf8');
-  assert.match(src, /\(cmd\|bat\)\$\/i\.test\(String\(bin\)\) \? \{ shell: true \}/);
+  assert.match(src, /launchPlan\(bin, args\)/);
+  assert.doesNotMatch(src, /shell: true/);
   assert.match(src, /missingClaudeMessage\(bin\)/);
+  for (const f of ['claude-bin.mjs', 'claude-login.mjs']) {
+    const s = readFileSync(join(import.meta.dirname, '..', 'src', 'calendar', f), 'utf8');
+    assert.match(s, /launchPlan\(/, f);
+    assert.doesNotMatch(s, /shell: true/, f);
+  }
 });
 
 test('claudeStatus asks the program itself whether it is signed in, and says how to fix it when it is not', async () => {

@@ -84,6 +84,33 @@ test('project files: images and brand are served sandboxed; history and review f
   assert.equal((await fetch(`${base}/p/${P}/.hidden`)).status, 404);
 });
 
+test('hidden folders stay hidden under every spelling (letter case, NTFS stream and trailing dot or space)', async () => {
+  // Real .json files (a type /p/ does serve) inside each hidden folder, so a 404 can only come from the folder rule.
+  for (const dir of ['history', 'review', 'checks']) {
+    mkdirSync(join(projectDir, dir), { recursive: true });
+    writeFileSync(join(projectDir, dir, 'secret-doc.json'), '{"secret":true}');
+  }
+  const url = (first, rest = 'secret-doc.json') => `${base}/p/${P}/${first}/${rest}`;
+  // Control: an ordinary asset and a plain-named file next to the hidden folders are still served.
+  assert.equal((await fetch(`${base}/p/${P}/assets/logo.svg`)).status, 200);
+  for (const first of [
+    'review', 'Review', 'REVIEW', 'rEvIeW', 'history', 'History', 'HISTORY', 'checks', 'Checks', 'CHECKS',
+    'review::$INDEX_ALLOCATION', 'Review::$INDEX_ALLOCATION', 'history::$INDEX_ALLOCATION', 'checks::$INDEX_ALLOCATION',
+    'review.', 'review%20', 'review...', '%52eview', 'review%3a%3a%24INDEX_ALLOCATION',
+  ]) {
+    const res = await fetch(url(first));
+    assert.equal(res.status, 404, `${first} must not be served`);
+    assert.equal((await res.text()).includes('secret'), false, `${first} leaked the file`);
+  }
+  // Deeper files and the backslash spelling are refused too.
+  assert.equal((await fetch(url('Review', 'versions/x/1.json'))).status, 404);
+  assert.equal((await fetch(`${base}/p/${P}/Review%5Csecret-doc.json`)).status, 404);
+  // A folder that merely starts with a hidden name is not hidden.
+  mkdirSync(join(projectDir, 'reviews'), { recursive: true });
+  writeFileSync(join(projectDir, 'reviews', 'plain.json'), '{"plain":true}');
+  assert.equal((await fetch(url('reviews', 'plain.json'))).status, 200);
+});
+
 test('lists projects and documents, and returns a document with its sizes and brand', async () => {
   const list = (await call('GET', '/api/projects')).json.projects;
   const p = list.find((x) => x.id === P);

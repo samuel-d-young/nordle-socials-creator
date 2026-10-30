@@ -5,8 +5,10 @@
 //  - Nothing runs unless the project's settings.autoBuild (or autoPropose) is on, or the caller says yes.
 //  - One build at a time per project (a lock file). A crashed run's lock and its half-built item are cleaned up next time.
 //  - Every Claude run has a timeout; on Windows the whole process tree is stopped, by PID, never by name.
-//  - The child gets NORDLE_AGENT_RUN=1 and only the tools it needs; the command-line steps only the owner may take
-//    (approve, reject, sign off, settings) refuse when that variable is set. See docs/CALENDAR.md for what that does and does not guarantee.
+//  - The child gets NORDLE_AGENT_RUN=1 and only the tools it needs (a build gets a shell limited to this install's build/reel/render/verify/... commands,
+//    never `node` in general; it is told not to read or change .nordle, calendar.json, review/, publish/ or checks/; the project's own .claude settings are
+//    not loaded); the command-line steps only the owner may take (approve, reject, sign off, settings) refuse when that variable is set.
+//    This is a convenience guard, not a sandbox: see SECURITY.md and docs/CALENDAR.md for what it does and does not guarantee.
 //  - `spawn` and `exec` are injected so tests never start a real Claude.
 
 import { execFile, spawn as nodeSpawn } from 'node:child_process';
@@ -15,7 +17,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ROOT } from '../../tools/validate.mjs';
 import { acquireRunLock } from './lock.mjs';
-import { buildPrompt, proposePrompt } from './prompts.mjs';
+import { buildPrompt, projectHelpers, proposePrompt } from './prompts.mjs';
+import { launchPlan } from './winshell.mjs';
 import { stockBrief } from '../stock/index.mjs';
 import { CalendarError, linkDoc, listProjects, loadProject, mutateCalendar, runnableItems } from './service.mjs';
 import { monthReport } from './plan.mjs';
@@ -51,8 +54,47 @@ export const DEFAULT_MODEL = 'sonnet';
 export const DEFAULT_EFFORT = 'medium';
 export const DEFAULT_LIMIT = 5;
 
-const BUILD_TOOLS = ['mcp__nordle', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Agent', 'Task', 'Bash(node:*)'];
+const BASE_BUILD_TOOLS = ['mcp__nordle', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Agent', 'Task'];
 const PROPOSE_TOOLS = ['mcp__nordle', 'Read', 'Glob', 'Grep'];
+
+// The command-line steps a build may run: the ones the build prompt and the guides send Claude to (each also exists as an MCP tool). Left out on purpose, because
+// they are the owner's: calendar (approve, reject, sign off, settings), publish (run, settings, sync), stock (key, settings, add), performance (import),
+// record and finish, update, envato. A shell with `node:*` could run any script at all, so only these subcommands of THIS install's nordle.mjs (by full path:
+// a bare `node nordle.mjs` would run a file of the project folder), the validator, and the project's own build helpers in specs/ are allowed.
+export const BUILD_CLI_COMMANDS = ['build', 'reel', 'render', 'verify', 'critique', 'check', 'packet', 'video', 'cut', 'validate'];
+
+const fwd = (p) => String(p).replace(/\\/g, '/');
+/** `node "full/path"` as the prompt writes it, and the bare form when the path needs no quotes. */
+const invocations = (runner, script) => [`${runner} "${fwd(script)}"`, ...(/^[A-Za-z0-9_./:@+=-]+$/.test(fwd(script)) ? [`${runner} ${fwd(script)}`] : [])];
+
+/** The shell commands a build run may use, as `claude --allowedTools` rules. */
+export function buildShellRules({ nordleRoot = ROOT, projectDir } = {}) {
+  const rules = [];
+  for (const sub of BUILD_CLI_COMMANDS) for (const base of invocations('node', join(nordleRoot, 'nordle.mjs'))) rules.push(`Bash(${base} ${sub}:*)`);
+  for (const base of invocations('node', join(nordleRoot, 'tools', 'validate.mjs'))) rules.push(`Bash(${base}:*)`);
+  if (projectDir) {
+    for (const h of projectHelpers(projectDir)) {
+      const runner = /^sh\s/.test(h.usage) || h.file.endsWith('.sh') ? 'sh' : 'node';
+      for (const base of invocations(runner, join(resolve(projectDir), 'specs', h.file))) rules.push(`Bash(${base}:*)`);
+    }
+  }
+  return rules;
+}
+
+/** What a build run may use: Nordle's tools, file tools, subagents, and exactly the shell commands above. */
+export const buildTools = (opts = {}) => [...BASE_BUILD_TOOLS, ...buildShellRules(opts)];
+
+// Files the headless run may neither read nor change. The secrets (publishing tokens, stock-library keys, the agent token) live under .nordle; the rest
+// are the owner's records, which only the Nordle tools may touch (calendar.json through the calendar service, review/ and checks/ through the server).
+const DENIED_IN_PROJECT = ['.nordle/**', 'calendar.json', 'review/**', 'publish/**', 'checks/**'];
+const posix = (p) => { const s = fwd(resolve(p)); const m = /^([A-Za-z]):\/(.*)$/.exec(s); return m ? `/${m[1].toLowerCase()}/${m[2]}` : s; };
+
+/** `claude --disallowedTools` rules (Read and Edit; Edit also covers Write) for those files, relative to the run's folder, anywhere, and where this install keeps them. */
+export function agentDenyRules({ nordleRoot = ROOT } = {}) {
+  const where = [...DENIED_IN_PROJECT.map((p) => `./${p}`), '**/.nordle/**', '//**/.nordle/**'];
+  for (const dir of new Set([process.env.NORDLE_RUNTIME_DIR || join(nordleRoot, '.nordle'), process.env.NORDLE_PUBLISH_DIR].filter(Boolean).map((d) => posix(d)))) where.push(`/${dir}/**`);
+  return where.flatMap((p) => [`Read(${p})`, `Edit(${p})`]);
+}
 
 /** `claude -p` runs with its own sign-in, not the desktop app's: when that is missing or expired every run fails the same way, at once. */
 export const SIGNED_OUT = /failed to authenticate|oauth session expired|not logged in|please run \/login|invalid api key|authentication_error/i;
@@ -82,17 +124,38 @@ export function mcpConfig(nordleRoot = ROOT) {
   return { mcpServers: { nordle: { command: process.execPath, args: [join(nordleRoot, 'mcp.mjs')], ...(Object.keys(env).length ? { env } : {}) } } };
 }
 
-/** Arguments for `claude -p`. The prompt itself goes in on stdin. */
-export function claudeArgs({ mcpFile, maxTurns = DEFAULT_MAX_TURNS, tools, model, effort, maxBudgetUsd } = {}) {
+/** A model name goes on the command line (and, for a .cmd launcher on Windows, through cmd.exe), so it may only be a plain name: sonnet, opus, claude-sonnet-4-5, sonnet[1m]. */
+export const MODEL_NAME = /^[A-Za-z0-9._:[\]-]{1,60}$/;
+export class ClaudeSettingError extends Error {}
+export function checkModel(model) {
+  if (model === undefined || model === null || model === '') return null;
+  if (typeof model === 'string' && MODEL_NAME.test(model)) return null;
+  const shown = JSON.stringify(String(model).replace(/[^\x20-\x7e]/g, '?').slice(0, 40));
+  return `The Claude model name ${shown} is not allowed. Use only letters, digits and . _ : [ ] - (up to 60), for example sonnet, opus or claude-sonnet-4-5. Change it in the brand's calendar settings (claudeModel).`;
+}
+
+/**
+ * Arguments for `claude -p`. The prompt itself goes in on stdin.
+ * Beyond the tool allow-list: the settings files of the project folder are not read (`--setting-sources user`: a project you cloned could carry its own
+ * .claude/settings.json), and `--disallowedTools` keeps the run away from the owner's secrets and records (agentDenyRules). The allow-list and the deny list
+ * are a convenience guard, not a sandbox: see SECURITY.md. The owner's NORDLE_CLAUDE_ARGS come after these flags, so they can override them on purpose.
+ */
+export function claudeArgs({ mcpFile, maxTurns = DEFAULT_MAX_TURNS, tools, model, effort, maxBudgetUsd, deny = agentDenyRules() } = {}) {
   const extra = (process.env.NORDLE_CLAUDE_ARGS ?? '').split(/\s+/).filter(Boolean);
   const allowed = process.env.NORDLE_CLAUDE_TOOLS ? process.env.NORDLE_CLAUDE_TOOLS.split(',').map((s) => s.trim()).filter(Boolean) : tools;
+  const chosen = model || process.env.NORDLE_CLAUDE_MODEL || DEFAULT_MODEL;
+  const bad = checkModel(chosen);
+  if (bad) throw new ClaudeSettingError(bad);
+  const level = effort || process.env.NORDLE_CLAUDE_EFFORT || DEFAULT_EFFORT;
+  if (!/^[a-z]{1,12}$/.test(String(level))) throw new ClaudeSettingError('The Claude effort level must be one of: low, medium, high, xhigh, max. Change it in the brand\'s calendar settings (claudeEffort).');
   return [
     '-p', '--output-format', 'json', '--max-turns', String(maxTurns),
     '--mcp-config', mcpFile, '--strict-mcp-config', '--permission-mode', 'acceptEdits',
-    '--model', model || process.env.NORDLE_CLAUDE_MODEL || DEFAULT_MODEL,
-    '--effort', effort || process.env.NORDLE_CLAUDE_EFFORT || DEFAULT_EFFORT,
+    '--model', chosen,
+    '--effort', level,
     ...(maxBudgetUsd ? ['--max-budget-usd', String(maxBudgetUsd)] : []),
-    '--no-session-persistence', ...extra,
+    '--no-session-persistence', '--setting-sources', 'user',
+    ...(deny.length ? ['--disallowedTools', ...deny] : []), ...extra,
     '--allowedTools', ...allowed,
   ];
 }
@@ -129,7 +192,9 @@ export function runClaude({ spawn, exec, bin, args, cwd, env, prompt, timeoutMs,
     const onAbort = () => { aborted = true; if (child) { killTree(child, exec); backstop = setTimeout(() => finish({ signal: 'SIGKILL' }), 10000); } else finish({ signal: 'SIGKILL' }); };
     if (signal?.aborted) { aborted = true; finish({ signal: 'SIGKILL' }); return; }
     signal?.addEventListener?.('abort', onAbort, { once: true });
-    try { child = spawn(bin, args, { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...(/\.(cmd|bat)$/i.test(String(bin)) ? { shell: true } : {}) }); } catch (e) { finish({ error: e.message }); return; }    const keep = (cur, chunk) => (cur + String(chunk)).slice(-2_000_000);
+    // a .cmd launcher (npm's Claude Code on Windows) is started by its real target, or with every argument escaped for cmd.exe: see winshell.mjs
+    try { const plan = launchPlan(bin, args); child = spawn(plan.command, plan.args, { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...plan.options }); } catch (e) { finish({ error: e.message }); return; }
+    const keep = (cur, chunk) => (cur + String(chunk)).slice(-2_000_000);
     child.stdout?.on('data', (d) => { stdout = keep(stdout, d); });
     child.stderr?.on('data', (d) => { stderr = keep(stderr, d); });
     child.on('error', (e) => finish({ error: e.code === 'ENOENT' ? missingClaudeMessage(bin) : e.message }));
@@ -260,11 +325,19 @@ export async function runDue({
     return { ...result, enabled: false, reason: `autoBuild is off for "${p.id}". Turn it on (node nordle.mjs calendar settings ${p.id} --auto-build on) or run with --yes.` };
   }
 
+  // A model name that is not a plain name is refused before anything is claimed or started (it would end up on a command line).
+  const wantedModel = model ?? p.settings.claudeModel;
+  const badModel = checkModel(wantedModel) ?? (wantedModel ? null : checkModel(process.env.NORDLE_CLAUDE_MODEL));
+  if (badModel && queue.length) {
+    result.ran = queue.slice(0, limit).map(({ item, mode }) => ({ id: item.id, mode, outcome: 'failed', error: badModel }));
+    return result;
+  }
+
   if (dryRun) {
     result.dryRun = queue.slice(0, limit).map(({ item, mode }) => {
       const prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
       const lim = buildLimits(item, p.settings, { maxTurns, timeoutMs });
-      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns: lim.maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd })], promptChars: prompt.length, prompt };
+      return { id: item.id, mode, command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns: lim.maxTurns, tools: buildTools({ nordleRoot, projectDir: dir }), deny: agentDenyRules({ nordleRoot }), model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd })], promptChars: prompt.length, prompt };
     });
     return result;
   }
@@ -298,7 +371,7 @@ export async function runDue({
       try {
         prompt = buildPrompt(dir, item.id, { mode, today: day, nordleRoot, stock: stockBrief(p.id) });
         const lim = buildLimits(item, p.settings, { maxTurns, timeoutMs });
-        args = claudeArgs({ mcpFile, maxTurns: lim.maxTurns, tools: BUILD_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd });
+        args = claudeArgs({ mcpFile, maxTurns: lim.maxTurns, tools: buildTools({ nordleRoot, projectDir: dir }), deny: agentDenyRules({ nordleRoot }), model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: lim.maxBudgetUsd });
         const env = { ...process.env, NORDLE_AGENT_RUN: '1' };
         run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env, prompt, timeoutMs: lim.timeoutMs, signal });
         run.parsed = parseClaudeOutput(run.stdout);
@@ -357,8 +430,12 @@ export async function runPropose({
   const last = readState(dir);
   if (!yes && last.lastAt && now - Date.parse(last.lastAt) < minHours * 3600 * 1000) return { ...result, skipped: `Proposed ${Math.round((now - Date.parse(last.lastAt)) / 3600000)} hours ago; waiting.` };
 
+  const wantedModel = model ?? p.settings.claudeModel;
+  const badModel = checkModel(wantedModel) ?? (wantedModel ? null : checkModel(process.env.NORDLE_CLAUDE_MODEL));
+  if (badModel) return { ...result, ran: [{ outcome: 'failed', added: [], error: badModel }] };   // refused before anything starts
+
   const prompt = proposePrompt(dir, { months, today: day, nordleRoot }) + (extra ? `\n${String(extra).slice(0, 6000)}` : '');
-  if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD })], promptChars: prompt.length, prompt }] };
+  if (dryRun) return { ...result, dryRun: [{ command: [claudeBin(), ...claudeArgs({ mcpFile: '<temp mcp config>', maxTurns, tools: PROPOSE_TOOLS, deny: agentDenyRules({ nordleRoot }), model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD })], promptChars: prompt.length, prompt }] };
 
   const lock = acquireRunLock(dir, { mode: 'propose', item: null }, { staleMs: staleAfter(timeoutMs) });
   if (!lock.ok) return { ...result, locked: lock.holder };
@@ -368,7 +445,7 @@ export async function runPropose({
     writeFileSync(mcpFile, JSON.stringify(mcpConfig(nordleRoot)));
     const before = new Set(loadProject(dir).cal.items.map((i) => i.id));
     log(`Asking Claude for ideas for ${months.join(', ')}...`);
-    const args = claudeArgs({ mcpFile, maxTurns, tools: PROPOSE_TOOLS, model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD });
+    const args = claudeArgs({ mcpFile, maxTurns, tools: PROPOSE_TOOLS, deny: agentDenyRules({ nordleRoot }), model: model ?? p.settings.claudeModel, effort: p.settings.claudeEffort, maxBudgetUsd: p.settings.maxBudgetUsd ?? PROPOSE_BUDGET_USD });
     const run = await runClaude({ spawn, exec, bin: claudeBin(), args, cwd: dir, env: { ...process.env, NORDLE_AGENT_RUN: '1' }, prompt, timeoutMs });
     run.parsed = parseClaudeOutput(run.stdout);
     const added = loadProject(dir).cal.items.filter((i) => !before.has(i.id));

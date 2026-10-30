@@ -19,6 +19,7 @@ import { critiqueDocument } from '../render/critique.mjs';
 import { renderSheet } from '../render/sheet.mjs';
 import { createAutoRender } from './autorender.mjs';
 import { ROUTES } from './routes/index.mjs';
+import { isHiddenSegment, oddSegment } from './hidden-paths.mjs';
 
 const JSON_LIMIT = 1024 * 1024;
 const UPLOAD_LIMIT = 20 * 1024 * 1024;
@@ -74,7 +75,9 @@ function sendFile(req, res, base, rel, { csp, types, hideDirs, dotfiles = false 
   const parts = decoded.split(/[\\/]/).filter((p) => p !== '');
   if (!parts.length || parts.some((p) => p === '..' || p.includes('\0'))) throw new HttpError(404, 'Not found.');
   if (!dotfiles && parts.some((p) => p.startsWith('.'))) throw new HttpError(404, 'Not found.');
-  if (hideDirs && hideDirs.has(parts[0])) throw new HttpError(404, 'Not found.');
+  // File names are case-insensitive on Windows and macOS, and NTFS has tricks (name::$INDEX_ALLOCATION, trailing dot or space).
+  if (parts.some(oddSegment)) throw new HttpError(404, 'Not found.');
+  if (isHiddenSegment(parts[0], hideDirs)) throw new HttpError(404, 'Not found.');
   const abs = resolve(base, ...parts);
   if (!abs.startsWith(base + sep)) throw new HttpError(404, 'Not found.');
   const ext = extname(abs).toLowerCase();
@@ -85,6 +88,16 @@ function sendFile(req, res, base, rel, { csp, types, hideDirs, dotfiles = false 
     const realBase = realpathSync(base);
     if (!real.startsWith(realBase + sep) || !statSync(real).isFile()) throw new Error('outside');
   } catch { throw new HttpError(404, 'Not found.'); }
+  if (hideDirs) {
+    // Second look at the name the file system really has (true letter case, links followed), in case a spelling got past the first.
+    let first = null;
+    try {
+      const nativeBase = realpathSync.native(base);
+      const nativeReal = realpathSync.native(real);
+      if (nativeReal.startsWith(nativeBase + sep)) first = nativeReal.slice(nativeBase.length + 1).split(sep)[0];
+    } catch { /* the first check already held */ }
+    if (first !== null && isHiddenSegment(first, hideDirs)) throw new HttpError(404, 'Not found.');
+  }
   const stat = statSync(real);
   const headers = { 'content-type': MIME[ext] ?? 'application/octet-stream', 'content-length': stat.size, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'accept-ranges': 'bytes' };
   if (csp) headers['content-security-policy'] = csp;
