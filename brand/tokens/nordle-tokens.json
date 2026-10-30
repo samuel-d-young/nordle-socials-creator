@@ -1,0 +1,133 @@
+{
+  "$description": "Nordle design tokens (light = Paper, dark = Darkroom). Mirrors app/styles.css and app/studio-skin.css.",
+  "color": {
+    "paper": {
+      "light": "#F2F0EA",
+      "dark": "#131517",
+      "role": "page"
+    },
+    "rail": {
+      "light": "#E9E6DE",
+      "dark": "#0E1012",
+      "role": "side rail, recessed areas"
+    },
+    "surface": {
+      "light": "#FBFAF7",
+      "dark": "#1B1E21",
+      "role": "panels, inputs, raised things"
+    },
+    "ink": {
+      "light": "#17191B",
+      "dark": "#ECE9E0",
+      "role": "text, outlines, hard shadows, the primary button"
+    },
+    "ink-2": {
+      "light": "#44484C",
+      "dark": "#B7B4AA",
+      "role": "secondary text"
+    },
+    "ink-3": {
+      "light": "#5C6065",
+      "dark": "#97948C",
+      "role": "meta text"
+    },
+    "rule": {
+      "light": "#D8D4C9",
+      "dark": "#2B2F33",
+      "role": "hairlines"
+    },
+    "rule-strong": {
+      "light": "#B9B4A6",
+      "dark": "#43484D",
+      "role": "stronger hairlines, field borders"
+    },
+    "hot": {
+      "light": "#FF6B1A",
+      "dark": "#FF8A45",
+      "role": "the one accent: fills, borders and shadows with ink on them. Never small text on paper"
+    },
+    "on-hot": {
+      "light": "#17191B",
+      "dark": "#17191B",
+      "role": "text on the orange"
+    },
+    "proof": {
+      "light": "#B52A17",
+      "dark": "#FF7A63",
+      "role": "something is wrong, needs you, today"
+    },
+    "stamp": {
+      "light": "#17674A",
+      "dark": "#62C79B",
+      "role": "signed off, passed"
+    },
+    "pencil": {
+      "light": "#865000",
+      "dark": "#E8AA48",
+      "role": "changes requested, warnings"
+    },
+    "mark": {
+      "light": "#F4E7A8",
+      "dark": "#5A4B14",
+      "role": "highlighter on a caption hook"
+    },
+    "pin": {
+      "light": "#D63B64",
+      "dark": "#FF6C93",
+      "role": "comment pins"
+    },
+    "sel": {
+      "light": "#2B59FF",
+      "dark": "#7C9BFF",
+      "role": "selection handles in the editor"
+    },
+    "table": {
+      "light": "#E2DFD6",
+      "dark": "#0B0C0E",
+      "role": "the light table behind pictures"
+    }
+  },
+  "font": {
+    "ui": "Outfit Variable",
+    "numerals": "Doto Variable",
+    "fallback": "Inter Variable, system-ui, 'Segoe UI', Roboto, sans-serif"
+  },
+  "type": {
+    "label": "11/14, 0.14em tracked, 600, upper case",
+    "meta": "12/16",
+    "body": "13/20",
+    "lead": "15/22",
+    "h3": "18/24",
+    "h2": "24/28",
+    "h1": "36/38",
+    "masthead": "56/56"
+  },
+  "space": [
+    2,
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    72
+  ],
+  "radius": {
+    "controls": 3,
+    "dialogs": 4,
+    "pictures": 0,
+    "dots": 999
+  },
+  "shadow": {
+    "small": "2px 2px 0 edge",
+    "default": "3px 3px 0 edge",
+    "large": "6px 6px 0 edge"
+  },
+  "motion": {
+    "fast": 120,
+    "mid": 180,
+    "slow": 240,
+    "easing": "cubic-bezier(.2,.7,.2,1)"
+  }
+}
