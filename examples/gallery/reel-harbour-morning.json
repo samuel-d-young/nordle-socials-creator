@@ -1,0 +1,17 @@
+{
+  "id": "harbour-morning-reel",
+  "title": "Harbour morning (motion reel)",
+  "sizes": ["ig-reel-9x16"],
+  "scenes": [
+    { "type": "motion", "recipe": "kinetic", "dur": 2.6, "background": "aurora",
+      "content": { "kicker": "Little Gannet Coffee", "headline": "Small batches\nbig mornings", "accent": "big mornings", "body": "Roasted on the harbour" } },
+    { "type": "motion", "recipe": "number", "dur": 2.6, "background": "glow",
+      "content": { "kicker": "Since 2016", "number": "98", "suffix": "%", "label": "Single-origin beans", "note": "Traceable to the farm", "progress": 0.98 } },
+    { "type": "motion", "recipe": "list", "dur": 2.8, "background": "bold",
+      "content": { "kicker": "Your first visit", "headline": "What to expect", "items": ["A warm welcome", "A look at the menu", "Your first cup"] } },
+    { "type": "motion", "recipe": "bars", "dur": 2.8, "background": "paper",
+      "content": { "kicker": "On the menu", "headline": "Cups a day", "items": [{ "label": "Flat white", "value": 120 }, { "label": "Latte", "value": 90 }, { "label": "Filter", "value": 30 }] } },
+    { "type": "motion", "recipe": "logo", "dur": 2.2, "background": "aurora",
+      "content": { "line": "Come and say hello", "url": "littlegannet.example" } }
+  ]
+}

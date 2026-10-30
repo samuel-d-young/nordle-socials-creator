@@ -6,6 +6,10 @@ A local social-media studio where **Claude is the designer** and you are the art
 the posts (carousels, single graphics, **reels cut from your real footage**), writes the captions, and **checks its own
 work**; you open the Studio, step through what is ready, and approve, ask for changes, or move things around yourself.
 
+<p align="center"><img src="docs/images/studio-month.png" alt="The Nordle Studio: a month of posts for three made-up brands, in colour-coded lanes" width="920"></p>
+
+*The Studio, showing a month for three made-up brands. Every brand, post and number in the screenshots in this README is invented.*
+
 What makes it different from a template tool:
 
 - **Claude designs, then judges.** Layout patterns give it well-spaced pages in your brand's own house style; a design
@@ -26,9 +30,62 @@ On a Mac? See [docs/MACOS.md](docs/MACOS.md) (Homebrew install, the Command key,
 
 Want to see the whole workflow work before you trust it? Paste the prompt in [docs/SELF-TEST.md](docs/SELF-TEST.md): Claude uses the Studio on three brands and reports what worked and what broke.
 
+## What it makes
+
+All of this was made by Nordle from the made-up Little Gannet Coffee sample brand. Each post is one small document, and the same document comes out in every size.
+
+<p align="center">
+<img src="examples/gallery/carousel-1-cover.png" width="19%" alt="Carousel page 1: Spring menu is here">
+<img src="examples/gallery/carousel-2-latte.png" width="19%" alt="Carousel page 2: Honey lavender latte">
+<img src="examples/gallery/carousel-3-tonic.png" width="19%" alt="Carousel page 3: Cold brew tonic">
+<img src="examples/gallery/carousel-4-cortado.png" width="19%" alt="Carousel page 4: Cardamom cortado">
+<img src="examples/gallery/carousel-5-visit.png" width="19%" alt="Carousel page 5: Come say hi">
+</p>
+
+<p align="center">
+<img src="examples/gallery/graphic-open-late-4x5.png" height="400" alt="A feed graphic: Open till 8 pm">
+<img src="examples/gallery/story-open-late-9x16.png" height="400" alt="The same graphic as a story">
+<img src="examples/gallery/reel-harbour-morning.gif" height="400" alt="A 13-second motion-graphics reel: kinetic type, a counting number, a list, bars, a logo">
+</p>
+
+*A five-page carousel, one graphic in two sizes, and a motion-graphics reel with no footage (a small GIF preview). How to make them again: [examples/gallery](examples/gallery/README.md).*
+
+## A look around
+
+**Review queue.** Steps through what is waiting: approve, ask for changes with pins on the picture, or reject. The caption, checks and comments sit beside the post.
+
+<img src="docs/images/studio-queue.png" alt="The review queue showing a carousel, its caption and the Approve, Request changes and Reject buttons" width="900">
+
+**The wall, and a post's sheet.** Every post as a thumbnail, by week; open one for the big preview, its pages, its checks and who made them.
+
+<img src="docs/images/studio-post.png" alt="The wall of posts with one carousel open beside it" width="900">
+
+**The plan.** Monthly quotas, the mix of themes against your aim, the gaps, and the idea backlog you approve or reject.
+
+<img src="docs/images/studio-plan.png" alt="The plan: quotas for three months, the theme mix and an idea in the backlog" width="900">
+
+**Insights.** What worked and what did not, scored against the account's own history, with every group showing how many posts it rests on (small groups are labelled "directional only"). *The numbers here are invented.*
+
+<img src="docs/images/studio-insights.png" alt="Insights: best and weakest posts, and results by theme, format, hook type and weekday" width="900">
+
+**The editor.** Pick any post and change it by hand: text, images, shapes, every size at once, safe zones, and a lock on anything Claude must not touch.
+
+<img src="docs/images/editor-carousel.png" alt="The picture editor with a carousel cover open, its pages on the left and properties on the right" width="900">
+
 ## Install (two minutes)
 
-Needs Node.js 20 or newer. ffmpeg is needed for video posts only.
+You need:
+
+- **Node.js 20 or newer.**
+- **Claude Code, signed in.** Nordle asks Claude to plan, design and check, so builds use your own Claude plan: about 1 to 2 dollars to build a
+  picture post and up to 5 dollars for a reel. Every run is capped and says what it cost. Without Claude Code you can still open the sample,
+  edit by hand and render; the planning and building need it.
+- **ffmpeg**, for video posts only (never bundled).
+
+Nordle only puts a new post in Buffer when you press Schedule, or after you switch on automatic scheduling yourself. Once Buffer is connected it
+also keeps Buffer matching your calendar: if you move, reject or un-approve a post, its copy in Buffer is moved or deleted (posts made by hand in
+Buffer are never touched; turn this off with `autoSync: { enabled: false }` in the publishing settings, see [docs/PUBLISHING.md](docs/PUBLISHING.md)).
+It checks GitHub for a newer version at most once every six hours (a plain request, nothing about you is sent); turn that off with `NORDLE_NO_UPDATE_CHECK=1`.
 
 ```bash
 git clone https://github.com/samuel-d-young/nordle-socials-creator nordle && cd nordle
