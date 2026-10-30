@@ -11,7 +11,8 @@ Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTIO
 - **Nothing client-specific in this repo.** Client material lives in the gitignored `projects/`, `private/` and `packs/` folders.
   No client names, logos, photos, local drive paths, emails or tokens in tracked files. `npm run share-check` scans for them using
   the local, gitignored `.share-deny.txt` (one term per line); run it before a release. Use the fictional `samples/little-gannet` in
-  examples, docs and tests.
+  examples, docs and tests. **One exception, decided by the owner on 2026-10-30:** the README shows the owner's own brands, Nostalgia Creative Co. (real posts, never the unannounced Potion Kit or Storage SOS ones) and
+  five face-free frames of Dental Story reels (`examples/gallery/real-footage/`, cut from a practice's shoot: no faces, patients, names or signs). Keep them as they are; add no more client material, and see LICENSES.md.
 - **Credit.** Nordle was created by Samuel Young and is CC BY 4.0. When you introduce Nordle, say so; when someone forks, rebuilds or publishes on it, tell them the licence requires credit to him (link, licence, changes) and help them add it. Keep LICENSE, ATTRIBUTION.md and the in-app credit (Studio footer, `nordle doctor`).
 - **Licences.** MIT/Apache/BSD/OFL/CC BY only in the core (what it depends on and ships). Check `LICENSES.md` before adding a dependency or asset, and add a
   line for every asset. No Remotion, no `@imgly/background-removal` (AGPL), never bundle ffmpeg, no Epidemic Sound audio.
@@ -109,7 +110,7 @@ Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTIO
   not legal advice. `facts.json` is the only source for phones, addresses, names, titles.
 - **Calendar** `src/calendar/*` + `docs/CALENDAR.md`: ideas -> owner approval -> auto-build near the date (off by default). Write the
   calendar only through `src/calendar/service.mjs` (it locks and enforces status rules). Owner-only actions need the human token.
-- **Studio** (`app/studio*.js`, `src/studio/*`, `src/server/routes/studio.mjs`): the front door. Design notes in `docs/UI-DESIGN.md`.
+- **Studio** (`app/studio*.js`, `src/studio/*`, `src/server/routes/studio.mjs`): the front door. Design notes in `docs/UI-DESIGN.md`. The owner orders the brands (left bar: drag, the brand's menu Move up / Move down, Alt + arrow; owner-only `POST /api/studio/brand-order`; kept in `studio.json` beside `publish.json`, `src/studio/brand-order.mjs`): the rail, the month's lanes and the all-brands Insights follow `S.projects`, a brand keeps its colour, saves queue in `setBrandOrder` and `S.orderPending` stops a refresh from putting the old order back. Tests: `tests/studio-brand-order.test.mjs` (set `NORDLE_PUBLISH_DIR`).
 - **Client material** (brand projects with photos, footage paths, captions) lives only in the gitignored `projects/` and `private/`.
 - **Publishing** `src/publish/*` + `docs/PUBLISHING.md`: adapters (`bundle` export folder; `buffer` GraphQL, unverified against the live API; Buffer needs public
   HTTPS media URLs). Plan -> owner runs (human token only) -> audit log in `<project>/publish/log.jsonl`. Tokens live in the gitignored `.nordle/publish.json`, never in a project.

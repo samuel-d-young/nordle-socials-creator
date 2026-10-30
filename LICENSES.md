@@ -48,10 +48,14 @@ so they are only the Studio's, never a brand's. The paper, ink and orange style 
 The public pages in `site/` (the landing page and the Buffer sign-in relay `site/connect/buffer.html`, published with GitHub Pages) are original to Nordle, CC BY 4.0, created by Samuel Young. `site/fonts/` holds unmodified copies of the latin and latin-ext files of Outfit, Doto and Inter with their SIL Open Font License 1.1 text beside each; `site/images/studio-month.png` is the README's own screenshot of the fictional sample brand.
 The brand kit in `brand/` (the Nordle mark, wordmark, social images, tokens and guide) is original to Nordle, CC BY 4.0, created by Samuel Young; the wordmark and lockup SVGs embed the OFL fonts Outfit and Doto. A fork must use its own name and mark.
 
+The pictures of the author's own brands, Nostalgia Creative Co. and Dental Story (`examples/gallery/nostalgia/`, `examples/gallery/real-footage/`, `docs/images/real-nostalgia-*.png`, and the
+Nostalgia posts in `docs/images/studio-month.png`), are shown as examples of what Nordle holds and makes. They are **not** under the CC BY 4.0 licence of the code: all rights are reserved, so please
+do not reuse them. The Dental Story frames were chosen to show no faces, patients, names or signs.
+
 ## Not allowed in the repo
 
-Music from Epidemic Sound or any licensed library, client photos or logos, anything under `packs/`, and any code
-copied from tools whose licence does not allow it (for example members-only or non-commercial tools).
+Music from Epidemic Sound or any licensed library, client photos or logos (the few Dental Story example frames above are the one exception, by the owner's decision: no faces, names or signs),
+anything under `packs/`, and any code copied from tools whose licence does not allow it (for example members-only or non-commercial tools).
 
 ## Credits
 

@@ -852,6 +852,9 @@ a.btn { text-decoration: none; color: inherit; }
 .rb-menu { opacity: 0; border: 0; background: none; padding: 5px; margin-right: 2px; color: var(--ink-3); border-radius: var(--radius); display: inline-flex; }
 .rb-row:hover .rb-menu, .rb-menu:focus-visible, .rb-menu[aria-expanded="true"] { opacity: 1; }
 .rb-menu:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+.rb-row.dragging { opacity: .45; }
+.rb-row.drop-here { box-shadow: 0 -2px 0 var(--ink), inset 0 2px 0 var(--ink); }
+.popmenu button:disabled { opacity: .4; cursor: default; }
 .popmenu { position: fixed; z-index: 120; min-width: 190px; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--lift); padding: 4px; }
 .popmenu button { display: flex; width: 100%; gap: 8px; align-items: center; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: var(--radius); color: var(--ink); }
 .popmenu button:hover, .popmenu button:focus-visible { background: color-mix(in srgb, var(--ink) 7%, transparent); }

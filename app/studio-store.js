@@ -14,6 +14,7 @@ export const S = {
   rev: null,
   trashCount: 0,
   projects: [],
+  orderPending: 0,            // saves of a new order of the brands that have not finished
   posts: [],
   byUid: new Map(),
   view: 'month',
@@ -83,10 +84,17 @@ export const dateFmt = {
 
 // ---- loading ------------------------------------------------------------------------------------------------------------------
 
+/** `list` in the order `like` has (a brand `like` does not have goes last, in its own place). */
+function inOrderOf(list, like) {
+  const rank = new Map(like.map((p, i) => [p.id, i]));
+  return list.map((p, i) => ({ p, i })).sort((a, b) => (rank.get(a.p.id) ?? 1e9) - (rank.get(b.p.id) ?? 1e9) || a.i - b.i).map((x) => x.p);
+}
+
 function ingest(r) {
   const byUid = new Map(r.posts.map((p) => [p.uid, p]));
   update({
-    load: 'ready', error: '', offline: false, rev: r.rev, trashCount: r.trashCount ?? 0, projects: r.projects, posts: r.posts, byUid,
+    // while a new order of the brands is being saved, an answer that was asked for before it must not put the old order back
+    load: 'ready', error: '', offline: false, rev: r.rev, trashCount: r.trashCount ?? 0, projects: S.orderPending > 0 ? inOrderOf(r.projects, S.projects) : r.projects, posts: r.posts, byUid,
     today: S.todayOverride || r.today, month: S.month || (S.todayOverride || r.today).slice(0, 7),
   });
 }

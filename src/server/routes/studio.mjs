@@ -5,6 +5,7 @@
 //   POST /api/studio/act             {uid, action: approve|changes|reject|reopen|idea-approve|idea-reject|edit|undo, ...}   owner only
 //                                    `changes` also starts the designer on the post at once ({revising:true}; {revising:false, reviseReason:'off'|'no-post'|'not-sent-back'} when it cannot)
 //   POST /api/studio/bulk            {uids, onlyVerified}                                                                 owner only
+//   POST /api/studio/brand-order     {order: [brand ids]}  the order of the brands in the rail, the month's lanes and the all-brands Insights (kept on this computer, `studio.json`)   owner only
 //   POST /api/studio/cover           {uid, time} or {uid, auto:true}  use the frame at that second (or the best one) of a reel as its cover (the picture is retaken, no re-render; Buffer is told the frame)   owner only
 //   POST /api/studio/caption         {uid, text}  change a post's caption (a built post: its document, one undo step; an imported post: its record)   owner only
 //   GET  /api/studio/cover-candidates?uid=&count=   the best few frames of a reel, best first: [{time, score, image: data URL}] and the cover now. Reads only.
@@ -16,6 +17,7 @@ import { comment, CommentError } from '../../studio/comments.mjs';
 import { setCaption, CaptionError } from '../../studio/caption.mjs';
 import { listTrash, removeBrand, removePosts, restoreBrand, restorePost, TrashError, trashCount } from '../../studio/trash.mjs';
 import { candidatesFor, setCover } from '../../studio/cover.mjs';
+import { saveBrandOrder } from '../../studio/brand-order.mjs';
 import { createHash } from 'node:crypto';
 import { pictureInProject, sendThumbnail, thumbnail } from '../../studio/thumb.mjs';
 
@@ -47,6 +49,14 @@ export default {
         const abs = pictureInProject(project.dir, url.searchParams.get('path') ?? '');
         need(abs, 404, 'No such picture.');
         return sendThumbnail(req, res, await thumbnail(abs, url.searchParams.get('w')));
+      }
+      if (sub === 'brand-order') {
+        // the order of the brands in the rail, the month's lanes and the all-brands Insights: the owner's choice on this computer
+        need(method === 'POST', 405, 'POST only.');
+        needHuman();
+        const body = await readJsonBody(req);
+        need(Array.isArray(body.order) && body.order.length <= 500, 400, 'Send {"order": ["brand-id", ...]}.');
+        return sendJson(res, 200, { ok: true, order: saveBrandOrder(body.order, store.scan().map((p) => p.id)) });
       }
       if (sub === 'act') {
         need(method === 'POST', 405, 'POST only.');

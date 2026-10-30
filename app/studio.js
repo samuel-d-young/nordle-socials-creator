@@ -112,6 +112,52 @@ function setView(view, { push = true } = {}) {
   writeUrl(push);
 }
 
+// ---- the order of the brands: the rail, the month's lanes and the all-brands Insights follow it. It is shown at once, then kept on this computer. ----------
+
+let orderSaves = Promise.resolve();
+/** Put the brands in `ids` order (a brand left out keeps its place after the others). Saves go one after another, so the last choice is the one kept. */
+function setBrandOrder(ids, { focus } = {}) {
+  const byId = new Map(S.projects.map((p) => [p.id, p]));
+  const next = ids.map((id) => byId.get(id)).filter(Boolean);
+  if (next.length !== S.projects.length || next.every((p, i) => p === S.projects[i])) return undefined;
+  update({ projects: next, orderPending: S.orderPending + 1 });
+  if (focus) requestAnimationFrame(() => document.querySelector(`.rb-row[data-brand="${focus}"] .rb`)?.focus());
+  const order = next.map((p) => p.id);
+  orderSaves = orderSaves.then(async () => {
+    let failed = null;
+    try { await api.post('/studio/brand-order', { order }); } catch (e) { failed = e; }
+    update({ orderPending: S.orderPending - 1 });
+    if (failed) notify(failed.message, { kind: 'error' });
+    if (failed || S.orderPending === 0) await load({ force: true });      // what the server has is the truth: after the last save, or when one could not be saved
+  });
+  return orderSaves;
+}
+/** Move one brand to a place in the list (0 is the top). */
+function moveBrand(id, to) {
+  const ids = S.projects.map((p) => p.id);
+  const from = ids.indexOf(id);
+  if (from < 0) return undefined;
+  const at = Math.max(0, Math.min(ids.length - 1, to));
+  if (at === from) return undefined;
+  ids.splice(at, 0, ids.splice(from, 1)[0]);
+  return setBrandOrder(ids, { focus: id });
+}
+let draggedBrand = null;
+const clearDrag = () => { for (const r of document.querySelectorAll('.rb-row.dragging, .rb-row.drop-here')) r.classList.remove('dragging', 'drop-here'); };
+const brandDrag = {
+  start: (e, p) => { draggedBrand = p.id; if (e.dataTransfer) { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; } e.currentTarget.classList.add('dragging'); },
+  over: (e) => { if (!draggedBrand) return; e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drop-here'); },
+  leave: (e) => e.currentTarget.classList.remove('drop-here'),
+  drop: (e, p) => { if (!draggedBrand) return; e.preventDefault(); const from = draggedBrand; draggedBrand = null; clearDrag(); moveBrand(from, S.projects.findIndex((x) => x.id === p.id)); },
+  end: () => { draggedBrand = null; clearDrag(); },
+};
+/** Alt + arrow up or down on a brand moves it. */
+function brandKey(e, p) {
+  if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); e.stopPropagation();
+  moveBrand(p.id, S.projects.findIndex((x) => x.id === p.id) + (e.key === 'ArrowUp' ? -1 : 1));
+}
+
 function setBrand(brand) {
   if (brand === S.brand) return;
   update({ brand, sel: null, open: false, picked: new Set(), queue: { ...S.queue, list: [], uid: null } });
@@ -246,8 +292,11 @@ function renderRail() {
         h('button', { class: 'rail-add', type: 'button', 'data-act': 'add-brand', title: 'Add a brand', 'aria-label': 'Add a brand', onclick: () => openAddBrand({ onCreated: (id) => setBrand(id), openPublishing: () => openConnect('buffer'), openStock: (id) => openStock({ project: id }), openLibrary: () => { location.hash = '#/projects'; } }) }, icon('plus', 14), h('span', {}, 'Add'))),
       h('button', { class: `rb${S.brand === 'all' ? ' on' : ''}`, type: 'button', 'aria-pressed': String(S.brand === 'all'), onclick: () => setBrand('all') },
         h('span', { class: 'rb-ticks', 'aria-hidden': 'true' }, S.projects.map((p) => h('i', { style: { '--lane': p.color } }))), h('span', { class: 'rb-n' }, 'All brands'), needsAll ? h('span', { class: 'rb-c', title: 'Waiting for your review' }, String(needsAll)) : null),
-      S.projects.map((p, i) => h('div', { class: 'rb-row' },
-        h('button', { class: `rb${S.brand === p.id ? ' on' : ''}`, type: 'button', 'aria-pressed': String(S.brand === p.id), onclick: () => setBrand(p.id), title: `${p.name} (${i + 2})` },
+      S.projects.map((p, i) => h('div', {
+        class: 'rb-row', draggable: 'true', 'data-brand': p.id,
+        ondragstart: (e) => brandDrag.start(e, p), ondragover: brandDrag.over, ondragleave: brandDrag.leave, ondrop: (e) => brandDrag.drop(e, p), ondragend: brandDrag.end,
+      },
+        h('button', { class: `rb${S.brand === p.id ? ' on' : ''}`, type: 'button', 'aria-pressed': String(S.brand === p.id), onclick: () => setBrand(p.id), onkeydown: (e) => brandKey(e, p), title: `${p.name} (${i + 2})\nDrag to move it, or Alt + arrow up or down` },
           h('i', { class: 'tick', style: { '--lane': p.color }, 'aria-hidden': 'true' }), h('span', { class: 'rb-n' }, p.name), bc[p.id]?.needs ? h('span', { class: 'rb-c', title: 'Waiting for your review' }, String(bc[p.id].needs)) : null),
         h('button', { class: 'rb-menu', type: 'button', 'aria-label': `More for ${p.name}`, 'aria-haspopup': 'menu', onclick: (e) => openBrandMenu(e.currentTarget, p) }, icon('dots', 15))))),
     h('div', { class: 'rail-foot' },
@@ -276,9 +325,12 @@ function hostingNote() {
 /** The small menu beside a brand in the rail. */
 function openBrandMenu(button, p) {
   document.querySelector('.popmenu')?.remove();
+  const at = S.projects.findIndex((x) => x.id === p.id);
   const r = button.getBoundingClientRect();
   const menu = h('div', { class: 'popmenu', role: 'menu', style: { left: `${Math.round(r.left)}px`, top: `${Math.round(r.bottom + 4)}px` } },
     h('button', { role: 'menuitem', type: 'button', 'data-act': 'brand-guide', onclick: () => { menu.remove(); openGuide(p.id, { brandName: p.name }); } }, icon('eyeView', 14), 'Style guide…'),
+    h('button', { role: 'menuitem', type: 'button', 'data-act': 'brand-up', disabled: at <= 0, onclick: () => { menu.remove(); moveBrand(p.id, at - 1); } }, icon('up', 14), 'Move up'),
+    h('button', { role: 'menuitem', type: 'button', 'data-act': 'brand-down', disabled: at >= S.projects.length - 1, onclick: () => { menu.remove(); moveBrand(p.id, at + 1); } }, icon('down', 14), 'Move down'),
     h('button', { role: 'menuitem', type: 'button', onclick: () => { menu.remove(); act.removeBrand(p); } }, icon('trash', 14), 'Remove brand…'));
   button.setAttribute('aria-expanded', 'true');
   const close = () => { menu.remove(); button.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', esc, true); };
@@ -387,7 +439,8 @@ function renderView() {
 }
 
 const viewSig = () => {
-  const base = `${S.view}|${idOf(S.posts)}|${S.brand}|${JSON.stringify(S.f)}|${S.today}`;
+  const base = `${S.view}|${idOf(S.posts)}|${S.brand}|${JSON.stringify(S.f)}|${S.today}|${S.projects.map((p) => p.id).join()}`;     // the brands' order too: the month's lanes follow it
+  // (the queue's signature below does not use it: the queue is one list of posts)
   switch (S.view) {
     case 'month': return `${base}|${[...S.picked].join()}|${isPhone()}`;
     case 'wall': return `${base}|${[...S.picked].join()}|${S.month}`;
@@ -634,7 +687,7 @@ async function quick(kind) {
 function showKeys() {
   const rows = [
     ['Go to', [['g m', 'Month'], ['g w', 'Wall'], ['g q', 'Review queue'], ['g l', 'List'], ['g p', 'Plan'], ['1 2 3 4', 'All brands, then each brand'], ['[  ]', 'Previous, next month'], ['T', 'Today']]],
-    ['Move', [['J  K', 'Next, previous post'], ['← → ↑ ↓', 'Move around the grid'], ['Enter', 'Open the post'], ['Esc', 'Close, or clear the selection'], ['/', 'Search']]],
+    ['Move', [['Alt + ↑ ↓', 'Move a brand up or down, with it focused in the left bar'], ['J  K', 'Next, previous post'], ['← → ↑ ↓', 'Move around the grid'], ['Enter', 'Open the post'], ['Esc', 'Close, or clear the selection'], ['/', 'Search']]],
     ['Decide', [['C', 'Pin a comment on the picture'], ['A', 'Approve (sign off)'], ['X', 'Request changes'], ['R', 'Reject'], ['U', 'Undo the last decision'], ['E', 'Open in the editor']]],
     ['In a post', [[', .', 'Previous, next page (or 5 s back, forward)'], ['← →', 'Pages or seek, with the picture focused'], ['Space', 'Play or pause'], ['S', 'Skip (review queue)']]],
   ];

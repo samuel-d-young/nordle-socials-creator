@@ -11,6 +11,7 @@ import { queuePosition } from '../calendar/jobs.mjs';
 import { DEFAULT_LEAD_DAYS } from '../calendar/plan.mjs';
 import { DEFAULT_TIMEZONE, addDays } from '../calendar/dates.mjs';
 import { requiredChecks, verificationStatus } from '../verify/store.mjs';
+import { applyBrandOrder } from './brand-order.mjs';
 
 // ---- cached JSON ----------------------------------------------------------------------------------------------------------
 
@@ -385,7 +386,8 @@ export function collect(store, { today } = {}) {
   posts.sort((a, b) => (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99') || (a.time ?? '').localeCompare(b.time ?? '') || a.project.localeCompare(b.project) || a.uid.localeCompare(b.uid));
   const tz = projects.find((p) => p.timezone)?.timezone;
   const now = todayIn(tz, today);
-  const body = { today: now, projects, posts };
+  // the owner's order of the brands (a brand keeps its colour wherever it sits: the colour was chosen above, from its place in the folder)
+  const body = { today: now, projects: applyBrandOrder(projects), posts };
   const rev = createHash('sha1').update(JSON.stringify(body)).digest('hex').slice(0, 12);
   return { rev, generatedAt: new Date().toISOString(), ...body };
 }
