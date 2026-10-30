@@ -102,6 +102,9 @@ node server.mjs --open         # the Studio, at http://127.0.0.1:5400
 Or paste [SHARE-PROMPT.md](SHARE-PROMPT.md) into Claude Code and let it do all of that for you. Restart Claude Code once so the
 `nordle_*` tools appear. The first run copies a fictional sample project (a coffee shop) so there is something to open.
 
+**Connect Buffer.** In the Studio open Publishing and press **Sign in with Buffer** (you approve Nordle on Buffer's own page and nothing is pasted), or paste a
+Buffer API key instead. See [docs/PUBLISHING.md](docs/PUBLISHING.md) for what each way does.
+
 ## The Studio (front door)
 
 Month calendar (all brands in colour-coded lanes, or one), Wall of thumbnails, List, a **Review queue** that steps through

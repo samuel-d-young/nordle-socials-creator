@@ -60,7 +60,7 @@ export function head(d, post) {
   const pr = project(post.project);
   const date = post.date ? dateFmt.long(post.date) : 'Not scheduled yet';
   return h('header', { class: 'ph' },
-    h('div', { class: 'ph-meta' }, brandTick(post.project), h('span', { class: 'ph-brand' }, pr?.name ?? post.project), h('span', { class: 'ph-sep' }, '·'), glyph(post.format), h('span', {}, FORMAT_LABEL[post.format] ?? post.format), post.pillar ? h('span', { class: 'ph-pillar' }, pillarName(post)) : null),
+    h('div', { class: 'ph-meta' }, brandTick(post.project), h('span', { class: 'ph-brand' }, pr?.name ?? post.project), h('span', { class: 'ph-sep' }, '·'), glyph(post.format), h('span', {}, FORMAT_LABEL[post.format] ?? post.format), post.pillar ? h('span', { class: 'ph-pillar' }, pillarName(post)) : null, post.fromBuffer ? h('span', { class: 'ph-pillar', 'data-state': 'from-buffer', title: 'Made by hand in Buffer. Nordle copied it here so the calendar shows everything this brand posts. It never changes it in Buffer.' }, 'From Buffer') : null),
     h('h2', { class: 'ph-title' }, post.title),
     h('div', { class: 'ph-line' }, h('span', { class: 'ph-date' }, date, post.time ? ` · ${post.time}` : ''), statusChip(post)));
 }

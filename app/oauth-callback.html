@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>Nordle: signing in with Buffer</title>
+<link rel="icon" type="image/svg+xml" href="/app/icon.svg">
+<style>
+  :root { --paper: #F2F0EA; --surface: #FBFAF7; --ink: #17191B; --ink-2: #44484C; --hot: #FF6B1A; --ok: #17674A; --bad: #B52A17; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #131517; --surface: #1B1E21; --ink: #ECE9E0; --ink-2: #B7B4AA; --hot: #FF8A45; --ok: #62C79B; --bad: #FF7A63; } }
+  html, body { height: 100%; margin: 0; }
+  body { display: grid; place-items: center; background: var(--paper); color: var(--ink); font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 30rem; margin: 1rem; padding: 1.5rem 1.75rem; background: var(--surface); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--hot); }
+  h1 { margin: 0 0 .5rem; font-size: 1.4rem; letter-spacing: -.02em; }
+  p { margin: 0; color: var(--ink-2); }
+  main[data-state="ok"] p { color: var(--ok); font-weight: 600; }
+  main[data-state="bad"] p { color: var(--bad); font-weight: 600; }
+</style>
+</head>
+<body>
+<main data-state="waiting">
+  <h1>Nordle</h1>
+  <p id="msg" role="status">Passing the Buffer sign-in to Nordle…</p>
+</main>
+<script src="/app/oauth-callback.js"></script>
+</body>
+</html>

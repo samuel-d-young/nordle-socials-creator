@@ -1,5 +1,6 @@
 // The Buffer adapter. Buffer's public API is GraphQL at https://api.buffer.com, authenticated with an API key made in Buffer
-// (Settings > API) and sent as `Authorization: Bearer <key>`. What the docs say, and what we have NOT been able to check against
+// (Settings > API) or with the access token of a Buffer sign-in (OAuth, src/publish/buffer-oauth.mjs), both sent as `Authorization: Bearer <token>`.
+// What the docs say, and what we have NOT been able to check against
 // the live service, is in docs/PUBLISHING.md. The two facts that shape this file:
 //   * Buffer has no upload endpoint. A picture or video must be a public, direct, HTTPS address that stays up until the post
 //     goes out (Buffer fetches it at publishing time, maybe days later). So the adapter points Buffer at the export folder
@@ -13,12 +14,14 @@
 import { PublishError, recordAllowance, redact, waitWords } from '../store.mjs';
 import { bundleFileName, bundleFolderName, exportBundle } from './bundle.mjs';
 import { keyFor, uploadAll } from '../hosting.mjs';
+import { accessTokenFor } from '../buffer-oauth.mjs';
 import { join } from 'node:path';
 
 export const BUFFER_API = 'https://api.buffer.com';
 const INSTAGRAM_CAPTION_LIMIT = 2196;     // Buffer's character-limits guide: Instagram post text; a line break counts as 2
 const MAX_CAROUSEL = 20;
-const SERVICES = ['instagram', 'facebook'];   // the channel types Nordle has been written for (the rest are blocked, not guessed)
+const TIKTOK_CAPTION_LIMIT = 2200;        // TikTok's caption length (the safe, long-standing limit)
+const SERVICES = ['instagram', 'facebook', 'tiktok'];   // the channel types Nordle has been written for (the rest are blocked, not guessed). TikTok: Buffer's schema has `metadata.tiktok {title, isAiGenerated}`, both optional, so a TikTok post is the caption plus its video (or pictures) and nothing else (checked against the live schema 29 Oct 2026)
 const STORIES = false;                    // the Instagram `story` type is not verified: stories use the export folder for now
 
 const Q_ORGS = 'query GetOrganizations { account { organizations { id name } } }';
@@ -29,7 +32,7 @@ const M_DELETE = 'mutation DeletePost($input: DeletePostInput!) { deletePost(inp
 const Q_ONE = 'query One($id: PostId!) { post(input: { id: $id }) { id text status dueAt channelService schedulingType assets { __typename type source thumbnail mimeType ... on VideoAsset { video { thumbnailOffset title } } } metadata { __typename ... on InstagramPostMetadata { type shouldShareToFeed firstComment } ... on FacebookPostMetadata { type firstComment } } } }';
 const M_EDIT_DUE = 'mutation EditPost($input: EditPostInput!) { editPost(input: $input) { __typename ... on PostActionSuccess { post { id dueAt status } } ... on MutationError { message } } }';
 
-const Q_POSTS = (metrics, text) => `query ListPosts($org: OrganizationId!, $after: String, $filter: PostsFiltersInput) { posts(first: 100, after: $after, input: { organizationId: $org, filter: $filter, sort: [{ field: dueAt, direction: desc }] }) { edges { node { id channelId channelService status dueAt sentAt${text ? ' createdAt text' : ''}${metrics ? ' metricsUpdatedAt metrics { type value unit }' : ''} } } pageInfo { hasNextPage endCursor } } }`;
+const Q_POSTS = (metrics, text, assets = false) => `query ListPosts($org: OrganizationId!, $after: String, $filter: PostsFiltersInput) { posts(first: 100, after: $after, input: { organizationId: $org, filter: $filter, sort: [{ field: dueAt, direction: desc }] }) { edges { node { id channelId channelService status dueAt sentAt${text ? ' createdAt text' : ''}${assets ? ' assets { __typename type source thumbnail mimeType }' : ''}${metrics ? ' metricsUpdatedAt metrics { type value unit }' : ''} } } pageInfo { hasNextPage endCursor } } }`;
 
 /** Buffer's RateLimit header: `"100-in-15min"; r=83; t=73, "250-in-1day"; r=128; t=66998, ...` -> { '15min': {left, resetsIn}, '1day': ..., '30days': ... } */
 export function parseRateLimit(header) {
@@ -46,9 +49,34 @@ const instagramLength = (text) => String(text).length + (String(text).match(/\n/
 export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, timeoutMs = 30000, allowHttpMedia = false } = {}) {
   const doFetch = (...a) => (fetchImpl ?? globalThis.fetch)(...a);
 
-  /** One GraphQL request. Returns `data`, or throws a PublishError that says what to do. */
-  async function gql(settings, query, variables, { mutation = false, onHeaders } = {}) {
-    if (!settings.token) throw new PublishError(400, 'Buffer is not connected yet: add your Buffer API key in the publishing settings.', { code: 'not-configured' });
+  /**
+   * One GraphQL request. Returns `data`, or throws a PublishError that says what to do. An account that signed in with Buffer (OAuth) has an
+   * access token that lasts about an hour: it is renewed before the request when it is nearly over, and once more (with one retry) when Buffer
+   * answers 401. Both go through buffer-oauth.mjs, the only place that spends a refresh token; `settings.token` is updated in place.
+   */
+  async function gql(settings, query, variables, opts = {}) {
+    if (!settings.token) throw new PublishError(400, 'Buffer is not connected yet: sign in with Buffer, or add your Buffer API key, in the publishing settings.', { code: 'not-configured' });
+    const oauth = settings.account?.authType === 'oauth' && !!settings.account.id;
+    const renew = async (rejected) => {
+      const fresh = await accessTokenFor(settings.account.id, { rejected });
+      settings.token = fresh.token;
+      settings.account.expiresAt = fresh.expiresAt;
+    };
+    if (oauth) await renew(null);
+    try {
+      return await gqlOnce(settings, query, variables, { ...opts, oauth, retryable: oauth });
+    } catch (e) {
+      if (!(oauth && e instanceof PublishError && e.code === 'auth-expired')) throw e;
+      await renew(settings.token);   // Buffer refused this access token: renew once and ask once more
+      return gqlOnce(settings, query, variables, { ...opts, oauth, retryable: false });
+    }
+  }
+
+  const authRefused = (settings, oauth, forbidden = false) => (oauth
+    ? new PublishError(401, forbidden ? 'Buffer refused this sign-in for that. Sign in with Buffer again in the publishing settings.' : 'Buffer did not accept the sign-in. Sign in with Buffer again in the publishing settings.', { code: 'auth' })
+    : new PublishError(401, 'Buffer did not accept the API key. Make a new one in Buffer (Settings > API) and save it in the publishing settings.', { code: 'auth' }));
+
+  async function gqlOnce(settings, query, variables, { mutation = false, onHeaders, oauth = false, retryable = false } = {}) {
     let res;
     try {
       res = await doFetch(apiUrl, {
@@ -64,7 +92,8 @@ export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, tim
     if (settings.account?.id) recordAllowance(settings.account.id, parseRateLimit(res.headers.get('ratelimit')));   // remember what Buffer says is left
     const retryAfter = Number.parseInt(res.headers.get('retry-after') ?? '', 10);
     if (res.status === 429) throw new PublishError(429, `Buffer's rate limit is used up. Try again in ${Number.isFinite(retryAfter) ? waitWords(retryAfter) : 'a while'}; nothing further was sent.`, { code: 'rate-limit', retryAfter: Number.isFinite(retryAfter) ? retryAfter : null });
-    if (res.status === 401 || res.status === 403) throw new PublishError(401, 'Buffer did not accept the API key. Make a new one in Buffer (Settings > API) and save it in the publishing settings.', { code: 'auth' });
+    if (res.status === 401 && retryable) throw new PublishError(401, 'Buffer did not accept the access token.', { code: 'auth-expired' });   // expired or revoked: gql() renews it and asks once more
+    if (res.status === 401 || res.status === 403) throw authRefused(settings, oauth, res.status === 403);
     let json = null;
     const text = await res.text().catch(() => '');
     try { json = JSON.parse(text); } catch { /* not JSON */ }
@@ -72,7 +101,8 @@ export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, tim
     if (Array.isArray(json.errors) && json.errors.length && !json.data?.createPost) {
       const e = json.errors[0], code = e.extensions?.code;
       if (code === 'RATE_LIMIT_EXCEEDED') throw new PublishError(429, `Buffer's rate limit is used up (${e.extensions?.window ?? 'window unknown'}). Try again later; nothing further was sent.`, { code: 'rate-limit', retryAfter: Number.isFinite(retryAfter) ? retryAfter : null });
-      if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') throw new PublishError(401, `Buffer refused: ${redact(e.message, settings.token)}. Check the API key.`, { code: 'auth' });
+      if (code === 'UNAUTHORIZED' && retryable) throw new PublishError(401, 'Buffer did not accept the access token.', { code: 'auth-expired' });
+      if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') throw oauth ? authRefused(settings, true, code === 'FORBIDDEN') : new PublishError(401, `Buffer refused: ${redact(e.message, settings.token)}. Check the API key.`, { code: 'auth' });
       throw new PublishError(502, `Buffer said: ${redact(e.message ?? code ?? 'an error', settings.token)}`, { code: code ?? 'graphql', uncertain: mutation && code === 'UNEXPECTED' });
     }
     return json.data;
@@ -116,7 +146,7 @@ export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, tim
     describe(state = {}) {
       const accounts = state.accounts ?? [];
       const needs = [];
-      if (!accounts.some((a) => a.configured)) needs.push('A Buffer account: an API key from Buffer (Settings > API), saved in the publishing settings');
+      if (!accounts.some((a) => a.configured)) needs.push('A Buffer account: sign in with Buffer, or paste an API key from Buffer (Settings > API), in the publishing settings');
       if (!Object.values(state.brands ?? {}).some((b) => b.channels?.length)) needs.push('The Buffer channels each brand posts to');
       if (!state.options?.mediaBaseUrl) needs.push('Somewhere public for the pictures and video: set up media hosting (a bucket Nordle uploads to) or the web address where the export folders are hosted. Buffer reads pictures from web addresses; it has no upload');
       const seen = new Map();
@@ -166,16 +196,17 @@ export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, tim
      * Posts Buffer holds for some channels of one organisation (one request per 100 posts, newest due first), read only. `filter` is Buffer's PostsFiltersInput
      * (status, dueAt {start,end}, ...). Stops early, saying so, when the 15-minute or daily request allowance runs low. Returns { posts, pages, complete, rate }.
      */
-    async listPosts(settings, { organizationId, channelIds, filter = {}, metrics = false, text = false, maxPages = 8 } = {}) {
+    async listPosts(settings, { organizationId, channelIds, filter = {}, metrics = false, text = false, assets = false, maxPages = 8 } = {}) {
       if (!organizationId || !channelIds?.length) return { posts: [], pages: 0, complete: true, rate: {} };
       const posts = [];
       let after = null, pages = 0, rate = {}, complete = true, stopped = null;
       for (;;) {
-        const data = await gql(settings, Q_POSTS(metrics, text), { org: organizationId, after, filter: { channelIds, ...filter } }, { onHeaders: (h) => { rate = parseRateLimit(h.get('ratelimit')); } });
+        const data = await gql(settings, Q_POSTS(metrics, text, assets), { org: organizationId, after, filter: { channelIds, ...filter } }, { onHeaders: (h) => { rate = parseRateLimit(h.get('ratelimit')); } });
         const conn = data?.posts;
         for (const e of conn?.edges ?? []) {
           const n = e.node;
           posts.push({ id: String(n.id), channelId: String(n.channelId), service: n.channelService ?? null, status: n.status, dueAt: n.dueAt ?? null, sentAt: n.sentAt ?? null, ...(text ? { text: n.text ?? '', createdAt: n.createdAt ?? null } : {}),
+            ...(assets ? { assets: (n.assets ?? []).map((a) => ({ type: a.type ?? (a.__typename === 'VideoAsset' ? 'video' : 'image'), url: a.source ?? null, thumbnail: a.thumbnail ?? null, mime: a.mimeType ?? null })) } : {}),
             ...(metrics ? { metricsUpdatedAt: n.metricsUpdatedAt ?? null, m: Object.fromEntries((n.metrics ?? []).map((x) => [x.type, x.value])) } : {}) });
         }
         pages++;
@@ -200,7 +231,9 @@ export function createBufferAdapter({ fetch: fetchImpl, apiUrl = BUFFER_API, tim
       if (!settings.options?.mediaBaseUrl) add('no-public-url', 'Buffer needs a public web address for each picture and video, and no media web address is set. Use the export folder and host it, or upload by hand in Buffer. (A tunnel option does not exist yet.)');
       if (post.format === 'story' && !STORIES && post.variant !== 'story') add('story-unsupported', 'Stories are not scheduled through Buffer yet: use the export folder and add the story in Buffer.');
       const service = channel?.service ?? cached?.service ?? null;
-      if (service && !SERVICES.includes(service)) add('service-unsupported', `Nordle sends to Instagram and Facebook channels through Buffer, not to ${service} yet: use the export folder for this one.`);
+      if (service && !SERVICES.includes(service)) add('service-unsupported', `Nordle sends to Instagram, Facebook and TikTok channels through Buffer, not to ${service} yet: use the export folder for this one.`);
+      if (service === 'tiktok' && post.variant !== 'story' && String(post.caption ?? '').length > TIKTOK_CAPTION_LIMIT) add('caption-too-long', `The caption is ${String(post.caption).length} characters and TikTok takes ${TIKTOK_CAPTION_LIMIT}.`);
+      if (service === 'tiktok' && post.variant === 'story') add('story-unsupported', 'TikTok has no Stories: this one is not sent to the TikTok channel.');
       if (post.variant === 'story') {
         warnings.push(post.format === 'reel' ? 'Story: the video is shared again as a Story (a Story is at most 60 seconds, so a longer video is cut).' : 'Story: only the first picture goes in the Story, and a 4:5 picture shows with bars above and below (a Story is 9:16).');
       } else if (service === 'instagram' || !service) {

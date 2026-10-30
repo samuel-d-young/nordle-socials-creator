@@ -9,7 +9,7 @@ signed-off ──owner makes a plan──> plan (15 minutes, bound to what it sa
                                      one line per post per channel                           only when EVERY channel has gone
 ```
 
-**Words.** An **account** is a login: one Buffer API key. A **channel** is one place inside an account: an Instagram profile, a Facebook
+**Words.** An **account** is a login: one Buffer API key, or one Buffer sign-in ([Sign in with Buffer](#sign-in-with-buffer-oauth)). A **channel** is one place inside an account: an Instagram profile, a Facebook
 page. A **brand** (a Nordle project) picks the account it publishes through and the channels it posts to, so one brand can post to an
 Instagram profile and four Facebook pages, and a second brand can use a different Buffer account altogether.
 
@@ -54,7 +54,8 @@ Instagram profile and four Facebook pages, and a second brand can use a differen
 `<repo>/.nordle/publish.json`:
 
 ```
-accounts: { "<accountId>": { adapter: "buffer", label, token, organizationId?, lastTestedAt?, lastTestOk?, channelCache } }
+accounts: { "<accountId>": { adapter: "buffer", label, token, organizationId?, lastTestedAt?, lastTestOk?, channelCache,
+                              authType?: "oauth", refreshToken?, expiresAt?, scope? } }   (the last four only for a Buffer sign-in; `token` is then its access token)
 brands:   { "<project>":    { account: "<accountId>"|null, channels: [ {id, name?, service?, formats?, enabled?, offsetMinutes?, hashtags?} ] } }
 adapters: { "buffer":       { options: { mediaBaseUrl, schedulingType?, saveToDraft? } } }
 ```
@@ -147,7 +148,7 @@ tunnel option does not exist yet. Pictures are public (unlisted) from the moment
 
 Options (`options`, or `mediaBaseUrl` at the top level of a settings call): `mediaBaseUrl` (https), `schedulingType` (`automatic` or
 `notification`), `saveToDraft` (send posts to Buffer as drafts instead, a gentler first try; *combination with `customScheduled` is
-unverified*). Limits in Nordle: only Instagram and Facebook channels are sent (any other service is blocked, not guessed); **stories** are
+unverified*). Limits in Nordle: only Instagram, Facebook and TikTok channels are sent (any other service is blocked, not guessed; TikTok, added 29 Oct 2026, sends the caption and the video or pictures with no extra settings, its caption limit is 2200, and it has no Stories); **stories** are
 blocked for Buffer (use the export folder); a reel's cover image is not sent (Buffer only takes a frame time, so choose the cover in Buffer);
 Instagram captions over 2196 characters (a line break counts as 2) and carousels over 20 pictures are blockers.
 
@@ -225,6 +226,7 @@ All under `/api/publish`. Errors are `{ok:false, errors:[{path,message}]}`.
 | `POST /run {planId, only?, override?, times?}` | **owner** | `{results:[{uid,key,channel,ok,message,scheduledAt,remoteId}], posts:[{uid,status,done,total}], stopped?, warnings?}` |
 | `POST /settings {adapter, account?, label?, token?, organizationId?, remove?, brand?, useAccount?, channels?, mediaBaseUrl?, options?}` | **owner** | `{ok, configured, accounts:[{id,label,configured,lastTestedAt}], brands, cleared?}` (`token: null` clears a key) |
 | `POST /test {adapter, account?}` | **owner** | `{ok, message, account?, channels?}`; remembers the channels it sees and when it asked |
+| `GET /oauth/buffer/status`, `POST /oauth/buffer/start {account?, label?}`, `POST /oauth/buffer/finish {code, state, error?}`, `POST /oauth/buffer/disconnect {account}` | **owner** (403 for Claude's token) | see "Sign in with Buffer (OAuth)" below |
 
 `uid` is `<project>:<calendar item id>` as in `/api/studio`. A plan has **one item per post per channel**; `key` is `<uid>#<channelId>` (just the
 uid when there is no channel) and `only`/`override` accept either a uid (all its channels) or a key. `when` is UTC ISO (the calendar time plus
@@ -247,7 +249,7 @@ key has been used.
 Taken from Buffer's documentation (read-only research, October 2026), not exercised against the live service:
 
 * Endpoint `https://api.buffer.com` (GraphQL), `Authorization: Bearer <API key>`; key from Settings > API; OAuth 2.0 also exists (scopes
-  `posts:write`, `account:read`, ...; access tokens last an hour): Nordle uses the API key only. (getting-started.md, authentication.md)
+  `posts:write`, `account:read`, ...; access tokens last an hour): Nordle uses an API key, or since 30 Oct 2026 also Buffer's OAuth sign-in (last section of this page). (getting-started.md, authentication.md)
 * Organisations: `account { organizations { id name } }`; channels: `channels(input:{organizationId}) { id name service ... }`; the Channel type has
   `isDisconnected` and `isLocked`. (examples/get-organizations.md, get-channels.md, reference.md)
 * `createPost(input)` with `text`, `channelId`, `schedulingType` (`automatic`|`notification`), `mode` (`addToQueue`|`shareNext`|`shareNow`|
@@ -310,3 +312,113 @@ Every change is written to `publish/log.jsonl` (events `sync-move`, `sync-adopt`
 **Automatic** (`src/publish/auto-sync.mjs`, started by `server.mjs`, on unless `settings.autoSync.enabled === false`): it watches the calendar files (free), and when a calendar has changed and
 been quiet for a minute (and ten minutes have passed since its last run) it runs the same plan and applies it; otherwise it looks every six hours and once when the server starts.
 It never touches the "left alone" rows. Tests: `tests/publish-sync.test.mjs` (a fake adapter; nothing real is contacted). Read-only audit script: `private/buffer-sync-audit.mjs`.
+
+## Reading Buffer by itself: results, and posts made by hand in Buffer (`publish sync-posts`, automatic)
+
+Nordle also **reads** Buffer so the calendar and Insights show what really happened there, whoever made the post. It is read only: nothing in this section writes to Buffer.
+
+**What it does, for each brand that has a Buffer account and chosen channels** (`src/publish/auto-pull.mjs`, started by `server.mjs`, on unless `settings.autoPull.enabled === false`):
+
+1. Reads the posts that went out and how they did (`src/publish/remote.mjs` `syncSentPosts`, one request per 100 posts), kept in `<project>/performance/buffer-posts.json` (schema `nordle.bufferposts/0.2`: numbers, words and pictures).
+2. Turns those numbers into Insights entries on the calendar posts they belong to (`src/performance/from-buffer.mjs`).
+3. Copies **posts made by hand in Buffer** onto the calendar (`src/publish/buffer-import.mjs`), so the month and the Wall show everything the brand posts.
+
+It runs about every six hours (the time of the last pull is on disk, so a restart does not read again), at most once an hour after a failure, and it keeps Buffer's request allowance (the same reserve as the history pull, see
+"When to post, and Buffer's request allowance"). "Update from Buffer" in Insights, and `node nordle.mjs publish sync-posts <project>`, do the same thing at once.
+
+**What counts as made by hand.** A Buffer post that no calendar item owns: its id is not recorded on an item, its words are not the caption of an item, and (for a story with no words) it is not at one of Nordle's own times.
+Drafts, posts needing approval and errors are not copied. Only this brand's chosen channels are read, so another brand's posts in the same Buffer account never appear. Sent posts are copied for the last 90 days only and at most
+60 new posts per run, newest first (the rest wait for the next run), so the first run cannot flood the calendar.
+
+**What it makes.** One calendar item with `origin: "buffer"`: status `scheduled` (still to go out) or `posted`, the day and time on the brand's clock, the words as `external.caption`, the hashtags, the picture saved as
+`external/<id>/cover.<ext>` (best effort: a public https address only, at most 6 MB, a failure never stops the import), and the Buffer ids as `publish.targets`. One post sent to several channels is one item with several targets.
+The post sheet says **From Buffer**.
+
+**Read only, always.** `publish sync` and the automatic sync skip these items: they are never moved, adopted or deleted in Buffer. Nordle only follows the post: a time moved in Buffer moves the item, a send marks it `posted`, and a
+post deleted in Buffer marks the item `rejected` (with a note). If you edit such an item's caption in Nordle, Buffer keeps its own words.
+
+Tests: `tests/buffer-import.test.mjs` (fake adapter and fake picture server; nothing real is contacted).
+
+## Sign in with Buffer (OAuth)
+
+Nordle can connect to Buffer in two ways, and they sit side by side: **Sign in with Buffer** (OAuth 2.0 authorization code with PKCE: you press a button,
+approve Nordle on Buffer's own page, and nothing is pasted) and the **pasted API key** described above. An account is one or the other; saving a key into an
+account that was signed in clears the sign-in, and signing in to an account that held a key replaces the key. Everything after the connection (plans, runs,
+channels, brands, the audit log) is identical. Code: `src/publish/buffer-oauth.mjs`, `src/server/routes/buffer-oauth.mjs`, `app/studio-buffer-signin.js`,
+`app/oauth-callback.html` + `.js`, `site/` (the hosted pages), `.github/workflows/pages.yml`.
+
+**The flow.**
+
+1. In the Publishing window, **Sign in with Buffer** asks the server (`POST /api/publish/oauth/buffer/start`) for a sign-in. The server makes a PKCE verifier
+   (32 random bytes, kept in memory only), a `state` (`p<port>-<32 hex>`, the port being the one this Nordle answers on), and returns the Buffer address
+   `https://auth.buffer.com/auth` with `client_id`, `redirect_uri`, `response_type=code`, `scope`, `state`, `code_challenge` (SHA-256 of the verifier),
+   `code_challenge_method=S256` and `prompt=consent`.
+2. The Studio opens that address in a new tab. You approve Nordle in Buffer. (The Studio has to be open at `http://127.0.0.1:<port>/`, which is what `node server.mjs --open`
+   uses: the sign-in comes back to that address, and a Studio opened as `localhost` is a different address to the browser, so the two tabs could not talk. The button says so.)
+3. Buffer sends the browser to the **redirect address**, `https://samuel-d-young.github.io/nordle-socials-creator/connect/buffer.html`, with `?code=..&state=..`
+   (or `?error=access_denied&state=..`). That static page forwards the browser to `http://127.0.0.1:<port>/app/oauth-callback.html` (the port is read from the
+   `state`, the host is written into the page's script and never taken from the address).
+4. `app/oauth-callback.html` removes the code from the address bar and hands `{code, state, error}` to the Studio tab that started the sign-in (a
+   `BroadcastChannel` called `nordle-buffer-oauth`, with a short-lived `localStorage` key for browsers that block it), and shows what happened. It has no token and
+   cannot call the API.
+5. The Studio tab (which holds the owner's token) checks the state is the one it started and calls `POST /api/publish/oauth/buffer/finish`. The server checks
+   the state again (exact match, not older than 10 minutes, used once, at most five waiting), posts the code and the verifier to `https://auth.buffer.com/token`
+   (form-encoded, no client secret), saves the account in `.nordle/publish.json` (mode 0600), and tests the connection the way the key flow does (lists the
+   organisations and channels). The window then shows the account as **Signed in with Buffer** with a **Disconnect** button.
+
+**Why a hosted page exists, and what it can and cannot see.** Buffer only accepts `https` redirect addresses, even for local development, and they must match the
+registered one exactly, so Buffer cannot send the browser straight to Nordle on `127.0.0.1`. `site/connect/buffer.html` is a few lines of plain HTML and one
+script file (no external resources, no analytics, no cookies, no storage, a strict `Content-Security-Policy` meta tag, `no-referrer`) published with GitHub Pages
+(`.github/workflows/pages.yml` deploys `site/`). It sees the one-time **code** and the **state** in its own address and nothing else. The code is useless without the
+verifier, which never leaves this computer; the page cannot read your tokens (they are traded from this computer straight to Buffer); it forwards only to
+`127.0.0.1` and refuses any `state` Nordle did not make. GitHub, like any web host, may keep its own ordinary access logs. The landing page `site/index.html` says the same in plain words.
+
+**Settings.** The app client id is not a secret (a public client has no secret at all). `BUFFER_OAUTH_CLIENT_ID` in `src/publish/buffer-oauth.mjs` is Nordle's own;
+`NORDLE_BUFFER_CLIENT_ID` or the publishing setting `adapters.buffer.oauth.clientId` overrides it (a fork uses its own). Likewise `BUFFER_OAUTH_REDIRECT_URI`
+(`NORDLE_BUFFER_REDIRECT_URI`, `adapters.buffer.oauth.redirectUri`; must be https) and the scopes (`NORDLE_BUFFER_SCOPES`, space separated, or
+`adapters.buffer.oauth.scopes`). `GET /api/publish/oauth/buffer/status` (owner only) returns `{configured, redirectUri, scopes, accounts:[{id,label,authType,expiresAt}]}`.
+With no client id, the button says in plain words that this copy of Nordle has no Buffer app client id yet and that an API key works; `start` answers 409.
+
+| call (all **owner only**; Claude's token gets 403) | reply |
+|---|---|
+| `GET /api/publish/oauth/buffer/status` | `{ok, configured, redirectUri, scopes, accounts, problem?}` |
+| `POST /api/publish/oauth/buffer/start {account?, label?}` | `{ok, url, state, account}`; 409 without a client id. `account` signs that account in again; with none, the first free id (`default`, then `buffer`, `buffer-2`...) |
+| `POST /api/publish/oauth/buffer/finish {code, state, error?}` | `{ok, message, account, label, authType:'oauth', expiresAt, renews, note?, channels?}` (the connection test's answer, never a token) |
+| `POST /api/publish/oauth/buffer/disconnect {account}` | `{ok, account}`: forgets the tokens on this computer, keeps the account |
+
+**Scopes.** Nordle asks for `account:read posts:read posts:write offline_access` and nothing else (the list is `BUFFER_OAUTH_SCOPES`, one constant). The first three
+are what reading channels and posts and scheduling need. `offline_access` is what makes Buffer send a refresh token; Buffer's app-client form has no checkbox for it,
+so it is requested at sign-in. If Buffer refuses it (`invalid_scope`), the message says which scope is the likely cause and where the list is changed. If Buffer
+simply sends no refresh token, the sign-in still works but cannot renew itself: the window says so, and the account card says when the hour ends.
+
+**Token lifetime and rotation.** An access token lasts about an hour (`expires_in`). Nordle renews it when it is within two minutes of its end, and once when Buffer
+answers 401 (renew, then retry that one request; a second 401 is a plain "sign in again" error, never a loop). **Refresh tokens are single use**: every renewal
+returns a new one and the old one dies, and using a dead one revokes the whole grant. So there is exactly one place that renews (`refreshAccount` in
+`src/publish/buffer-oauth.mjs`), guarded by a lock per account inside the server **and** a lock file between programs (the command line and the server share one settings
+file), it reads the stored account again once it holds the lock (so concurrent callers share one renewal), and it saves the new refresh token and access token
+in one atomic write **before** the access token is used. A renewal that Buffer answers with `invalid_grant` makes Nordle forget the dead grant and say "Sign in with
+Buffer again" without trying again. Honest limit: if a renewal's answer is lost after Buffer has already rotated the token (the network drops at that exact moment),
+the new token is lost and the next sign-in must be done by hand.
+
+**Disconnect, Remove, and revoking in Buffer.** *Disconnect* forgets the sign-in on this computer and keeps the account, its brands and its channel names (press "Sign
+in again" to connect it again). *Remove* deletes the account. Neither can take Nordle's access away inside Buffer: that is done in Buffer's own settings, by you, and the
+window says so.
+
+**Registering your own app client (a fork).** In Buffer: Settings > API > App Clients > create a client. Name it (for example "Nordle"), choose a **public** client
+(no secret: PKCE is the protection), and register the redirect address **exactly** (https, nothing added or removed): for a fork that publishes its own `site/`
+folder with GitHub Pages (Settings > Pages > Source: "GitHub Actions"; the workflow `.github/workflows/pages.yml` does the rest) it is
+`https://<your-user>.github.io/<your-repo>/connect/buffer.html`. Tick only the permissions Nordle asks for (`account:read`, `posts:read`, `posts:write`). Then set
+`NORDLE_BUFFER_CLIENT_ID` (and `NORDLE_BUFFER_REDIRECT_URI`) or edit the constants. Nordle's own client id and redirect address are the constants in `src/publish/buffer-oauth.mjs`;
+the redirect address is `https://samuel-d-young.github.io/nordle-socials-creator/connect/buffer.html`.
+
+**What the pasted key is still for.** A personal API key keeps working everywhere, and is the only way in on a copy of Nordle with no app client id. Reading Insights
+(post metrics) may need a personal key: **unverified**, nothing here has been tried to see whether an OAuth access token with these scopes is allowed to read them.
+
+**Verified and not.** `tests/buffer-oauth.test.mjs` (server, a fake Buffer: PKCE against the RFC 7636 vector, the exact authorize parameters, wrong/expired/reused state,
+the form-encoded token request with the verifier and no secret, rotation saved before use, one renewal for concurrent callers, `invalid_grant` without a loop, one retry
+after a 401, pasted keys clearing a sign-in, Claude's token refused, no secret in any reply, plan or audit line) and `tests/buffer-oauth-ui.test.mjs` (the callback page, the
+relay page, and the Publishing window end to end, with the browser's request to Buffer answered by the test). **Nothing has been tried against the real Buffer.** Unverified:
+that Buffer's consent page and token address behave as its developer docs describe (parameter names, `prompt=consent`, Bearer access tokens on `https://api.buffer.com`,
+a 401 for an expired token), that `offline_access` is honoured, that Buffer's rate limits for app clients show in the same `RateLimit` header, and that browsers
+let a real https page send you on to `http://127.0.0.1` (a plain navigation, which loopback addresses are expected to allow; the test serves the relay page over http, so
+this step has not been seen in Chrome, Edge, Firefox or Safari).

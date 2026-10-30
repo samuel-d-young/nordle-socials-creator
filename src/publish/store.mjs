@@ -1,7 +1,10 @@
 // Where publishing keeps its state. Three things, three places:
 //   settings  <repo>/.nordle/publish.json   Gitignored, written with mode 0600 where the OS supports it, never returned by any API
 //             (only `configured: true`), never logged. It holds
-//               accounts  { <accountId>: { adapter, label, token, organizationId?, lastTestedAt?, channelCache } }   the logins (API keys)
+//               accounts  { <accountId>: { adapter, label, token, organizationId?, lastTestedAt?, channelCache,
+//                                          authType?: 'oauth', refreshToken?, expiresAt? (ISO), scope? } }   the logins: an API key, or (authType 'oauth')
+//                                          a Buffer sign-in whose `token` is the access token (about an hour) and `refreshToken` renews it (src/publish/buffer-oauth.mjs).
+//                                          The refresh token never leaves this file except to Buffer's token address; accountsFor/resolveSettings do not carry it.
 //               brands    { <project>: { account: <accountId>|null, channels: [ {id, name?, service?, formats?, enabled?, offsetMinutes?, hashtags?} ] } }
 //               adapters  { <adapter>: { options } }   shared options (the media web address, ...)
 //             An older file with one key per adapter (adapters.buffer.token / .channels) is read as account "default"; the next save
@@ -137,11 +140,14 @@ export const adapterOptions = (settings, adapterId) => {
   return adapterId !== 'bundle' && settings.hosting?.publicBaseUrl ? { ...own, mediaBaseUrl: settings.hosting.publicBaseUrl } : own;
 };
 
-/** The logins (API keys) an adapter has: [{ id, adapter, label, token (or null), organizationId, lastTestedAt, lastTestOk, channelCache }]. The token is for the server only. */
+/**
+ * The logins an adapter has: [{ id, adapter, label, token (or null), authType ('key' | 'oauth'), expiresAt (ISO or null; a Buffer sign-in's access token),
+ * renews (a sign-in that can renew itself), organizationId, lastTestedAt, lastTestOk, channelCache }]. The token is for the server only; the refresh token is never carried.
+ */
 export function accountsFor(settings, adapterId) {
   return Object.entries(settings.accounts ?? {})
     .filter(([id, a]) => a && typeof a === 'object' && a.adapter === adapterId && ACCOUNT_ID.test(id))
-    .map(([id, a]) => ({ id, adapter: a.adapter, label: typeof a.label === 'string' && a.label ? a.label : id, token: typeof a.token === 'string' && a.token ? a.token : null, organizationId: typeof a.organizationId === 'string' && a.organizationId ? a.organizationId : null, lastTestedAt: typeof a.lastTestedAt === 'string' ? a.lastTestedAt : null, lastTestOk: typeof a.lastTestOk === 'boolean' ? a.lastTestOk : null, channelCache: Array.isArray(a.channelCache) ? a.channelCache : [] }));
+    .map(([id, a]) => ({ id, adapter: a.adapter, label: typeof a.label === 'string' && a.label ? a.label : id, token: typeof a.token === 'string' && a.token ? a.token : null, authType: a.authType === 'oauth' ? 'oauth' : 'key', expiresAt: a.authType === 'oauth' && typeof a.expiresAt === 'string' ? a.expiresAt : null, renews: a.authType === 'oauth' && typeof a.refreshToken === 'string' && !!a.refreshToken, organizationId: typeof a.organizationId === 'string' && a.organizationId ? a.organizationId : null, lastTestedAt: typeof a.lastTestedAt === 'string' ? a.lastTestedAt : null, lastTestOk: typeof a.lastTestOk === 'boolean' ? a.lastTestOk : null, channelCache: Array.isArray(a.channelCache) ? a.channelCache : [] }));
 }
 
 /** One brand's setup: which login it publishes through and its channels, every default filled in (whatever form was saved). */
@@ -172,7 +178,7 @@ export function resolveSettings(settings, adapterId, project) {
   const acc = accountsFor(settings, adapterId).find((a) => a.id === b.account) ?? null;
   const options = adapterOptions(settings, adapterId);
   return {
-    account: acc ? { id: acc.id, label: acc.label } : null,
+    account: acc ? { id: acc.id, label: acc.label, authType: acc.authType, expiresAt: acc.expiresAt } : null,   // authType/expiresAt tell the adapter whether to renew a Buffer sign-in
     token: acc?.token ?? null,
     organizationId: acc?.organizationId ?? options.organizationId ?? null,
     options,

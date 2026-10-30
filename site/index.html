@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Nordle: a social-media editor you and Claude edit together</title>
+<meta name="description" content="Nordle is a free, open-source social-media editor that runs on your own computer: video, carousels, graphics and post copy, reviewed and scheduled to Buffer.">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<div class="wrap">
+  <p class="brand">Nordle<i>.</i></p>
+  <p class="lede">A social-media editor you and Claude edit together. It makes video from your footage, motion graphics, carousels, single graphics and the words that go with them, and you review every post before it goes anywhere.</p>
+  <p>Nordle runs on your own computer and is free and open source. When a post is signed off you can schedule it to your channels through Buffer.</p>
+
+  <img class="shot" src="images/studio-month.png" width="1440" height="900" alt="The Nordle Studio showing a month calendar of posts for a fictional coffee shop, each post in a coloured lane">
+
+  <h2>Install</h2>
+  <p>You need Node.js 20 or newer and Claude Code, signed in. The code, the sample project and the full instructions are on <a href="https://github.com/samuel-d-young/nordle-socials-creator">GitHub</a>.</p>
+<pre>git clone https://github.com/samuel-d-young/nordle-socials-creator nordle &amp;&amp; cd nordle
+node setup.mjs --register
+node server.mjs --open</pre>
+  <p><a class="btn" href="https://github.com/samuel-d-young/nordle-socials-creator">Nordle on GitHub</a></p>
+
+  <h2>What “Sign in with Buffer” does</h2>
+  <p>In Nordle’s Publishing window, “Sign in with Buffer” opens Buffer in a new tab. You approve Nordle there, and Nordle (the copy on your computer) can then read your Buffer channels and posts and schedule the posts you choose. You can still paste a Buffer API key instead.</p>
+  <ul>
+    <li>It does <strong>not</strong> let Nordle post on its own. A post goes to Buffer only when you press Schedule, or after you switch on automatic scheduling yourself.</li>
+    <li>It does <strong>not</strong> give this website, or anyone but the copy of Nordle on your computer, any access to your Buffer account.</li>
+    <li>The sign-in is kept in a private file on your computer. “Disconnect” in Nordle forgets it there; to take Nordle’s access away inside Buffer as well, use Buffer’s own settings.</li>
+  </ul>
+
+  <h2>Privacy</h2>
+  <p>This website exists so that Buffer has a secure (https) address to send you back to. The page Buffer sends you to stores nothing: no cookies, no analytics, no accounts, nothing in your browser. All it sees is a one-time code in the address, which is useless without a secret that never leaves your computer, and it passes that on to Nordle on your own computer (127.0.0.1) and nowhere else. Nordle itself runs on your computer and sends nothing to this site. Like any web host, GitHub Pages may keep its own ordinary access logs; nothing here adds to them.</p>
+  <p>The full policy is the <a href="https://dentalstory.au/privacy#nordle">Nordle privacy policy</a>.</p>
+
+  <footer>
+    <p>Nordle was created by Samuel Young, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Fonts: Outfit, Doto and Inter, SIL Open Font License 1.1 (<a href="fonts/outfit/OFL.txt">Outfit</a>, <a href="fonts/doto/OFL.txt">Doto</a>, <a href="fonts/inter/OFL.txt">Inter</a>).</p>
+  </footer>
+</div>
+</body>
+</html>

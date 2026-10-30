@@ -7,6 +7,7 @@ import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { dateFmt } from './studio-store.js';
 import { notify, plural, skeleton } from './studio-ui.js';
+import { openPullOptions } from './buffer-pull-options.js';
 
 const LO = Math.log(0.5), HI = Math.log(2);
 /** Where a score sits on a bar that runs from 0.5× to 2× with 1.0× in the middle (percent from the left). */
@@ -68,7 +69,7 @@ export function timesPanel(pr) {
   const status = h('span', { class: 'muted bt-status' });
   const sync = h('button', { class: 'btn', type: 'button', 'data-act': 'bt-sync', title: 'Ask Buffer for the posts that have gone out and how they did (a few requests)', onclick: () => pull(false) }, icon('calendarSend', 14), 'Update from Buffer');
   const sec = h('section', { class: 'bt', id: `bt-${pr.id}`, 'aria-label': 'When to post' },
-    h('div', { class: 'ins-ghead' }, h('h3', { class: 'lbl' }, 'When to post'), h('span', { class: 'sp' }), status, sync),
+    h('div', { class: 'ins-ghead' }, h('h3', { class: 'lbl' }, 'When to post'), h('span', { class: 'sp' }), status, h('button', { class: 'btn quiet', type: 'button', 'data-act': 'bt-options', title: 'How often, and what, Nordle reads from Buffer by itself', onclick: () => openPullOptions(pr) }, 'Options'), sync),
     h('p', { class: 'ins-gnote muted' }, 'Worked out from this brand\'s own posts that went out through Buffer. Each post is compared with the same channel\'s usual result, so a big page and a small one count the same. Only times you have actually used can show up here.'),
     body);
 
@@ -78,7 +79,7 @@ export function timesPanel(pr) {
       const r = await api.post('/publish/sync-posts', { project: pr.id, ...(force ? { force: true } : {}) });
       if (r.skipped) { notify(r.message, { kind: 'info', ms: 12000, action: { label: 'Pull anyway', fn: () => pull(true) } }); status.textContent = ''; sync.disabled = false; return; }
       const m = r.metrics;
-      notify(`Pulled ${plural(r.fetched, 'post')} from Buffer in ${plural(r.requests, 'request')}.${r.incomplete ? ` Not everything: ${r.incomplete}.` : ''}${m?.ok ? ` ${m.matched} matched a post in Nordle and now have numbers in Insights; ${m.unmatched} were made outside Nordle and count in the totals only.` : ''}`, { kind: r.incomplete ? 'info' : 'ok', ms: 12000 });
+      notify(`Pulled ${plural(r.fetched, 'post')} from Buffer in ${plural(r.requests, 'request')}.${r.incomplete ? ` Not everything: ${r.incomplete}.` : ''}${m?.ok ? ` ${m.matched} matched a post in Nordle and now have numbers in Insights; ${m.unmatched} were made outside Nordle and count in the totals only.` : ''}${r.imported?.ok && r.imported.created ? ` ${plural(r.imported.created, 'post')} made by hand in Buffer ${r.imported.created === 1 ? 'was' : 'were'} added to the calendar (read only).` : ''}`, { kind: r.incomplete ? 'info' : 'ok', ms: 12000 });
       document.dispatchEvent(new Event('nordle-insights-refresh'));
     } catch (e) { notify(e.message, { kind: 'error' }); status.textContent = ''; sync.disabled = false; return; }
     sync.disabled = false;
@@ -87,7 +88,7 @@ export function timesPanel(pr) {
 
   function render(r) {
     if (!r.analysis) {
-      body.replaceChildren(h('div', { class: 'bt-empty' }, h('p', {}, 'Nordle has not looked at this brand\'s Buffer history yet.'), h('p', { class: 'muted' }, 'Press “Update from Buffer”. It reads the posts that have gone out and how they did, using a handful of requests.')));
+      body.replaceChildren(h('div', { class: 'bt-empty' }, h('p', {}, 'Nordle has not looked at this brand\'s Buffer history yet.'), h('p', { class: 'muted' }, 'Nordle reads this by itself every few hours once Buffer is connected. Press “Update from Buffer” to do it now: it reads the posts that have gone out and how they did, and copies posts made by hand in Buffer onto the calendar, using a handful of requests.')));
       status.textContent = '';
       return;
     }

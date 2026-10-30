@@ -45,6 +45,8 @@ The licence text for each is beside the font (`fonts/fraunces/OFL.txt`, `fonts/i
 The Studio's own look also uses `fonts/outfit` (Outfit) and `fonts/doto` (Doto, a dot-matrix face), from the `@fontsource-variable/outfit` and
 `@fontsource-variable/doto` packages, version 5.3.0, SIL Open Font License 1.1 (`fonts/outfit/OFL.txt`, `fonts/doto/OFL.txt`). They are not in `fonts/manifest.json`,
 so they are only the Studio's, never a brand's. The paper, ink and orange style follows RoboNuggets' RENDER Studio (CC BY 4.0); no code was copied.
+The public pages in `site/` (the landing page and the Buffer sign-in relay `site/connect/buffer.html`, published with GitHub Pages) are original to Nordle, CC BY 4.0, created by Samuel Young. `site/fonts/` holds unmodified copies of the latin and latin-ext files of Outfit, Doto and Inter with their SIL Open Font License 1.1 text beside each; `site/images/studio-month.png` is the README's own screenshot of the fictional sample brand.
+The brand kit in `brand/` (the Nordle mark, wordmark, social images, tokens and guide) is original to Nordle, CC BY 4.0, created by Samuel Young; the wordmark and lockup SVGs embed the OFL fonts Outfit and Doto. A fork must use its own name and mark.
 
 ## Not allowed in the repo
 

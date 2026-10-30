@@ -8,6 +8,7 @@ import { S, load, update } from './studio-store.js';
 import { askConfirm, brandName, notify, plainWaits, plural } from './studio-ui.js';
 import { openCoverPicker } from './studio-cover.js';
 import { PUBLISH_GUIDES, guideBlock } from './platform-guides.js';
+import { loadSignInStatus, onSignInChange, resetSignIn, setSignInSink, signInBox, signInCardText, startSignIn } from './studio-buffer-signin.js';
 
 const FORMATS = [['reel', 'Reels'], ['carousel', 'Carousels'], ['post', 'Posts'], ['story', 'Stories']];
 
@@ -52,6 +53,13 @@ export async function loadPublish() {
   try { pub.adapters = await getAdapters(); pub.loaded = true; update(); } catch { /* publishing is optional: the Studio works without it */ }
   try { pub.auto = await api.get('/publish/auto-schedule'); autoChanged(); update(); } catch { pub.auto = null; }
 }
+
+/** A Buffer sign-in that finishes while the Publishing window is closed: say so, and pick up the new account. (The window sets its own handler while it is open.) */
+const signedInWhileClosed = async (r) => {
+  notify(r.ok ? 'Signed in with Buffer. Open Publishing to choose which brand uses it.' : `Signed in with Buffer, but ${short(r.message ?? 'Nordle could not reach Buffer with it', 140)}`, { kind: r.ok ? 'ok' : 'error', ms: 9000 });
+  await loadPublish();
+};
+setSignInSink(signedInWhileClosed);
 
 /** Cheap (local files on the server): what automatic scheduling did lately and what it could not send. Re-draws only when something changed. */
 export async function refreshAuto() {
@@ -710,16 +718,22 @@ export async function openConnect(adapterId = 'buffer') {
     const list = accountsList();
     return [
       h('div', { class: 'acc-head' }, h('h3', { class: 'lbl' }, multi() ? `Buffer accounts (${list.filter((x) => x.configured).length})` : 'Your accounts')),
-      multi() ? h('ul', { class: 'bacc-list' }, list.length ? list.map((x) => h('li', { class: `bacc${flash === x.id ? ' fresh' : ''}`, dataset: { account: x.id } },
+      multi() ? h('ul', { class: 'bacc-list' }, list.length ? list.map((x) => h('li', { class: `bacc${flash === x.id ? ' fresh' : ''}`, dataset: { account: x.id, auth: x.authType === 'oauth' ? 'oauth' : 'key' } },
         h('b', {}, x.label), h('span', { class: `bacc-st ${x.configured && x.lastTestOk !== false ? 'ok' : ''}` }, !x.configured ? 'Not connected' : x.lastTestOk === false ? 'Could not connect' : 'Connected'),
         h('span', { class: 'muted bacc-t' }, [x.lastTestedAt ? `Tested ${stamp(x.lastTestedAt)}` : (x.channels ?? []).length ? '' : 'Not tested yet', (x.channels ?? []).length ? plural(x.channels.length, 'channel') : '', allowanceText(x.allowance)].filter(Boolean).join(' · ')),
-        h('span', { class: 'bacc-acts' }, btn('Test', { quiet: true, act: 'test-account', onclick: () => testAccount(x) }), btn('Remove', { quiet: true, act: 'remove-account', onclick: () => removeAccount(x) })))) : [h('li', { class: 'muted' }, 'No Buffer account is connected yet.')]) : null,
+        x.authType === 'oauth' ? h('span', { class: 'muted bsi-card', 'data-field': `signin-${x.id}` }, signInCardText(x)) : null,
+        h('span', { class: 'bacc-acts' },
+          !x.configured || (x.authType === 'oauth' && x.lastTestOk === false) ? btn('Sign in again', { quiet: true, act: 'buffer-signin-again', onclick: () => startSignIn({ account: x.id, label: x.label }) }) : null,
+          btn('Test', { quiet: true, act: 'test-account', onclick: () => testAccount(x) }),
+          x.authType === 'oauth' && x.configured ? btn('Disconnect', { quiet: true, act: 'disconnect-account', onclick: () => disconnectAccount(x) }) : null,
+          btn('Remove', { quiet: true, act: 'remove-account', onclick: () => removeAccount(x) })))) : [h('li', { class: 'muted' }, 'No Buffer account is connected yet.')]) : null,
+      multi() ? signInBox({ args: () => { const label = fields.label.value.trim(); return label ? { account: slug(label), label } : {}; } }) : null,
       multi() ? h('div', { class: 'bacc-add' },
-        h('h4', {}, 'Add a Buffer account'),
+        h('h4', {}, 'Or paste an API key'),
         h('div', { class: 'bacc-add-row' },
           fields.label, fields.token,
           btn('Add account', { act: 'add-account', onclick: addAccount })),
-        h('p', { class: 'sch-help' }, 'In Buffer open Settings, then API, create a key and paste it here. It is sent once to Nordle on this computer, kept in a private file, and never shown again. Use a different key for each Buffer login.')) : null,
+        h('p', { class: 'sch-help' }, 'In Buffer open Settings, then API, create a key and paste it here. It is sent once to Nordle on this computer, kept in a private file, and never shown again. Use a different key for each Buffer login. A key is still the way to go where the sign-in is not available.')) : null,
     ];
   }
 
@@ -965,6 +979,11 @@ export async function openConnect(adapterId = 'buffer') {
   async function checkAccount(x) {
     let r;
     try { r = await api.post('/publish/test', { adapter: a.id, account: x.id }); } catch (e) { r = { ok: false, message: e.message }; }
+    await afterCheck(x, r);
+  }
+  /** A Buffer sign-in has just finished (the server already tested it): the same banner, matching and notice as after a key is added. */
+  const afterSignIn = (r) => afterCheck({ id: r.account, label: r.label }, r);
+  async function afterCheck(x, r) {
     saved = true;
     await refresh();
     let linked = [];
@@ -975,7 +994,7 @@ export async function openConnect(adapterId = 'buffer') {
     // the confirmation sits at the top of this window, where the person is looking (a toast would be hidden behind it)
     banner = r.ok
       ? { ok: true, title: `${label} is connected`, text: [chans.length ? `${plural(chans.length, 'channel')} found: ${chans.slice(0, 4).map((c) => c.name).join(', ')}${chans.length > 4 ? '…' : ''}.` : base,
-        linked.length ? `Matched to ${linked.join(' and ')}.` : S.projects.some((p) => !work[p.id].account) ? 'Now choose which brand it publishes for, below.' : ''].filter(Boolean).join(' ') }
+        linked.length ? `Matched to ${linked.join(' and ')}.` : S.projects.some((p) => !work[p.id].account) ? 'Now choose which brand it publishes for, below.' : '', r.note ? plainWaits(r.note) : ''].filter(Boolean).join(' ') }
       : { ok: false, title: `${label} did not connect`, text: base };
     flash = r.ok ? x.id : null;
     notify(r.ok ? `${label} is connected to ${a.name}.` : `${label} could not connect to ${a.name}.`, { kind: r.ok ? 'ok' : 'error' });
@@ -984,9 +1003,15 @@ export async function openConnect(adapterId = 'buffer') {
     m.body.querySelector('.acc-banner')?.scrollIntoView({ block: 'nearest' });
   }
   const testAccount = (x) => checkAccount(x);
+  /** Forget a Buffer sign-in on this computer. The account stays, so its brands keep their channels and it can be signed in again. */
+  async function disconnectAccount(x) {
+    if (!(await askConfirm({ title: `Disconnect “${x.label}”?`, body: 'Nordle forgets this Buffer sign-in on this computer and stops using it. To take Nordle’s access away inside Buffer as well, use Buffer’s own settings: only you can do that part, and Nordle cannot do it for you.', ok: 'Disconnect', danger: true }))) return;
+    try { await api.post('/publish/oauth/buffer/disconnect', { account: x.id }); saved = true; banner = { ok: true, title: `${x.label} is disconnected`, text: 'Its sign-in is forgotten here. Press “Sign in again” to connect it again.' }; flash = null; message = ''; } catch (e) { banner = { ok: false, title: `${x.label} was not disconnected`, text: e.message }; }
+    await refresh();
+  }
   async function removeAccount(x) {
     const using = S.projects.filter((p) => work[p.id].account === x.id).map((p) => p.name);
-    if (!(await askConfirm({ title: `Remove “${x.label}”?`, body: `Its API key is forgotten${using.length ? `, and ${using.join(', ')} will have no Buffer account until you pick another` : ''}. Nothing in Buffer changes.`, ok: 'Remove account', danger: true }))) return;
+    if (!(await askConfirm({ title: `Remove “${x.label}”?`, body: `${x.authType === 'oauth' ? 'Its Buffer sign-in is forgotten' : 'Its API key is forgotten'}${using.length ? `, and ${using.join(', ')} will have no Buffer account until you pick another` : ''}. Nothing in Buffer changes.`, ok: 'Remove account', danger: true }))) return;
     try {
       for (const p of S.projects.filter((q) => work[q.id].account === x.id)) await api.post('/publish/settings', { adapter: a.id, brand: p.id, useAccount: null });
       await api.post('/publish/settings', { adapter: a.id, account: x.id, remove: true }); saved = true; banner = null; flash = null; message = `Removed “${x.label}”.`; } catch (e) { message = e.message; }
@@ -1029,8 +1054,16 @@ export async function openConnect(adapterId = 'buffer') {
     await refresh();
   }
 
+  // Sign in with Buffer: while this window is open it redraws as the sign-in goes along, and takes the finished answer itself
+  const stopWatching = onSignInChange(() => { if (m.dlg.isConnected) draw(); });
+  setSignInSink(async (r) => { if (r.account) await afterSignIn(r); });
+  resetSignIn();
+  if (multi()) loadSignInStatus();
+
   draw();
   loadPlatforms();
   await new Promise((r) => m.dlg.addEventListener('close', r, { once: true }));
+  stopWatching();
+  setSignInSink(signedInWhileClosed);
   return saved;
 }

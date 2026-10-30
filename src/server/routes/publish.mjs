@@ -52,6 +52,8 @@ import { checkScheduled, readSentPosts, syncSentPosts, unscheduleMissing } from 
 import { analyseTimes, suggestSlots } from '../../performance/best-time.mjs';
 import { listPlatforms, savePlatformKey } from '../../publish/platforms.mjs';
 import { bufferTotals, importBufferMetrics } from '../../performance/from-buffer.mjs';
+import { importFromBuffer } from '../../publish/buffer-import.mjs';
+import { pullOptions } from '../../publish/pull-options.mjs';
 import { loadProject } from '../../calendar/service.mjs';
 import { PublishError, buildPlan, describeAdapter, getAdapter, listAdapters, publicPlan, runPlan, saveSettingsFor, testAdapter, testHosting } from '../../publish/index.mjs';
 
@@ -120,9 +122,15 @@ export default {
         const b = await readJsonBody(req);
         const synced = await syncSentPosts(store, { project: b.project, role, force: b.force === true });
         // the same pull also fills the numbers Insights reads (metrics.json), for every post that can be tied to one calendar item
+        const pull = pullOptions();       // what the owner chose to read from Buffer (Insights > Options)
         let metrics = null;
-        try { const pr = store.project(String(b.project ?? '')); if (pr) metrics = await importBufferMetrics(pr.dir); } catch (e) { metrics = { ok: false, message: e.message }; }
-        return sendJson(res, 200, { ...synced, ...(metrics ? { metrics } : {}) });
+        if (pull.results) try { const pr = store.project(String(b.project ?? '')); if (pr) metrics = await importBufferMetrics(pr.dir); } catch (e) { metrics = { ok: false, message: e.message }; }
+        // ...and posts made by hand in Buffer are copied onto the calendar (read only), so the month shows everything the brand posts
+        let imported = null;
+        if (!synced.skipped && pull.handMade) {      // a pull that was skipped (done a few hours ago) must not spend requests on a second look either
+          try { imported = await importFromBuffer(store, { project: b.project, role, days: pull.days, maxNew: pull.maxNew, covers: pull.covers }); } catch (e) { imported = { ok: false, message: e.message }; }
+        }
+        return sendJson(res, 200, { ...synced, ...(metrics ? { metrics } : {}), ...(imported ? { imported } : {}) });
       }
       if (sub === 'buffer-totals') {
         // the brand's own totals for the last N days, straight from the pull (local files only)

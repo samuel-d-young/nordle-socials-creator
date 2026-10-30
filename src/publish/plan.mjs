@@ -221,7 +221,7 @@ export async function evaluatePost(store, uid, { adapter, settings, times = {}, 
   const specs = [];
   if (adapter.needsAccount && !s.token) {
     specs.push({ entry: null, extra: [s.account
-      ? { code: 'no-key', message: `The ${service} account "${s.account.label}" for ${brandName} has no API key yet: save one in the publishing settings.` }
+      ? { code: 'no-key', message: `The ${service} account "${s.account.label}" for ${brandName} has no API key or Buffer sign-in yet: connect it in the publishing settings.` }
       : { code: 'no-account', message: `Connect a ${service} account for ${brandName}: choose which ${service} account it publishes through in the publishing settings.` }] });
   } else if (!s.channels.length) {
     specs.push({ entry: null, extra: adapter.needsChannel ? [{ code: 'no-channel', message: `Choose the channels ${brandName} posts to: add at least one ${service} channel for it in the publishing settings.` }] : [] });

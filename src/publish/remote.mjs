@@ -102,6 +102,8 @@ export async function unscheduleMissing(store, { uid, channels, role } = {}) {
 // ---- sent posts and how they did (for the best time to post) ----------------------------------------------------------------------
 
 const postsFile = (dir) => join(dir, 'performance', 'buffer-posts.json');
+/** 0.2 keeps each sent post's words and pictures as well as its numbers. */
+export const BUFFER_POSTS_SCHEMA = 'nordle.bufferposts/0.2';
 
 /** What was pulled before: { pulledAt, posts:[ { id, channelId, service, sentAt, dueAt, metricsUpdatedAt, m:{reach,...} } ] } (empty when none). */
 export function readSentPosts(dir) {
@@ -128,12 +130,13 @@ export async function syncSentPosts(store, { project: projectId, role, now = Dat
     return { ok: true, skipped: true, fetched: 0, total: had.posts.length, requests: 0, rate: {}, pulledAt: had.pulledAt, message: `Already updated ${Math.max(1, Math.round((now - Date.parse(had.pulledAt)) / 60000))} minutes ago. Nordle waits ${SYNC_GAP_MS / 3600000} hours between pulls to save Buffer's request allowance.` };
   }
   guardAllowance(s.account?.id, 'Updating the history');
-  const newest = had.posts.reduce((m, p) => Math.max(m, Date.parse(p.sentAt ?? p.dueAt ?? '') || 0), 0);
+  // an earlier pull did not keep the words and pictures (needed to show posts made by hand in Buffer): read the whole window again once
+  const newest = had.schema === BUFFER_POSTS_SCHEMA ? had.posts.reduce((m, p) => Math.max(m, Date.parse(p.sentAt ?? p.dueAt ?? '') || 0), 0) : 0;
   const start = new Date(newest ? Math.max(newest - 3 * 86400000, now - days * 86400000) : now - days * 86400000).toISOString();
   const merged = new Map(had.posts.map((p) => [p.id, p]));
   let requests = 0, fetched = 0, rate = {}, incomplete = null;
   for (const [organizationId, ids] of byOrg) {
-    const r = await adapter.listPosts(s, { organizationId, channelIds: ids, filter: { status: ['sent'], dueAt: { start } }, metrics: true, maxPages: 10 });
+    const r = await adapter.listPosts(s, { organizationId, channelIds: ids, filter: { status: ['sent'], dueAt: { start } }, metrics: true, text: true, assets: true, maxPages: 10 });
     requests += r.pages; rate = r.rate;
     if (!r.complete) incomplete = r.stopped ?? 'not everything was read';
     for (const p of r.posts) { merged.set(p.id, p); fetched++; }
@@ -142,7 +145,7 @@ export async function syncSentPosts(store, { project: projectId, role, now = Dat
   const file = postsFile(project.dir);
   mkdirSync(join(project.dir, 'performance'), { recursive: true });
   const tmp = `${file}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify({ schema: 'nordle.bufferposts/0.1', pulledAt: new Date(now).toISOString(), posts })}\n`);
+  writeFileSync(tmp, `${JSON.stringify({ schema: BUFFER_POSTS_SCHEMA, pulledAt: new Date(now).toISOString(), posts })}\n`);
   renameSync(tmp, file);
   return { ok: true, fetched, total: posts.length, requests, rate, pulledAt: new Date(now).toISOString(), ...(incomplete ? { incomplete } : {}), timezone: loadProject(project.dir).timezone };
 }

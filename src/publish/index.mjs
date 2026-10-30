@@ -33,6 +33,7 @@ import { createBundleAdapter } from './adapters/bundle.mjs';
 import { MAX_ITEMS, buildPlan, evaluatePost, publicPlan } from './plan.mjs';
 import { checkHosting, hostingView, validateHosting } from './hosting.mjs';
 import { ACCOUNT_ID, DEFAULT_ACCOUNT, PublishError, accountsFor, adapterOptions, allBrands, appendAudit, brandSetup, changeSettings, loadPlan, loadSettings, normalizeBrandChannels, readAllowance, redact, savePlan } from './store.mjs';
+import { configureOAuth } from './buffer-oauth.mjs';
 
 export { PublishError, buildPlan, publicPlan };
 
@@ -41,8 +42,16 @@ export { PublishError, buildPlan, publicPlan };
 let config = {};
 let registry = null;
 
-/** Tests (and anything embedding Nordle) set a fake fetch or another API address here: configure({ buffer: { fetch, apiUrl } }). */
-export function configure(next = {}) { config = { ...config, ...next }; registry = null; }
+/**
+ * Tests (and anything embedding Nordle) set a fake fetch or another API address here: configure({ buffer: { fetch, apiUrl } }).
+ * configure({ oauth: { fetch, now } }) does the same for the Buffer sign-in's token address and clock (src/publish/buffer-oauth.mjs).
+ */
+export function configure(next = {}) {
+  const { oauth, ...rest } = next;
+  if (oauth) configureOAuth(oauth);
+  config = { ...config, ...rest };
+  registry = null;
+}
 
 export function adapters() {
   if (!registry) registry = new Map([createBundleAdapter(), createBufferAdapter(config.buffer ?? {})].map((a) => [a.id, a]));
@@ -60,6 +69,8 @@ export function getAdapter(id) {
 export const CHANNEL_TTL_MS = 10 * 60 * 1000;
 const memo = new Map();   // accountId -> { key, at, channels }
 const keyOf = (acc) => createHash('sha256').update(`${acc.token}|${acc.organizationId ?? ''}`).digest('hex').slice(0, 16);
+/** The part of a login an adapter needs to know about besides its token (a Buffer sign-in is renewed by the adapter; see store.mjs resolveSettings). */
+const accountOf = (acc) => ({ id: acc.id, label: acc.label, authType: acc.authType, expiresAt: acc.expiresAt });
 /** Forget what was loaded (tests; and after a key or organisation changes). */
 export function clearChannelMemo(accountId) { if (accountId) memo.delete(accountId); else memo.clear(); }
 
@@ -73,7 +84,7 @@ export async function loadAccountChannels(adapter, acc, { live = false, force = 
   const key = keyOf(acc), m = memo.get(acc.id);
   if (!force && m && m.key === key && now - m.at < CHANNEL_TTL_MS) return { channels: m.channels };
   try {
-    const channels = await adapter.listChannels({ token: acc.token, organizationId: acc.organizationId, options: adapterOptions(loadSettings(), adapter.id), channelCache: cached });
+    const channels = await adapter.listChannels({ token: acc.token, account: accountOf(acc), organizationId: acc.organizationId, options: adapterOptions(loadSettings(), adapter.id), channelCache: cached });
     memo.set(acc.id, { key, at: now, channels });
     changeSettings((s) => { if (s.accounts[acc.id]) s.accounts[acc.id].channelCache = channels; });
     return { channels };
@@ -114,7 +125,7 @@ export async function describeAdapter(adapter, { live = false, now = Date.now(),
   const brands = brandsView(fresh, byAccount);
   return {
     id: adapter.id, name: adapter.name, configured: !!d.configured, needs: d.needs ?? [], channels: (d.channels ?? []).map(shortChannel), note: d.note ?? '', stories: !!adapter.stories,
-    accounts: accs.map((a) => ({ id: a.acc.id, label: a.acc.label, configured: !!a.acc.token, lastTestedAt: a.acc.lastTestedAt, allowance: readAllowance(a.acc.id), ...(a.acc.lastTestOk === null ? {} : { lastTestOk: a.acc.lastTestOk }), channels: a.channels.map(shortChannel), ...(a.error ? { error: a.error } : {}) })),
+    accounts: accs.map((a) => ({ id: a.acc.id, label: a.acc.label, configured: !!a.acc.token, ...(a.acc.authType === 'oauth' ? { authType: 'oauth', expiresAt: a.acc.expiresAt, renews: a.acc.renews } : {}), lastTestedAt: a.acc.lastTestedAt, allowance: readAllowance(a.acc.id), ...(a.acc.lastTestOk === null ? {} : { lastTestOk: a.acc.lastTestOk }), channels: a.channels.map(shortChannel), ...(a.error ? { error: a.error } : {}) })),
     brands,
     selected: Object.fromEntries(Object.entries(brands).filter(([, b]) => b.channels.length).map(([p, b]) => [p, b.channels[0].id])),
     options,
@@ -192,6 +203,7 @@ export function saveSettingsFor(adapterId, body = {}, role) {
           if (typeof body.token !== 'string' || !/^[\x21-\x7e]{8,512}$/.test(body.token.trim())) throw new PublishError(400, 'That does not look like an API key (it should be one line of 8 to 512 characters, no spaces).');
           acc.token = body.token.trim();
         }
+        for (const k of ['authType', 'refreshToken', 'expiresAt', 'scope']) delete acc[k];   // a pasted key (or none) replaces a Buffer sign-in: nothing of the old one stays
         changed = true;
       }
       if (body.organizationId !== undefined) {
@@ -271,7 +283,7 @@ function settingsSummary(adapter) {
   const mine = accountsFor(s, adapter.id);
   return {
     configured: adapter.needsAccount ? mine.some((a) => !!a.token) : true,
-    accounts: mine.map((a) => ({ id: a.id, label: a.label, configured: !!a.token, lastTestedAt: a.lastTestedAt })),
+    accounts: mine.map((a) => ({ id: a.id, label: a.label, configured: !!a.token, ...(a.authType === 'oauth' ? { authType: 'oauth' } : {}), lastTestedAt: a.lastTestedAt })),
     brands: brandsView(s, byAccount),
   };
 }
@@ -291,18 +303,18 @@ export async function testAdapter(adapterId, accountId, role) {
   else if (mine.length === 1) acc = mine[0];
   else if (!mine.length) return { ok: false, message: `${adapter.name} is not connected yet: save an API key for an account first.` };
   else throw new PublishError(400, `Say which account to test (${mine.map((a) => a.id).join(', ')}).`);
-  const per = { token: acc.token, organizationId: acc.organizationId, options: adapterOptions(settings, adapter.id), channelCache: acc.channelCache };
-  const r = await adapter.check(per);
-  const out = { ok: !!r.ok, message: redact(r.message ?? '', acc.token), account: acc.id };
+  const per = { token: acc.token, account: accountOf(acc), organizationId: acc.organizationId, options: adapterOptions(settings, adapter.id), channelCache: acc.channelCache };
+  const r = await adapter.check(per);   // (a Buffer sign-in is renewed here if it needs to be: per.token is then the new access token)
+  const out = { ok: !!r.ok, message: redact(r.message ?? '', acc.token, per.token), account: acc.id };
   let channels = null;
   if (r.ok && adapter.listChannels) {
     try {
       channels = await adapter.listChannels(per);
-      memo.set(acc.id, { key: keyOf(acc), at: Date.now(), channels });
+      memo.set(acc.id, { key: keyOf({ ...acc, token: per.token }), at: Date.now(), channels });
       out.channels = channels.map(shortChannel);
     } catch (e) {
       if (!(e instanceof PublishError)) throw e;
-      out.ok = false; out.message = redact(e.message, acc.token);
+      out.ok = false; out.message = redact(e.message, acc.token, per.token);
     }
   }
   changeSettings((s) => { const a = s.accounts[acc.id]; if (a) { a.lastTestedAt = new Date().toISOString(); a.lastTestOk = out.ok; if (channels) a.channelCache = channels; } });

@@ -136,7 +136,10 @@ in place). It does nothing unless `settings.autoBuild` is on or `--yes` is given
    run left on `building` are put back to `approved`);
 2. marks the item `building`, composes the BUILD prompt (`calendar prompt <project> <item>` prints it) and starts `claude -p` in the
    project folder with the prompt on stdin, a temporary MCP config for this install's `mcp.mjs`, `--strict-mcp-config`, `--max-turns`,
-   `--allowedTools mcp__nordle Read Write Edit Glob Grep Agent Task Bash(node:*)`, `NORDLE_AGENT_RUN=1`, `windowsHide`, piped stdio;
+   `--allowedTools mcp__nordle Read Write Edit Glob Grep Agent Task` plus a shell limited to this install's `nordle.mjs build|reel|render|verify|critique|check|packet|video|cut|validate`,
+   its `tools/validate.mjs` and the project's own `specs/` build helpers (each by full path; no general `node`, and never the owner's commands: calendar, publish, stock, performance),
+   `--disallowedTools` Read and Edit rules for `.nordle/`, `calendar.json`, `review/`, `publish/` and `checks/`, `--setting-sources user` (the project's own `.claude`
+   settings are not loaded), `NORDLE_AGENT_RUN=1`, `windowsHide`, piped stdio; the model name must be a plain name (`^[A-Za-z0-9._:\[\]-]{1,60}$`) or the run is refused;
 3. waits (25 minute timeout; on Windows the whole process tree is stopped by PID with `taskkill /t /f`, never by name);
 4. checks the outcome: the item must be `built` and point at a document (if Claude wrote `docs/<item id>.json` but forgot to link it, the runner
    links it), and `tools/validate.mjs <doc> --assets` must pass. Anything else puts the item back (`approved`, or `changes`), records the
@@ -147,8 +150,9 @@ in place). It does nothing unless `settings.autoBuild` is on or `--yes` is given
 quota, at most once every 20 hours, with only read tools and the Nordle tools. The ideas arrive as `idea` (or `approved` if delegated).
 
 **What this does not guarantee.** The refusal of owner-only steps inside a headless run is an environment check in the command line plus
-the token check on the server; a Claude run that is allowed `Bash(node:*)` could still edit `calendar.json` as a file. Treat the runner as
-"Claude working under the owner's account", reviewed by sign-off, and keep `autoBuild` off for projects you do not want built unattended.
+the token check on the server, and the file rules above are Claude Code's permission rules, a convenience guard and not a sandbox: a `specs/` helper
+the run is allowed to start is a script the run can also rewrite, and the build commands run Nordle code that reads the files they are given. Treat the runner as
+"Claude working under the owner's account", reviewed by sign-off, and keep `autoBuild` off for projects you do not want built unattended. See `SECURITY.md`.
 The `claude` flags used are listed by `calendar run --dry-run` (the exact command, nothing started); adjust with `NORDLE_CLAUDE_BIN`
 (path to the binary), `NORDLE_CLAUDE_ARGS` (extra flags) and `NORDLE_CLAUDE_TOOLS` (comma list replacing the allowed tools).
 They were written against Claude Code's documented headless options and have not yet been exercised against the real binary by the

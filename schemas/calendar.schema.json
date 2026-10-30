@@ -43,7 +43,7 @@
         "regions": { "type": "array", "items": { "enum": ["VIC", "WA", "NSW", "QLD", "SA", "TAS", "ACT", "NT"] }, "description": "Which states' holidays, school terms and occasions apply. Empty or missing = national dates only in lint, everything in listings." },
         "ideaApproval": { "enum": ["owner", "delegated"], "description": "'delegated' = the owner has told Claude to go ahead before seeing the ideas: ideas Claude proposes arrive already approved. Only the owner can change this. Default owner." },
         "compliance": { "type": "array", "items": { "type": "string" }, "description": "Rule sets that apply to this brand's content, e.g. [\"ahpra\"] for Australian health advertising. Dental and other health brands are treated as regulated even when this is empty." },
-        "claudeModel": { "type": "string", "maxLength": 60, "description": "The model the Studio and the runner start Claude with (an alias such as sonnet or opus, or a full model name). Default sonnet: it builds a post well for much less." },
+        "claudeModel": { "type": "string", "minLength": 1, "maxLength": 60, "pattern": "^[A-Za-z0-9._:\\[\\]-]{1,60}$", "description": "The model the Studio and the runner start Claude with (an alias such as sonnet or opus, or a full model name). Default sonnet: it builds a post well for much less." },
         "claudeEffort": { "enum": ["low", "medium", "high", "xhigh", "max"], "description": "How hard Claude thinks while it builds. Default medium." },
         "maxBudgetUsd": { "type": "number", "minimum": 0.1, "maximum": 50, "description": "The most one run may spend, in US dollars (the run stops itself there). Default 2.50 for a build and 1.00 for new ideas." },
         "maxBuildAttempts": { "type": "integer", "minimum": 1, "maximum": 10, "description": "How many times the runner tries to build one item before leaving it for the owner. Default 3." },
@@ -131,7 +131,7 @@
             }
           }
         },
-        "origin": { "enum": ["claude", "owner"], "description": "Who thought of it." },
+        "origin": { "enum": ["claude", "owner", "buffer"], "description": "Who thought of it. 'buffer' = the post was made by hand in Buffer and Nordle copied it onto the calendar so it shows here (read only: Nordle never moves or deletes it in Buffer)." },
         "ideaApproval": { "enum": ["owner", "delegated"], "description": "'delegated' = the owner told Claude to go ahead before seeing the ideas." },
         "doc": { "$ref": "#/$defs/id", "description": "The document built for it, once there is one." },
         "external": {

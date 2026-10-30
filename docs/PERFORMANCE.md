@@ -11,8 +11,9 @@ worked and what did not** (honestly: small groups are labelled as small), Claude
                                      Claude's text)
 ```
 
-Nothing is posted, pulled from a platform, or sent anywhere by this. The numbers are copied by the owner from the platform's own
-analytics, and every number is stored exactly as shown. Nothing is estimated, by Nordle or by Claude.
+Nothing is posted or sent anywhere by this. The numbers come from the platform's own analytics: copied by the owner (CSV or typed), or, for a brand
+with Buffer connected, **read from Buffer by Nordle itself about every six hours** (read only; see docs/PUBLISHING.md "Reading Buffer by itself").
+Every number is stored exactly as the platform showed it. Nothing is estimated, by Nordle or by Claude.
 
 ## Each week or month: the steps
 

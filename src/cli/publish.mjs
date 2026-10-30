@@ -12,6 +12,8 @@ import { readAudit } from '../publish/store.mjs';
 import { checkScheduled, readSentPosts, syncSentPosts } from '../publish/remote.mjs';
 import { describeSync, planSync, runSync } from '../publish/sync.mjs';
 import { importBufferMetrics } from '../performance/from-buffer.mjs';
+import { importFromBuffer } from '../publish/buffer-import.mjs';
+import { pullOptions } from '../publish/pull-options.mjs';
 import { analyseTimes, suggestSlots } from '../performance/best-time.mjs';
 import { loadProject } from '../calendar/service.mjs';
 
@@ -234,6 +236,11 @@ Done: ${r.done.length} changed${r.failed.length ? `, ${r.failed.length} FAILED` 
               const m = await importBufferMetrics(resolveProject(pos[0]).dir);
               out(`Insights: ${m.matched} of ${m.withNumbers} posts with numbers matched a calendar item (${m.added} added, ${m.replaced} updated); ${m.unmatched} were made outside Nordle and stay in the totals only.`);
             } catch (e) { err(`Could not fill Insights from the pull: ${e.message}`); }
+            const pull = pullOptions();
+            if (pull.handMade) try {
+              const c = await importFromBuffer(store(), { project: resolveProject(pos[0]).id, role: 'human', days: pull.days, maxNew: pull.maxNew, covers: pull.covers });
+              out(`Made in Buffer: ${c.created} post${c.created === 1 ? '' : 's'} copied onto the calendar (read only), ${c.updated} followed, ${c.gone} removed in Buffer.${c.skipped.overLimit ? ` ${c.skipped.overLimit} more wait for the next run.` : ''}`);
+            } catch (e) { err(`Could not copy posts made in Buffer: ${e.message}`); }
           }
           for (const [k, v] of Object.entries(r.rate ?? {})) out(`  allowance ${k}: ${v.left} of ${v.limit} left`);
           return 0;

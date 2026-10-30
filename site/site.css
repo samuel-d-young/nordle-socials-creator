@@ -1,0 +1,31 @@
+/* Nordle's public pages: the Studio's look (paper, ink, one orange). Same-origin only; no external resources. */
+:root { --paper: #F2F0EA; --surface: #FBFAF7; --ink: #17191B; --ink-2: #44484C; --ink-3: #5C6065; --rule: #D8D4C9; --hot: #FF6B1A; --bad: #B52A17; --ok: #17674A;
+  --font-ui: 'Outfit Variable', Outfit, 'Inter Variable', Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter Variable', Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-dot: 'Doto Variable', Doto, ui-monospace, 'Cascadia Mono', Consolas, monospace; }
+@media (prefers-color-scheme: dark) { :root { --paper: #131517; --surface: #1B1E21; --ink: #ECE9E0; --ink-2: #B7B4AA; --ink-3: #97948C; --rule: #2B2F33; --hot: #FF8A45; --bad: #FF7A63; --ok: #62C79B; } }
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; color: var(--ink); font: 17px/1.6 var(--font-body); background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1.4px); background-size: 22px 22px; }
+a { color: var(--ink); text-underline-offset: 3px; }
+a:hover { color: var(--hot); }
+a:focus-visible { outline: 3px solid var(--hot); outline-offset: 2px; }
+.wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+.brand { font: 800 2.2rem/1 var(--font-ui); letter-spacing: -.035em; margin: 0 0 .25rem; }
+.brand i { color: var(--hot); font-style: normal; }
+.lede { font: 560 1.35rem/1.35 var(--font-ui); letter-spacing: -.01em; margin: .5rem 0 1.5rem; }
+h2 { font: 700 1.3rem/1.2 var(--font-ui); letter-spacing: -.01em; margin: 2.2rem 0 .5rem; padding-top: .9rem; border-top: 3px solid var(--ink); }
+p { margin: 0 0 1rem; }
+.shot { display: block; width: 100%; height: auto; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--hot); background: var(--surface); }
+pre { margin: 0 0 1rem; padding: .9rem 1rem; overflow-x: auto; background: var(--surface); border: 2px solid var(--ink); font: .9rem/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; }
+.btn { display: inline-block; padding: .55rem 1rem; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); font: 600 1rem var(--font-ui); text-decoration: none; box-shadow: 3px 3px 0 var(--hot); }
+.btn:hover { color: var(--paper); box-shadow: 4px 4px 0 var(--hot); }
+ul { margin: 0 0 1rem; padding-left: 1.2rem; }
+li { margin: .25rem 0; }
+.small { font-size: .9rem; color: var(--ink-2); }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); font-size: .9rem; color: var(--ink-2); }
+/* the relay page */
+.card { max-width: 32rem; margin: 12vh auto 0; padding: 1.5rem 1.75rem; background: var(--surface); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--hot); }
+.card h1 { margin: 0 0 .5rem; font: 800 1.5rem/1.1 var(--font-ui); letter-spacing: -.02em; }
+.card p { margin: 0 0 .75rem; color: var(--ink-2); }
+.card [data-state="bad"] { color: var(--bad); font-weight: 600; }

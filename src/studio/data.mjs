@@ -317,6 +317,7 @@ function summarize(project, lane, item, docId, calendar) {
     thumb,
     video,
     external: !!ext,
+    fromBuffer: item?.origin === 'buffer',
     score: sc.score,
     scoreStale: sc.stale,
     checks: checks ? { ...checks, verified: !!verification?.verified } : null,

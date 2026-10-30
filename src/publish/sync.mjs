@@ -36,7 +36,7 @@ const norm = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '').sli
 const stamp = (iso, tz) => (iso ? new Date(iso).toLocaleString('en-AU', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }) : 'no time');
 
 /** the words of an item as Buffer got them (the document's caption), or '' */
-function captionOf(dir, item) {
+export function captionOf(dir, item) {
   if (!item.doc) return item.external?.caption ?? '';
   try { return JSON.parse(readFileSync(join(dir, 'docs', `${item.doc}.json`), 'utf8'))?.copy?.caption ?? ''; } catch { return ''; }
 }
@@ -75,7 +75,7 @@ export async function planSync(projectDir, { role, now = Date.now(), adapter = g
   const known = new Map();                              // remoteId -> { item, target }
   for (const it of items) for (const t of it.publish?.targets ?? []) if (t.ok && t.remoteId) known.set(String(t.remoteId), { item: it, target: t });
   const byCaption = new Map();                          // first 60 letters -> item
-  for (const it of items) { const k = norm(captionOf(projectDir, it)); if (k.length >= 20 && !byCaption.has(k)) byCaption.set(k, it); }
+  for (const it of items) { if (it.origin === 'buffer') continue; const k = norm(captionOf(projectDir, it)); if (k.length >= 20 && !byCaption.has(k)) byCaption.set(k, it); }
   const defaultTime = proj.settings.postTimes?.[0] ?? DEFAULT_POST_TIMES[0];
 
   const actions = [], unknown = [], stale = [], missing = [];
@@ -86,6 +86,7 @@ export async function planSync(projectDir, { role, now = Date.now(), adapter = g
     const k = known.get(p.id);
     if (k) {
       const { item, target } = k;
+      if (item.origin === 'buffer') { kept++; continue; }          // made by hand in Buffer and copied onto the calendar (buffer-import.mjs): read only, never moved from here
       const recorded = target.scheduledAt ?? item.publish?.scheduledAt;
       const wanted = recorded && dayIn(recorded, tz) !== item.date ? zonedToUtc(item.date, clockIn(recorded, tz), tz) : new Date(recorded ?? p.dueAt);
       if (Math.abs(wanted - new Date(p.dueAt)) <= MOVE_TOLERANCE_MS) { kept++; continue; }
@@ -112,7 +113,7 @@ export async function planSync(projectDir, { role, now = Date.now(), adapter = g
   // 3. what Nordle thinks is waiting that Buffer does not hold (only when the listing was read to the end)
   if (complete) for (const [rid, { item, target }] of known) {
     const due = target.scheduledAt ?? item.publish?.scheduledAt;
-    if (item.status === 'scheduled' && !heldIds.has(rid) && due && new Date(due).getTime() > now + MIN_LEAD_MS) missing.push({ item: item.id, title: item.title, channel: chanName.get(String(target.channel).replace(STORY, '')) ?? target.channel, story: STORY.test(target.channel), dueAt: due });
+    if (item.origin !== 'buffer' && item.status === 'scheduled' && !heldIds.has(rid) && due && new Date(due).getTime() > now + MIN_LEAD_MS) missing.push({ item: item.id, title: item.title, channel: chanName.get(String(target.channel).replace(STORY, '')) ?? target.channel, story: STORY.test(target.channel), dueAt: due });
   }
   return { project: id, timezone: tz, madeAt: now, requests, complete, ...(stopped ? { stopped } : {}), kept, actions: actions.slice(0, MAX_CHANGES), more: Math.max(0, actions.length - MAX_CHANGES), unknown, stale, missing };
 }

@@ -11,6 +11,7 @@ import { createNordleServer } from './src/server/http.mjs';
 import { createReviser } from './src/studio/revise.mjs';
 import { createAutoScheduler } from './src/publish/auto.mjs';
 import { createAutoSync } from './src/publish/auto-sync.mjs';
+import { createAutoPull } from './src/publish/auto-pull.mjs';
 
 const args = process.argv.slice(2);
 const flagValue = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -36,6 +37,8 @@ const reviser = createReviser();
 // ...and, once the owner has switched it on in the Studio, signed-off posts whose slot is a week away go to Buffer by themselves
 const autoScheduler = createAutoScheduler();
 const autoSync = createAutoSync();
+// ...and Buffer's results and anything made by hand in Buffer are read every few hours, within Buffer's small request allowance (src/publish/auto-pull.mjs)
+const autoPull = createAutoPull();
 const app = createNordleServer({ roots, createIn: home, autoRender: true, reviser, autoScheduler, runtimeDir: process.env.NORDLE_RUNTIME_DIR ?? join(ROOT, '.nordle') });
 let port;
 for (let attempt = 0; attempt < (explicitPort === undefined ? 10 : 1); attempt++) {
@@ -49,6 +52,7 @@ if (port === undefined) { console.error('nordle: no free port found near 5400.')
 // a run that died with the last server left its post on "building": put it back and start that revision again
 autoScheduler.start(app.store);
 autoSync.start(app.store);
+autoPull.start(app.store);
 // posts whose changes were asked for while Claude was building them: start the designer on them when the build is done (also checked after every build the Studio starts)
 setInterval(() => { reviser.sweep(app.store).catch(() => {}); }, 20000).unref();
 reviser.recover(app.store).then((again) => { if (again.length) console.log(`Revising again after the restart: ${again.join(', ')}`); }, () => {});

@@ -1058,6 +1058,16 @@ dialog.wide .db { max-height: 74vh; }
 .bacc-add { margin-top: 14px; padding: 12px 14px; background: color-mix(in srgb, var(--ink) 4%, transparent); }
 .bacc-add h4 { margin: 0 0 8px; font: 560 15px/1.2 var(--font-display); }
 .bacc-add-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.4fr) auto; gap: 10px; }
+/* Sign in with Buffer (app/studio-buffer-signin.js): the primary way in, above the pasted key */
+.bsi { margin-top: 14px; padding: 12px 14px; background: color-mix(in srgb, var(--ink) 4%, transparent); border-left: 4px solid var(--hot, var(--ink)); }
+.bsi h4 { margin: 0 0 4px; font: 560 15px/1.2 var(--font-display); }
+.bsi .sch-help { margin: 0 0 10px; }
+.bsi-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bsi-say { margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.bsi-say.ok { color: var(--stamp); font-weight: 560; }
+.bsi-say.bad { color: var(--proof); font-weight: 560; }
+.bsi[data-phase="waiting"] .bsi-say, .bsi[data-phase="finishing"] .bsi-say { color: var(--ink); }
+.bsi-card { flex: 1 1 100%; font-size: 12px; }
 .acc-via { display: block; margin: 0 0 8px; max-width: 360px; }
 .sch-brand-group { margin-top: 18px; }
 .sch-brand-group:first-child { margin-top: 4px; }
