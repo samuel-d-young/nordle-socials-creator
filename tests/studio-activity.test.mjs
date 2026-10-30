@@ -72,7 +72,10 @@ test('a render shows how far it is, several pieces of work are listed, and a cli
     await page.waitForSelector('.act-link', { timeout: 8000 });
     await page.click('.act-link');
     await page.waitForSelector('.detail.open', { timeout: 8000 });
-    assert.ok((await page.locator('.detail.open').innerText()).includes(post.title.slice(0, 15)), 'the post that Claude worked on is the one that opened');
+    // the sheet's class is set before its text is drawn (a slow computer reads it too early), so wait for the title instead of reading once
+    const want = post.title.slice(0, 15);
+    await page.waitForFunction((t) => document.querySelector('.detail.open')?.innerText.includes(t), want, { timeout: 8000 })
+      .catch(async () => assert.fail(`the post that Claude worked on is not the one that opened (wanted "${want}", the sheet says "${(await page.locator('.detail.open').innerText()).slice(0, 200)}")`));
   });
 });
 

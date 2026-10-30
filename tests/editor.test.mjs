@@ -254,6 +254,8 @@ test('versions and approval: save, look at an old version read-only, restore it,
     await page.click('.tabs button:has-text("Properties")');
     await page.fill('[data-field="text"]', 'A changed subtitle');
     await settle(page);
+    // the edit is saved a moment after the typing, and "Saved" can still be showing from before: wait until the server has it, or the restore below races it
+    for (let i = 0; i < 40 && layerOf(await doc(), 'sub').text !== 'A changed subtitle'; i++) await page.waitForTimeout(150);
     await page.click('.tabs button:has-text("Review")');
 
     await page.click('.version button:has-text("View")');

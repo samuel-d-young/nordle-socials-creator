@@ -337,6 +337,7 @@ test('scenes: drag a boundary (both scenes follow), rename, add one at the playh
     await page.fill('dialog input', 'The rest');
     await page.click('dialog .btn.primary');
     await settle();
+    for (let i = 0; i < 40 && (await doc()).timeline.scenes[1].title !== 'The rest'; i++) await page.waitForTimeout(150);   // "Saved" can still be showing from before the rename
     assert.equal((await doc()).timeline.scenes[1].title, 'The rest');
     // add a scene at the playhead: splits the one under it
     await gotoSeconds(page, 6);
