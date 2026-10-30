@@ -83,7 +83,7 @@ async function route() {
   if (!m) {
     closeDoc();
     if (location.hash === '#/projects') {
-      // the library: every project and its documents, and where new ones are made
+      // All posts: every project and its documents, and where new ones are made
       hideStudio();
       update({ route: { name: 'home' }, doc: null });
       try { await loadProjects(); } catch (e) { toast(e.message, 'error'); }

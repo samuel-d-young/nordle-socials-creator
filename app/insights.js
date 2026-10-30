@@ -475,7 +475,7 @@ export function renderInsights(root, ctx) {
   lastCtx = ctx;
   if (!rescopeBound) { rescopeBound = true; document.addEventListener('insights:rescope', () => lastCtx?.rerender()); }
   const lanes = S.brand === 'all' ? S.projects : [project(S.brand)].filter(Boolean);
-  if (!lanes.length) { root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Create a project in the library, then follow how its posts do here.' })); return; }
+  if (!lanes.length) { root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Add a brand from the left bar, then follow how its posts do here.' })); return; }
   const token = ++st.token;
   const period = periodNow();
   root.replaceChildren(h('div', { class: 'ins' },

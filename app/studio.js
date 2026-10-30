@@ -256,9 +256,10 @@ function renderRail() {
       h('a', { class: `rf${S.view === 'trash' ? ' on' : ''}`, href: hashFor({ view: 'trash', post: '' }), onclick: (e) => { e.preventDefault(); setView('trash'); } }, icon('trash', 15), h('span', {}, 'Trash'), S.trashCount ? h('span', { class: 'rf-n' }, String(S.trashCount)) : null),
       h('button', { class: 'rf', type: 'button', onclick: () => openConnect('buffer'), title: hostingNote() || 'Publishing: platforms, accounts and where your pictures and video are hosted' }, icon('calendarSend', 15), h('span', {}, 'Publishing'),
         hostingNote() ? h('span', { class: 'rf-n rf-ok', 'data-state': 'hosting-ready', title: hostingNote() }, 'Hosting on') : null),
-      h('button', { class: 'rf', type: 'button', 'data-act': 'open-stock', onclick: () => openStock({ project: S.brand !== 'all' ? S.brand : '' }), title: 'Stock libraries: add a library and its key, and search photos, video, music and sound effects' }, icon('film', 15), h('span', {}, 'Stock')),
+      h('button', { class: 'rf', type: 'button', 'data-act': 'open-stock', onclick: () => openStock({ project: S.brand !== 'all' ? S.brand : '' }), title: 'Stock: search photos, video, music and sound effects from your libraries and your own folders' }, icon('film', 15), h('span', {}, 'Stock')),
+      h('button', { class: 'rf', type: 'button', 'data-act': 'open-stock-libraries', onclick: () => openStock({ project: S.brand !== 'all' ? S.brand : '', tab: 'libs' }), title: 'Stock libraries: add a stock site (Pexels, Pixabay, Freesound) and its key, or a folder of your own stock' }, icon('grid', 15), h('span', {}, 'Stock libraries')),
       h('button', { class: 'rf', type: 'button', 'data-act': 'open-claude-account', onclick: openClaudeAccount, title: 'The Claude account Nordle uses: see who it is, sign out, or switch to another' }, icon('sparkle', 15), h('span', {}, 'Claude account')),
-      h('a', { class: 'rf', href: '#/projects' }, icon('home', 15), h('span', {}, 'Library')),
+      h('a', { class: 'rf', href: '#/projects', 'data-act': 'open-all-posts', title: 'All posts: every brand and every post as cards. Open one to edit it by hand, or start a new post.' }, icon('home', 15), h('span', {}, 'All posts')),
       h('a', { class: 'rf rf-credit', href: 'https://github.com/samuel-d-young/nordle-socials-creator', target: '_blank', rel: 'noopener', title: 'Nordle was created by Samuel Young and is free to use under CC BY 4.0. Credit him if you share it or build on it.' }, h('span', {}, 'Nordle by Samuel Young'))));
 }
 

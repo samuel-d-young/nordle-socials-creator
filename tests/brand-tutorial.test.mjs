@@ -1,4 +1,4 @@
-// After a brand is added, "Brand added" explains what comes next: its style guide, publishing, its logo and photos, Stock and the Library (with a button for each).
+// After a brand is added, "Brand added" explains what comes next: its style guide, publishing, its logo and photos, Stock and All posts (with a button for each).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -20,7 +20,7 @@ async function makeBrand(page, open, name) {
   await page.waitForSelector('.wz-nexts');
 }
 
-test('the Brand added page explains Stock and the Library in plain words, and each button opens the right thing', async () => {
+test('the Brand added page explains Stock and All posts in plain words, and each button opens the right thing', async () => {
   await studioPage(async ({ page, open }) => {
     await makeBrand(page, open, 'Tutorial Tea');
     const text = await page.locator('.wz-nexts').innerText();
@@ -29,7 +29,7 @@ test('the Brand added page explains Stock and the Library in plain words, and ea
     assert.match(text, /You never have to pick files/);
     assert.match(text, /Pexels, Pixabay and Freesound/);
     assert.match(text, /Nordle never buys or signs in anywhere/);
-    assert.match(text, /The Library: every brand and every post/);
+    assert.match(text, /All posts: every brand and every post/);
     assert.match(text, /Everything stays on this computer/);
     assert.match(text, /Press Create/);
     assert.equal(await page.locator('.wz-next').count(), 6);

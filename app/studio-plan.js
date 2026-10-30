@@ -159,7 +159,7 @@ function brandSection(pr, ctx) {
 
 export function renderPlan(root, ctx) {
   const lanes = S.brand === 'all' ? S.projects : [project(S.brand)].filter(Boolean);
-  if (!lanes.length) return root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Create a project in the library, then plan its calendar here.' }));
+  if (!lanes.length) return root.replaceChildren(emptyState({ title: 'No brands yet', body: 'Add a brand from the left bar, then plan its calendar here.' }));
   root.replaceChildren(h('div', { class: 'plan' }, lanes.map((pr) => brandSection(pr, ctx))));
 }
 export { brandName };

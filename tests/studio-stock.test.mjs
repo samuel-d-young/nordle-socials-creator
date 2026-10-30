@@ -149,6 +149,23 @@ test('Stock sits in the rail beside Publishing and opens the window; with nothin
   });
 });
 
+test('Stock libraries sits right under Stock in the rail and opens on the Libraries tab even when a library is ready; Stock itself opens on Search', async () => {
+  await studioPage(async ({ page, open }) => {
+    addPexels();
+    await open(`#/s/month?today=${TODAY}`);
+    const labels = (await page.locator('.rail-foot .rf span:not(.keys)').allInnerTexts()).filter((l) => l.trim());
+    assert.equal(labels.indexOf('Stock libraries'), labels.indexOf('Stock') + 1, `Stock libraries follows Stock: ${labels.join(', ')}`);
+    assert.ok(!labels.includes('Library'), 'the posts page is called All posts, so "Library" means one thing only');
+    await page.click('.rail-foot [data-act="open-stock-libraries"]');
+    await page.waitForSelector('dialog.stk-dialog[open] .stk-tab[aria-selected="true"]');
+    assert.equal(await tab(page), 'Libraries');
+    await page.click('[data-act="stock-close"]');
+    await page.click('.rail-foot [data-act="open-stock"]');
+    await page.waitForSelector('dialog.stk-dialog[open] .stk-tab[aria-selected="true"]');
+    assert.equal(await tab(page), 'Search');
+  });
+});
+
 test('adding a library and pasting its key: the key is sent once, tested at once, and is nowhere in the page afterwards', async () => {
   await studioPage(async ({ page, open }) => {
     const sent = [], answers = [];

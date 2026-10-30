@@ -55,7 +55,7 @@ export function renderHome(root) {
   const list = state.projects;
   root.replaceChildren(h('div', { class: 'home' },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-      h('div', { style: { flex: 1 } }, h('h1', {}, h('a', { class: 'wordmark', href: '#/', title: 'Back to the Studio' }, 'Nordle', h('i', {}, '.'))), h('div', { class: 'muted' }, 'The library: every project and its documents. Everything stays on this computer.')),
+      h('div', { style: { flex: 1 } }, h('h1', {}, h('a', { class: 'wordmark', href: '#/', title: 'Back to the Studio' }, 'Nordle', h('i', {}, '.'))), h('div', { class: 'muted' }, 'All posts: every brand and its posts, to edit by hand. Everything stays on this computer.')),
       h('a', { class: 'btn', href: '#/', title: 'Back to the Studio' }, icon('month'), 'Studio'),
       h('button', { class: 'btn primary', onclick: newProject }, icon('plus'), 'New project')),
     list.length ? list.map((p) => h('section', { class: 'proj' },
