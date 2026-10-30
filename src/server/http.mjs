@@ -20,6 +20,7 @@ import { renderSheet } from '../render/sheet.mjs';
 import { createAutoRender } from './autorender.mjs';
 import { ROUTES } from './routes/index.mjs';
 import { isHiddenSegment, oddSegment } from './hidden-paths.mjs';
+import { createActivity } from './activity.mjs';
 
 const JSON_LIMIT = 1024 * 1024;
 const UPLOAD_LIMIT = 20 * 1024 * 1024;
@@ -65,7 +66,7 @@ async function readJsonBody(req) {
   if (type !== 'application/json') throw new HttpError(415, 'Send JSON (Content-Type: application/json).');
   const buf = await readBody(req, JSON_LIMIT);
   if (!buf.length) return {};
-  try { return JSON.parse(buf.toString('utf8')); } catch { throw new HttpError(400, 'That is not valid JSON.'); }
+  try { const body = JSON.parse(buf.toString('utf8')); req.nordleBody = body; return body; } catch { throw new HttpError(400, 'That is not valid JSON.'); }     // kept on the request so the activity line can say which document a render or a cut was about
 }
 
 /** Serve a file from inside `base` only (symlinks included). */
@@ -142,6 +143,11 @@ export function createNordleServer(opts) {
   const agentToken = opts.agentToken ?? randomBytes(16).toString('hex');
   const store = new Store({ roots: opts.roots, createIn: opts.createIn });
   const pool = new BrowserPool();
+  const activity = createActivity({
+    quietMs: opts.activityQuietMs,
+    lookup: (p, d) => { const doc = store.project(p)?.doc(d)?.doc; return { video: doc?.kind === 'video', title: doc?.title }; },
+    nameOf: (p) => store.project(p)?.brand?.name ?? p,
+  });
   const autoRender = opts.autoRender ? createAutoRender(pool, typeof opts.autoRender === 'object' ? opts.autoRender : {}) : null;   // real server only: keeps out/ pictures in step with edits
   const appDir = opts.appDir ?? join(ROOT, 'app');
   const staticRoutes = [
@@ -196,7 +202,7 @@ export function createNordleServer(opts) {
     if (seg[0] === 'meta' && method === 'GET') return sendJson(res, 200, { app: 'nordle', version: '0.1.0', port, role });
 
     // Feature modules in src/server/routes/*.mjs plug in here (see routes/index.mjs for the shape of ctx).
-    const routeCtx = { req, res, url, seg, method, role, human, store, pool, origin, readJsonBody, readBody, sendJson, sendFile, HttpError, need, needHuman, needAgent, ROOT, reviser: opts.reviser ?? null, pickFolder: opts.pickFolder ?? null, claudeRunner: opts.claudeRunner ?? null, pickFiles: opts.pickFiles ?? null, brandReader: opts.brandReader ?? null, exampleReader: opts.exampleReader ?? null, claudeStatusFn: opts.claudeStatusFn ?? null, claudeLoginFns: opts.claudeLoginFns ?? null, updateFetch: opts.updateFetch ?? null, updateStateDir: opts.updateStateDir ?? null, importVideos: opts.importVideos ?? null, autoScheduler: opts.autoScheduler ?? null };
+    const routeCtx = { req, res, url, seg, method, role, human, store, pool, activity, origin, readJsonBody, readBody, sendJson, sendFile, HttpError, need, needHuman, needAgent, ROOT, reviser: opts.reviser ?? null, pickFolder: opts.pickFolder ?? null, claudeRunner: opts.claudeRunner ?? null, pickFiles: opts.pickFiles ?? null, brandReader: opts.brandReader ?? null, exampleReader: opts.exampleReader ?? null, claudeStatusFn: opts.claudeStatusFn ?? null, claudeLoginFns: opts.claudeLoginFns ?? null, updateFetch: opts.updateFetch ?? null, updateStateDir: opts.updateStateDir ?? null, importVideos: opts.importVideos ?? null, autoScheduler: opts.autoScheduler ?? null };
     for (const r of ROUTES.filter((x) => x.scope === 'root' && x.key === seg[0])) {
       if ((await r.handle(routeCtx)) !== false) return;
     }
@@ -419,6 +425,10 @@ export function createNordleServer(opts) {
         const given = req.headers['x-nordle-token'] ?? (req.method === 'GET' ? url.searchParams.get('t') : undefined);
         const role = roleOf(given);
         if (!role) throw new HttpError(401, 'Missing or wrong token. Open Nordle from its own address.');
+        if (role === 'agent') {            // what Claude does is shown in the Studio's left bar (src/server/activity.mjs)
+          const note = activity.begin(req.method, url.pathname);
+          try { return await api(req, res, url, role); } finally { note?.end(res.statusCode, req.nordleBody, { jobId: req.nordleJob }); }
+        }
         return await api(req, res, url, role);
       }
       if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PATCH') throw new HttpError(404, 'Not found.');
@@ -458,7 +468,7 @@ export function createNordleServer(opts) {
   });
 
   return {
-    store, token, agentToken, server, pool,
+    store, token, agentToken, server, pool, activity,
     listen(wantedPort = 0) {
       return new Promise((resolveListen, reject) => {
         server.once('error', reject);

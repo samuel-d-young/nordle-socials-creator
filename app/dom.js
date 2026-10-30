@@ -52,6 +52,8 @@ const ICONS = {
   up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  sound: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/>',
+  soundOff: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
   alignLeft: '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>',
   alignCenter: '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
   alignRight: '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',

@@ -86,7 +86,9 @@ export default {
           const tooLong = gifProblem(Math.max(0, Math.min(options.to ?? total, total) - (options.from ?? 0)));
           if (tooLong) throw new HttpError(422, tooLong);
         }
-        return sendJson(ctx.res, 202, { job: videoJobs.start({ project, docId: session.id, file: session.file, options }) });
+        const started = videoJobs.start({ project, docId: session.id, file: session.file, options });
+        if (ctx.role === 'agent') ctx.req.nordleJob = started.id;      // a render Claude started is followed in the Studio's left bar until it ends (src/server/activity.mjs)
+        return sendJson(ctx.res, 202, { job: started });
       }
       if (sub === 'formats' && method === 'GET') return sendJson(ctx.res, 200, { formats: formatList() });
       if (sub === 'proxy' && method === 'POST') {

@@ -1,9 +1,10 @@
-// Removing posts and brands without ever deleting them. A removed post's files go to <project>/trash/<time>-<id>/ (with a meta.json
+// Removing posts and brands without deleting them. A removed post's files go to <project>/trash/<time>-<id>/ (with a meta.json
 // that holds its calendar item); a removed brand's whole folder goes to <projects root>/.trash/<id>-<time>/ (with a sibling meta
-// file). Both can be restored from the Studio's Trash page. Owner only (the route enforces it).
+// file). Both can be restored from the Studio's Trash page, or deleted for good from it (deleteFromTrash / emptyTrash: only what is
+// in the trash can be reached, and nothing else). Owner only (the route enforces it).
 
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { CalendarError, removeItem, restoreItem } from '../calendar/service.mjs';
 import { readRunLock } from '../calendar/lock.mjs';
 import { forget, locate, parseUid, readJsonCached, extReviewId } from './data.mjs';
@@ -170,5 +171,62 @@ export function listTrash(store) {
 export function trashCount(store) {
   const t = listTrash(store);
   return t.posts.length + t.brands.length;
+}
+
+// ---- deleting for good --------------------------------------------------------------------------------------------------------
+
+const safeFolder = (s) => typeof s === 'string' && s.length > 0 && !/^\.+$/.test(s) && !/[\\/]/.test(s);
+const inside = (base, dir) => { const b = resolve(base), d = resolve(dir); return d !== b && d.startsWith(b + sep); };
+
+/** Take a folder out of the disk. Says so in words when something has it open, instead of leaving half of it behind. */
+function eraseFolder(dir) {
+  try { rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 120 }); } catch { /* checked below */ }
+  if (existsSync(dir)) throw new TrashError(409, 'Something still has these files open (a video playing, or another program). Close it and try again.');
+}
+
+function deleteOne(store, id) {
+  const post = /^post:([a-z0-9][a-z0-9_-]*):([^/\\]+)$/.exec(id);
+  if (post) {
+    const project = store.project(post[1]);
+    const base = project ? join(project.dir, 'trash') : null;
+    const dir = base && safeFolder(post[2]) ? join(base, post[2]) : null;
+    const meta = dir && inside(base, dir) ? readJson(join(dir, 'meta.json')) : null;
+    if (meta?.kind !== 'post') throw new TrashError(404, 'That is not in the trash any more.');
+    eraseFolder(dir);
+    return { id, kind: 'post', title: meta.title };
+  }
+  const brand = /^brand:([a-z0-9][A-Za-z0-9_.-]*)$/.exec(id);
+  if (brand && safeFolder(brand[1])) {
+    for (const root of store.roots) {
+      const base = join(root, '.trash'), metaFile = join(base, `${brand[1]}.meta.json`), dir = join(base, brand[1]);
+      const meta = readJson(metaFile);
+      if (meta?.kind !== 'brand' || !inside(base, dir) || !existsSync(dir)) continue;
+      eraseFolder(dir);
+      rmSync(metaFile, { force: true });
+      return { id, kind: 'brand', title: meta.name };
+    }
+  }
+  throw new TrashError(404, 'That is not in the trash any more.');
+}
+
+/**
+ * Delete things in the trash for good. `ids` are the ids the Trash page lists (post:<project>:<folder>, brand:<folder>); anything that is not a thing in the
+ * trash is refused, so this can never reach a live post or brand. Each thing succeeds or fails on its own.
+ * @returns {{deleted:{id:string,kind:string,title:string}[], failed:{id:string,reason:string}[]}}
+ */
+export function deleteFromTrash(store, ids) {
+  const deleted = [], failed = [];
+  for (const id of ids) {
+    try { deleted.push(deleteOne(store, String(id))); } catch (e) {
+      if (e instanceof TrashError) failed.push({ id: String(id), reason: e.message }); else throw e;
+    }
+  }
+  return { deleted, failed };
+}
+
+/** Delete everything in the trash for good. */
+export function emptyTrash(store) {
+  const t = listTrash(store);
+  return deleteFromTrash(store, [...t.posts.map((p) => p.id), ...t.brands.map((b) => b.id)]);
 }
 export { basename, parseUid };

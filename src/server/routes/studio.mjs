@@ -5,6 +5,7 @@
 //   POST /api/studio/act             {uid, action: approve|changes|reject|reopen|idea-approve|idea-reject|edit|undo, ...}   owner only
 //                                    `changes` also starts the designer on the post at once ({revising:true}; {revising:false, reviseReason:'off'|'no-post'|'not-sent-back'} when it cannot)
 //   POST /api/studio/bulk            {uids, onlyVerified}                                                                 owner only
+//   POST /api/studio/trash-delete    {ids:["post:<project>:<folder>"|"brand:<folder>", ...]} or {all:true}  delete from the trash for good; only what GET /api/studio/trash lists can be reached   owner only
 //   POST /api/studio/brand-order     {order: [brand ids]}  the order of the brands in the rail, the month's lanes and the all-brands Insights (kept on this computer, `studio.json`)   owner only
 //   POST /api/studio/cover           {uid, time} or {uid, auto:true}  use the frame at that second (or the best one) of a reel as its cover (the picture is retaken, no re-render; Buffer is told the frame)   owner only
 //   POST /api/studio/caption         {uid, text}  change a post's caption (a built post: its document, one undo step; an imported post: its record)   owner only
@@ -15,7 +16,7 @@ import { collect, detail } from '../../studio/data.mjs';
 import { act, bulkApprove, StudioError } from '../../studio/actions.mjs';
 import { comment, CommentError } from '../../studio/comments.mjs';
 import { setCaption, CaptionError } from '../../studio/caption.mjs';
-import { listTrash, removeBrand, removePosts, restoreBrand, restorePost, TrashError, trashCount } from '../../studio/trash.mjs';
+import { deleteFromTrash, emptyTrash, listTrash, removeBrand, removePosts, restoreBrand, restorePost, TrashError, trashCount } from '../../studio/trash.mjs';
 import { candidatesFor, setCover } from '../../studio/cover.mjs';
 import { saveBrandOrder } from '../../studio/brand-order.mjs';
 import { createHash } from 'node:crypto';
@@ -90,6 +91,15 @@ export default {
         const body = await readJsonBody(req);
         need(Array.isArray(body.uids) && body.uids.length > 0 && body.uids.length <= 300, 400, 'Send {"uids": [...]} with up to 300 posts.');
         return sendJson(res, 200, { ok: true, ...(await removePosts(store, body.uids.map(String))) });
+      }
+      if (sub === 'trash-delete') {
+        // delete from the trash for good ({ids:[...]} or {all:true}); only what the Trash page lists can be reached, and only the owner can do it
+        need(method === 'POST', 405, 'POST only.');
+        needHuman();
+        const body = await readJsonBody(req);
+        if (body.all === true) return sendJson(res, 200, { ok: true, ...emptyTrash(store) });
+        need(Array.isArray(body.ids) && body.ids.length > 0 && body.ids.length <= 500, 400, 'Send {"ids": [...]} or {"all": true}.');
+        return sendJson(res, 200, { ok: true, ...deleteFromTrash(store, body.ids.map(String)) });
       }
       if (sub === 'restore') {
         need(method === 'POST', 405, 'POST only.');

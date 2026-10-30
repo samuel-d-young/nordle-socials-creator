@@ -24,6 +24,7 @@ import { commentsPanel } from './studio-comments.js';
 import { loadPublish, openConnect, openSchedule, pub, refreshAuto } from './studio-publish.js';
 import { openAddBrand, openGuide } from './studio-brand.js';
 import { openStock } from './studio-stock.js';
+import { activityEl, startActivity } from './studio-activity.js';
 import * as act from './studio-actions.js';
 import { api } from './api.js';
 
@@ -308,6 +309,7 @@ function renderRail() {
         h('button', { class: `rb${S.brand === p.id ? ' on' : ''}`, type: 'button', 'aria-pressed': String(S.brand === p.id), onclick: () => setBrand(p.id), onkeydown: (e) => brandKey(e, p), title: `${p.name} (${i + 2})\nDrag to move it, or Alt + arrow up or down` },
           h('i', { class: 'tick', style: { '--lane': p.color }, 'aria-hidden': 'true' }), h('span', { class: 'rb-n' }, p.name), bc[p.id]?.needs ? h('span', { class: 'rb-c', title: 'Waiting for your review' }, String(bc[p.id].needs)) : null),
         h('button', { class: 'rb-menu', type: 'button', 'aria-label': `More for ${p.name}`, 'aria-haspopup': 'menu', onclick: (e) => openBrandMenu(e.currentTarget, p) }, icon('dots', 15))))),
+    activityEl,                       // what Claude is doing right now (app/studio-activity.js)
     h('div', { class: 'rail-foot' },
       h('button', { class: 'rf', type: 'button', onclick: cycleTheme, title: 'Colour theme: follows the computer, or fixed light or dark' }, icon(themeMode() === 'dark' ? 'moon' : themeMode() === 'light' ? 'sun' : 'system', 15), h('span', {}, `Theme: ${themeMode()}`)),
       h('button', { class: 'rf', type: 'button', onclick: showKeys }, icon('keys', 15), h('span', {}, 'Shortcuts'), kbd('?')),
@@ -791,7 +793,7 @@ export function showStudio(hash) {
   if (first) {
     Object.keys(sigs).forEach((k) => delete sigs[k]);
     update({ load: S.load === 'ready' ? 'ready' : 'loading' });
-    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); startUpdateChecks(); refreshMaking().then(redrawBanner); watchMaking(); });
+    load({ force: true }).then(() => { if (S.view === 'queue') buildQueue(S.queue.uid ?? undefined); update(); loadPublish(); startUpdateChecks(); refreshMaking().then(redrawBanner); watchMaking(); startActivity(ctx); });
     clearInterval(pollTimer);
     pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) { load(); refreshAuto(); } }, 15000);
   } else {

@@ -840,6 +840,12 @@ a.btn { text-decoration: none; color: inherit; }
 .tr-title { font: 560 17px/1.25 var(--font-display); }
 .tr-meta { font-size: 12px; color: var(--ink-3); }
 .tr-note { font-size: 12px; }
+.tr-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.tr-top .tr-note { margin: 0; flex: 1 1 320px; }
+.tr-acts { display: inline-flex; gap: 8px; align-items: center; }
+.tr-del, .tr-empty { color: var(--proof); }
+.tr-del:hover:not(:disabled), .tr-empty:hover:not(:disabled) { background: var(--proof-wash); color: var(--proof); }
+.tr-list-names { margin: 10px 0 0 18px; padding: 0; font-size: 13px; line-height: 1.5; }
 .btn.rm { color: var(--ink-3); }
 .btn.rm:hover:not(:disabled) { color: var(--proof); }
 .acts.compact .rm { align-self: center; min-height: 28px; font-size: 12px; }
@@ -855,6 +861,40 @@ a.btn { text-decoration: none; color: inherit; }
 .rb-row.dragging { opacity: .45; }
 .rb-row.drop-here { box-shadow: 0 -2px 0 var(--ink), inset 0 2px 0 var(--ink); }
 .popmenu button:disabled { opacity: .4; cursor: default; }
+
+/* what Claude is doing, in the left bar (app/studio-activity.js) */
+.act { margin-top: auto; padding: 11px 11px 12px; border: 1px solid var(--rule); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 72%, transparent); display: flex; flex-direction: column; gap: 9px; }
+.act + .rail-foot { margin-top: 0; }
+.act-head { display: flex; align-items: center; gap: 8px; }
+.act-head .lbl { margin: 0; padding: 0; }
+.act-state { margin-left: auto; font: 560 10.5px/1 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.act[data-state="working"] .act-state { color: var(--ink); }
+.act-snd { border: 0; background: none; padding: 3px; color: var(--ink-3); border-radius: var(--radius); display: inline-flex; cursor: pointer; }
+.act-snd:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.act-snd[aria-pressed="false"] { opacity: .55; }
+.act-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.act-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.35; border-radius: var(--radius); }
+.act-spin { flex: none; width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink) 22%, transparent); border-top-color: var(--ink); animation: spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .act-spin { animation-duration: 3s; } }
+.act-row > svg, .act-link > svg { flex: none; margin-top: 1px; color: var(--stamp); }
+.act-row.bad > svg, .act-row.bad .act-link > svg { color: var(--proof); }
+.act-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; text-align: left; }
+.act-main b { font-weight: 600; color: var(--ink); }
+.act-title { display: flex; align-items: center; gap: 5px; color: var(--ink-2); min-width: 0; }
+.act-tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-tick { width: 6px; height: 6px; border-radius: 1px; flex: none; }
+.act-sub { color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.act-bar { display: block; height: 3px; margin-top: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.act-bar i { display: block; height: 100%; background: var(--ink); }
+.act-open, .act-link { border: 0; background: none; color: inherit; cursor: pointer; }
+.act-open { flex: none; padding: 2px; margin-top: 1px; color: var(--ink-3); border-radius: var(--radius); display: inline-flex; }
+.act-open:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.act-link { display: flex; gap: 8px; align-items: flex-start; width: 100%; padding: 0; font: inherit; text-align: left; }
+.act-link:hover .act-main b { text-decoration: underline; text-underline-offset: 2px; }
+.act-row.just { animation: act-just 2.4s ease-out; }
+@keyframes act-just { from { background: var(--stamp-wash); box-shadow: 0 0 0 4px var(--stamp-wash); } to { background: transparent; box-shadow: 0 0 0 4px transparent; } }
+@media (prefers-reduced-motion: reduce) { .act-row.just { animation: none; } }
+.act-idle { font-size: 12px; line-height: 1.45; margin: 0; }
 .popmenu { position: fixed; z-index: 120; min-width: 190px; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--lift); padding: 4px; }
 .popmenu button { display: flex; width: 100%; gap: 8px; align-items: center; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: var(--radius); color: var(--ink); }
 .popmenu button:hover, .popmenu button:focus-visible { background: color-mix(in srgb, var(--ink) 7%, transparent); }
