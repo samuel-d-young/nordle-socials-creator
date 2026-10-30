@@ -72,7 +72,7 @@ Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTIO
 
 ## Commands
 
-- `npm start` runs the editor and opens it. `npm run doctor`, `npm run validate`, `npm test` (about 690 tests, 4 to 6 minutes; the browser-driven ones are timing-sensitive on a slow or busy computer, so rerun a failing file alone before suspecting the code), `npm run verify`.
+- `npm start` runs the editor and opens it. `npm run doctor`, `npm run validate`, `npm test` (about 690 tests, 4 to 6 minutes; the browser-driven ones are timing-sensitive on a slow or busy computer, so rerun a failing file alone before suspecting the code; `npm run test:ci` (`tools/run-tests.mjs`) does that for you: each file is its own process, and a file that fails is run once more alone and reported as FLAKY if it then passes, as CI does), `npm run verify`.
 - Connect Claude Code: `node setup.mjs --register` (or `claude mcp add nordle -- node /full/path/to/nordle/mcp.mjs`); the MCP server starts the editor if needed.
 - `node nordle.mjs render <doc|project> [--sheet] [--safe] [--size ..] [--page ..]`, `node nordle.mjs verify <doc|project>`.
 - First time on a machine: `npx playwright-core install chromium`.

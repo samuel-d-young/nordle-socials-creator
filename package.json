@@ -21,6 +21,7 @@
     "verify:samples": "node nordle.mjs verify samples/little-gannet",
     "sample:media": "node tools/make-sample-media.mjs",
     "test": "node --test --test-timeout=180000 tests/*.test.mjs",
+    "test:ci": "node tools/run-tests.mjs",
     "verify": "node nordle.mjs doctor --ci && node nordle.mjs validate --assets && npm test && node nordle.mjs verify samples/little-gannet",
     "studio:demo": "node tools/studio-demo.mjs --real",
     "share-check": "node tools/share-check.mjs"
