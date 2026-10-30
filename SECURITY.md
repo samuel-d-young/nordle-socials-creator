@@ -72,6 +72,12 @@ sandbox** against a program that is already running as you on this computer. In 
    ignores letter case, but any other check that compares a name as plain text can be fooled the same way on those systems: report
    it if you find one.
 
+## Protecting the repository itself
+
+The `main` branch cannot be deleted or force-pushed, release tags (`v*`) cannot be moved, and a change from anyone but the owner needs a pull request
+whose tests pass on Linux and Windows. Secret scanning, Dependabot security updates and private vulnerability reporting are on, and Actions run with
+read-only tokens. The rulesets are recorded in [`.github/rulesets/`](.github/rulesets/README.md).
+
 ## Reporting a problem
 
 Please report a security problem through GitHub's private vulnerability reporting: on the repository's **Security** tab, choose
