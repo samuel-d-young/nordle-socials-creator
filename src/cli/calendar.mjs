@@ -27,7 +27,7 @@ const USAGE = `calendar <command> [project] ...
   signoff <project> <item>     changes <project> <item> --comment "what to change"     posted <project> <item>
   link <project> <item> <doc>            point an item at its finished post
   settings <project> [--lead-days N --auto-build on|off --auto-propose on|off --auto-revise on|off --regions VIC,WA --per-month reel=8,carousel=3,post=2
-                      --post-times 12:00,18:00 --idea-approval owner|delegated --horizon N --pillars id:Name:0.3,... --compliance ahpra --timezone Zone
+                      --post-times 12:00,18:00 --cover-frame auto|last --idea-approval owner|delegated --horizon N --pillars id:Name:0.3,... --compliance ahpra --timezone Zone
                       --review weekly|monthly|off --review-weekday monday --auto-review on|off]    (the performance review rhythm: docs/PERFORMANCE.md)
   slots <project> <YYYY-MM>              the free, evenly spread slots that would fill the month
   due <project>                          what the runner would build today
@@ -175,6 +175,7 @@ async function settings(flags, pos) {
   if (flags.regions !== undefined) patch.regions = flags.regions === true || flags.regions === 'none' ? null : String(flags.regions).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
   if (flags['post-times'] !== undefined) patch.postTimes = String(flags['post-times']).split(',').map((s) => s.trim()).filter(Boolean);
   if (flags['idea-approval'] !== undefined) patch.ideaApproval = String(flags['idea-approval']);
+  if (flags['cover-frame'] !== undefined) patch.coverFrame = String(flags['cover-frame']);
   if (flags.compliance !== undefined) patch.compliance = flags.compliance === true || flags.compliance === 'none' ? null : String(flags.compliance).split(',').map((s) => s.trim()).filter(Boolean);
   if (flags.timezone !== undefined) patch.timezone = String(flags.timezone);
   if (flags['per-month'] !== undefined) {

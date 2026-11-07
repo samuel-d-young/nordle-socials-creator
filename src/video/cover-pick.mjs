@@ -47,6 +47,19 @@ const rank01 = (values) => {
 };
 
 /**
+ * A time that lands inside the very last frame of a video: half a frame before its end. (The length itself is past the last frame: no frame
+ * starts there, and a service asked for it may refuse or fall back to its own first frame.) Used for brands whose reels end on their cover card.
+ * @returns {Promise<number|null>} seconds, or null when the file has no length
+ */
+export async function lastFrameTime(file) {
+  const probe = await probeMedia(file);
+  const duration = Number(probe.duration ?? 0);
+  if (!(duration > 0)) return null;
+  const frame = probe.video?.fps > 0 ? 1 / probe.video.fps : 0.04;
+  return Math.max(0, Math.round((duration - frame / 2) * 1000) / 1000);
+}
+
+/**
  * The best frames of a finished video, best first, at least `gap` seconds apart.
  * @param {string} file the video
  * @param {{count?:number, gap?:number, skipStart?:number, skipEnd?:number}} [opts] skipEnd is the length of the closing card or tail to keep clear of

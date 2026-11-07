@@ -15,7 +15,8 @@ import { readSentPosts } from '../src/publish/remote.mjs';
 import { allowancePath, clearAllowanceMemo, recordAllowance } from '../src/publish/store.mjs';
 import { Store } from '../src/server/store.mjs';
 import { loadCalendar, newCalendar, saveCalendar, validateCalendar } from '../src/calendar/model.mjs';
-import { decide, markScheduled, recordPublishTarget, updateItem } from '../src/calendar/service.mjs';
+import { decide, effectiveSettings, markScheduled, recordPublishTarget, setSettings, updateItem } from '../src/calendar/service.mjs';
+import { binary } from '../src/video/ffmpeg.mjs';
 import { NordleClient, NordleError } from '../src/mcp/client.mjs';
 import { createTools } from '../src/mcp/tools.mjs';
 import { clearChannelMemo, configure, buildPlan, describeAdapter, getAdapter, runPlan } from '../src/publish/index.mjs';
@@ -486,6 +487,40 @@ test('buffer: the cover frame chosen for a reel goes to Buffer as the video\'s t
   assert.equal(r.results[0].ok, true, r.results[0].message);
   assert.deepEqual(fake.state.creates.at(-1).assets, [{ video: { url: `${fake.origin}/media/${P}/${FUTURE}-16-cv-reel/cv-reel.mp4`, metadata: { thumbnailOffset: 8500 } } }]);
   assert.throws(() => setCoverTime(dirOf(P), 'cv-reel', -1), /seconds/);
+});
+
+test('buffer: with the calendar setting coverFrame "last" a reel\'s cover is its last frame, also when the owner clicked past the end; a click inside the video still wins', async (t) => {
+  const bin = binary('ffmpeg');
+  if (spawnSync(bin, ['-version'], { windowsHide: true }).status !== 0) return t.skip('ffmpeg is not installed');
+  await connectBuffer();
+  await setSettings(dirOf(P), { coverFrame: 'last' });
+  try {
+    const uid = addPost({ id: 'cv-last', format: 'reel', date: `${FUTURE}-17`, time: '08:05' });
+    const clip = join(dirOf(P), 'out', 'cv-last', 'cv-last.mp4');
+    assert.equal(spawnSync(bin, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=64x112:r=25:d=2', '-pix_fmt', 'yuv420p', clip], { windowsHide: true }).status, 0, 'a two second clip');
+    const coverOf = async () => (await planOf('buffer', [uid])).items[0].cover;
+    let c = await coverOf();
+    assert.equal(c.source, 'last');
+    assert.equal(c.automatic, 'last');
+    assert.ok(c.time > 1.9 && c.time < 2, `inside the last frame, not at or past the end (${c.time})`);
+    setCoverTime(dirOf(P), 'cv-last', 2.0);   // a click on the very end of the timeline: no frame starts there
+    c = await coverOf();
+    assert.equal(c.source, 'chosen');
+    assert.ok(c.time > 1.9 && c.time < 2, `pulled back to the last frame (${c.time})`);
+    setCoverTime(dirOf(P), 'cv-last', 0.5);
+    c = await coverOf();
+    assert.deepEqual([c.source, c.time], ['chosen', 0.5], 'a frame the owner chose inside the video stays');
+    setCoverTime(dirOf(P), 'cv-last', 0.3, { auto: true });   // Nordle's own earlier pick does not beat the setting
+    c = await coverOf();
+    assert.equal(c.source, 'last');
+    const plan = await planOf('buffer', [uid]);
+    const r = (await human('POST', '/run', { planId: plan.planId })).json;
+    assert.equal(r.results[0].ok, true, r.results[0].message);
+    const off = fake.state.creates.at(-1).assets[0].video.metadata.thumbnailOffset;
+    assert.ok(off > 1900 && off < 2000, `Buffer is told the last frame (${off} ms)`);
+  } finally { await setSettings(dirOf(P), { coverFrame: null }); }
+  assert.equal(effectiveSettings(loadCalendar(dirOf(P), P)).coverFrame, 'auto', 'the default is the best frame');
+  await assert.rejects(() => setSettings(dirOf(P), { coverFrame: 'middle' }), /not valid/);
 });
 
 test('buffer: a post deleted in Buffer is found by Check, Reschedule takes it back, and it can be scheduled again; only the owner may ask', async () => {

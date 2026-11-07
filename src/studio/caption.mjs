@@ -42,6 +42,8 @@ export async function setCaption(store, { uid, text } = {}) {
       const it = cal.items.find((i) => i.id === item.id);
       if (!it?.external) throw new CaptionError(409, 'This post has nothing to change.');
       if ((it.external.caption ?? '') === caption) return;
+      const firstLine = (s) => (String(s ?? '').split('\n').find((l) => l.trim()) ?? '').trim();
+      if (!it.hook || it.hook === firstLine(it.external.caption)) it.hook = firstLine(caption) || it.hook;   // the hook was the first line: it follows the new first line
       it.external.caption = caption;
       it.updated = new Date().toISOString();
       changed = true;

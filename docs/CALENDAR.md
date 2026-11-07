@@ -42,7 +42,8 @@ passes `--delegated` to `calendar add` on the command line). Ideas Claude then p
 
 * `calendar.json` (`schemas/calendar.schema.json`): `settings` and `items`. Settings (all optional):
   `leadDays` (7), `perMonth` (`{reel:8, carousel:3, post:2}` = 13), `autoBuild` (false), `autoPropose` (false), `horizonMonths` (3),
-  `postTimes`, `pillars` (`[{id,name,about,share}]`), `regions` (`["VIC"]`, `["WA"]`: which states' holidays, school terms and
+  `postTimes`, `coverFrame` (`auto` | `last`: a reel's cover is the best frame, or its final frame for reels that end on their cover card),
+  `pillars` (`[{id,name,about,share}]`), `regions` (`["VIC"]`, `["WA"]`: which states' holidays, school terms and
   occasions apply; set it), `ideaApproval` (`owner` | `delegated`), `compliance` (`["ahpra"]`; dental and other health brands are
   treated as regulated even without it), `maxBuildAttempts` (3), `review` (`{cadence: weekly|monthly, weekday?, autoReview?}`: the
   performance review rhythm, see `docs/PERFORMANCE.md`; `calendar run` mentions a due review and writes it only with `autoReview`).

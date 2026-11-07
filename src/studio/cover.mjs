@@ -6,10 +6,18 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { frameFromVideo } from '../video/render.mjs';
-import { coverCandidates } from '../video/cover-pick.mjs';
+import { coverCandidates, lastFrameTime } from '../video/cover-pick.mjs';
 import { getCover, setCoverTime } from '../publish/covers.mjs';
+import { loadProject } from '../calendar/service.mjs';
 import { StudioError } from './actions.mjs';
 import { detail, forget, locate } from './data.mjs';
+
+/** The frame Nordle picks when nobody chose one: the last frame for a brand whose reels end on their cover card (calendar setting coverFrame "last"), else the best one. */
+async function pickedTime(projectDir, videoAbs) {
+  if (loadProject(projectDir).settings.coverFrame === 'last') { const t = await lastFrameTime(videoAbs); if (t !== null) return t; }
+  const [best] = await coverCandidates(videoAbs, { count: 1 });
+  return best?.time ?? 0;
+}
 
 /** The finished video of a post and the cover picture that sits beside it, both inside the project. */
 function filesOf(store, uid) {
@@ -38,10 +46,7 @@ async function apply(f, time, { auto = false } = {}) {
 /** The owner chose a moment ({time}), or asked for the best one ({auto: true}). */
 export async function setCover(store, { uid, time, auto } = {}) {
   const f = filesOf(store, uid);
-  if (auto) {
-    const [best] = await coverCandidates(f.videoAbs, { count: 1 });
-    return apply(f, best?.time ?? 0, { auto: true });
-  }
+  if (auto) return apply(f, await pickedTime(f.project.dir, f.videoAbs), { auto: true });
   const t = Number(time);
   if (!Number.isFinite(t) || t < 0) throw new StudioError(400, 'Say which moment of the video: {"time": seconds}, or {"auto": true}.');
   return apply(f, t);
@@ -73,8 +78,7 @@ export async function candidatesFor(store, { uid, count = 6 } = {}) {
 export async function ensureCover(post) {
   const video = post.media?.find((m) => m.kind === 'video');
   if (!video?.abs || !post.itemId) return null;
-  const [best] = await coverCandidates(video.abs, { count: 1 });
-  const time = best?.time ?? 0;
+  const time = await pickedTime(post.projectDir, video.abs);
   const rel = (post.media.find((m) => m.kind === 'cover')?.abs) ?? null;
   if (rel && /\.(jpg|png)$/.test(rel)) { try { await frameFromVideo(video.abs, time, rel); } catch { /* the choice still stands: Buffer is told the time */ } }
   return setCoverTime(post.projectDir, post.itemId, time, { auto: true });

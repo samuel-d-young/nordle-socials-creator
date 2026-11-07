@@ -176,6 +176,11 @@ another MCP server lets Claude do. The API-key route above is the tested one and
   keeps clear of the opening instant and the closing card). Kept in `<project>/publish/covers.json` (`auto: true` when Nordle picked it), not
   in the post's document, so a sign-off stays good. Order of precedence: the owner's choice, the designer's `timeline.cover`, else the best
   frame is picked automatically when the plan runs. `POST /api/studio/cover {uid, time | auto:true}`, `GET /api/studio/cover-candidates`.
+  **Last frame.** For a brand whose reels end on their designed cover card, set the calendar setting `coverFrame` to `"last"` (default `"auto"`):
+  the cover is then the last frame of the video (half a frame before its end: `lastFrameTime` in `src/video/cover-pick.mjs`), the plan shows
+  it as "Last frame", and "Last frame" replaces "Best frame" in the cover control. A frame the owner clicked inside the video still wins; Nordle's
+  own earlier pick (`auto: true`) does not. A time at or past the end of the video (a click on the very end of the timeline) is pulled back to the
+  last frame, since no frame starts at the end and Buffer may refuse it. Set it with `nordle calendar settings <project> --cover-frame last` or `POST /api/calendar/settings {coverFrame: "last"}`.
 * **Re-run the checks** runs the automatic checks again on every post in the window (`POST /api/projects/<project>/checks/<doc>`).
 * **Reschedule what was deleted in Buffer.** `POST /api/publish/check-scheduled {uids}` lists Buffer's posts for the channels (one listing per
   organisation, from a day before the earliest scheduled time) and reports each target as Buffer's own status or `missing`. A target is

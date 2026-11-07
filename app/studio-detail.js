@@ -252,7 +252,7 @@ export function publishLines(pub) {
 }
 
 /** Can the words of this post be changed here? A built post (its document) or one imported with its pictures; not an idea with nothing written. */
-const canEditCaption = (d, post) => !!post.docId || !!d.item?.external;
+const canEditCaption = (d, post) => !!post.docId || !!post.external || !!d.item?.external;   // the post list says `external`; the item the sheet carries does not
 
 /**
  * The caption, with an Edit button. Edit turns it into a box (Ctrl+Enter saves, Esc cancels). A post that is approved, or already
@@ -272,8 +272,14 @@ export function caption(d, post, { onChanged } = {}) {
   function show() {
     aside.replaceChildren(...[h('span', { class: `count${over ? ' over' : ''}`, title: `Caption, call to action and hashtags together. Shortest limit for this post: ${c.limit}.` }, `${total.toLocaleString('en-AU')} of ${c.limit.toLocaleString('en-AU')}`), editBtn].filter(Boolean));
     if (!c.caption && !c.hashtags.length) { body.replaceChildren(h('p', { class: 'muted' }, post.status === 'idea' ? 'No caption yet: it is written when the post is built.' : 'No caption written yet.')); return; }
+    const text = c.caption ? captionText(c.caption, d.item?.hook || post.hook) : null;
+    if (text && editable) {   // the words themselves are the way in: click them to type (a drag to select and copy does not open the box)
+      text.classList.add('cap-click');
+      text.title = 'Click to edit the caption';
+      text.addEventListener('click', () => { if (!String(window.getSelection?.() ?? '').length) edit(); });
+    }
     body.replaceChildren(...[
-      c.caption ? captionText(c.caption, d.item?.hook || post.hook) : null,
+      text,
       c.cta && !c.caption.includes(c.cta) ? h('p', { class: 'cap-cta' }, h('span', { class: 'lbl-i' }, 'Call to action'), c.cta) : null,
       c.hashtags.length ? h('div', { class: 'tags' }, c.hashtags.map((t) => h('span', { class: 'tag' }, t))) : null,
       alts.length ? h('details', { class: 'alt' }, h('summary', {}, `Alt text (${alts.length})`), h('ul', {}, alts.map(([k, v]) => h('li', {}, h('b', {}, `${k}: `), v)))) : null].filter(Boolean));
@@ -283,7 +289,7 @@ export function caption(d, post, { onChanged } = {}) {
     const area = h('textarea', { class: 'field cap-area', rows: Math.min(18, Math.max(5, String(c.caption).split('\n').length + 2)), 'aria-label': 'Caption', 'data-field': 'caption-edit', maxlength: 5000 });
     area.value = c.caption ?? '';
     const note = h('p', { class: 'cap-warn', role: 'status' });
-    const signed = post.status === 'signed-off' && !post.staleSignoff;
+    const signed = post.status === 'signed-off' && !post.staleSignoff && !post.external;   // a post made outside Nordle has no document, so a new caption does not unsign it
     const scheduled = post.status === 'scheduled' || post.status === 'posted';
     if (scheduled) note.textContent = 'This post is already in a publishing service. It keeps the words it was given, so change them there too.';
     else if (signed) note.textContent = 'This post is approved. If you change the words, you will need to approve it again.';

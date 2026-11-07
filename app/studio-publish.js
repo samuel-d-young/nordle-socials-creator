@@ -236,7 +236,7 @@ export async function openSchedule(uids, { onScheduled } = {}) {
     const it = items.find((x) => x.cover && x.variant !== 'story');
     if (!it || alreadyDone(it)) return null;
     const c = it.cover;
-    const say = c.source === 'chosen' ? `Frame at ${mmss(c.time)}` : c.source === 'auto' ? `Frame at ${mmss(c.time)}, picked for you` : c.source === 'designer' ? `Frame at ${mmss(c.time)}` : 'Picked for you when you schedule';
+    const say = c.source === 'last' ? `Last frame (${mmss(c.time)})` : c.source === 'chosen' ? `Frame at ${mmss(c.time)}` : c.source === 'auto' ? `Frame at ${mmss(c.time)}, picked for you` : c.source === 'designer' ? `Frame at ${mmss(c.time)}` : 'Picked for you when you schedule';
     const busy = st.coverBusy.has(uid);
     const autoPick = async () => {
       st.coverBusy.add(uid); draw();
@@ -246,7 +246,7 @@ export async function openSchedule(uids, { onScheduled } = {}) {
     return h('div', { class: 'sch-cover', dataset: { source: c.source } },
       h('span', { class: 'lbl-i' }, 'Cover'), h('span', { class: 'sch-cover-say' }, busy ? 'Looking for the best frame…' : say),
       btn('Change', { quiet: true, act: 'cover-choose', disabled: busy, onclick: async () => { const post = S.byUid.get(uid); if (post && await openCoverPicker(post)) await replan(); } }),
-      btn('Best frame', { quiet: true, act: 'cover-auto', disabled: busy, title: 'Let Nordle pick the best frame', onclick: autoPick }));
+      btn(c.automatic === 'last' ? 'Last frame' : 'Best frame', { quiet: true, act: 'cover-auto', disabled: busy, title: c.automatic === 'last' ? 'Use the last frame of the video' : 'Let Nordle pick the best frame', onclick: autoPick }));
   }
 
   /** "Also add to Stories": the same post again as a Story on each Instagram and Facebook channel, at the same moment. */

@@ -17,6 +17,7 @@ import { DEFAULT_POST_TIMES } from '../calendar/plan.mjs';
 import { bundleFileName } from './adapters/bundle.mjs';
 import { PLAN_TTL_MS, PublishError, loadSettings, newPlanId, resolveSettings, savePlan } from './store.mjs';
 import { getCover } from './covers.mjs';
+import { lastFrameTime } from '../video/cover-pick.mjs';
 
 export const MAX_POSTS = 100;
 const MIN_LEAD_MS = 10 * 60 * 1000;
@@ -181,21 +182,32 @@ export async function evaluatePost(store, uid, { adapter, settings, times = {}, 
   let pictureIndex = 0;
   for (const m of media) { m.abs = join(project.dir, m.rel); m.file = bundleFileName(m, m.kind === 'image' ? pictureIndex++ : 0, docId); }
 
-  // the cover of a reel: the frame the owner chose in the Studio (or Nordle picked earlier), else the one the designer set; with neither, one is picked
+  let proj = cache.get(project.dir);
+  if (!proj) cache.set(project.dir, proj = loadProject(project.dir));
+
+  // the cover of a reel: the frame the owner chose in the Studio, else (when the calendar setting coverFrame is "last", for reels that end on
+  // their cover card) the last frame of the video, else a frame Nordle picked earlier or the one the designer set; with none of those, one is picked
   // automatically when the plan runs (src/studio/cover.mjs ensureCover), so Buffer is never left to use the first frame
   let coverTime = null, coverSource = null;
   if (format === 'reel' && cal) {
+    const wantLast = proj.settings.coverFrame === 'last';
     const chosen = getCover(project.dir, cal.id);
-    if (chosen) { coverTime = chosen.at; coverSource = chosen.auto ? 'auto' : 'chosen'; }
-    else if (at.docId) {
+    const videoAbs = media.find((m) => m.kind === 'video')?.abs ?? null;
+    if (chosen && !(wantLast && chosen.auto)) { coverTime = chosen.at; coverSource = chosen.auto ? 'auto' : 'chosen'; }
+    else if (wantLast && videoAbs) {
+      try { const t = await lastFrameTime(videoAbs); if (t !== null) { coverTime = t; coverSource = 'last'; } } catch { /* no length: fall through to the other ways */ }
+    }
+    if (coverSource === null && at.docId) {
       const tl = readJsonCached(join(project.dir, 'docs', `${at.docId}.json`))?.timeline;
       if (Number.isFinite(tl?.cover)) { coverTime = tl.cover; coverSource = 'designer'; }
+    }
+    // a time at or past the end of the video is not a frame (a click on the very end of the timeline gives one): use the last frame instead
+    if (Number.isFinite(coverTime) && videoAbs) {
+      try { const last = await lastFrameTime(videoAbs); if (last !== null && coverTime > last) coverTime = last; } catch { /* keep what was chosen */ }
     }
   }
 
   // when (before any channel's own offset)
-  let proj = cache.get(project.dir);
-  if (!proj) cache.set(project.dir, proj = loadProject(project.dir));
   const tz = validZone(proj.timezone) ? proj.timezone : DEFAULT_TIMEZONE;
   let baseWhen = null;
   if (cal?.date) {
@@ -270,7 +282,7 @@ export async function evaluatePost(store, uid, { adapter, settings, times = {}, 
       const item = skeleton({
         key: channel ? `${uid}#${channel.id}${story ? '#story' : ''}` : uid, project: project.id, docId, title: story ? `${title} (Story)` : title, format, status, caption, media: mine.map((m) => m.rel),
         channel, channelName: channel?.name ?? null, account: s.account?.id ?? null, accountLabel: s.account?.label ?? null, ...(story ? { variant: 'story' } : {}), targetId,
-        ...(format === 'reel' && !story ? { cover: { time: coverTime, source: coverSource ?? 'pending' } } : {}),
+        ...(format === 'reel' && !story ? { cover: { time: coverTime, source: coverSource ?? 'pending', automatic: proj.settings.coverFrame === 'last' ? 'last' : 'best' } } : {}),
         ...(!story && storySkipped ? { storySkipped } : {}),
       });
       if (when) {

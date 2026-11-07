@@ -68,6 +68,7 @@ export function effectiveSettings(cal) {
     autoRevise: s.autoRevise !== false,   // on unless the owner turns it off: "Request changes" in the Studio starts the designer straight away
     horizonMonths: s.horizonMonths ?? 3,
     postTimes: s.postTimes?.length ? s.postTimes : DEFAULT_POST_TIMES,
+    coverFrame: s.coverFrame === 'last' ? 'last' : 'auto',   // 'last': a reel's cover is its final frame (the cover card the reel ends on)
     pillars: s.pillars ?? [],
     regions: s.regions ?? [],
     ideaApproval: s.ideaApproval ?? 'owner',
@@ -476,7 +477,7 @@ export function linkDoc(projectDir, id, docId, { role = 'agent' } = {}) {
   });
 }
 
-const SETTING_KEYS = ['leadDays', 'perMonth', 'autoBuild', 'autoPropose', 'autoRevise', 'horizonMonths', 'postTimes', 'pillars', 'regions', 'ideaApproval', 'compliance', 'maxBuildAttempts', 'review', 'claudeModel', 'claudeEffort', 'maxBudgetUsd'];
+const SETTING_KEYS = ['leadDays', 'perMonth', 'autoBuild', 'autoPropose', 'autoRevise', 'horizonMonths', 'postTimes', 'coverFrame', 'pillars', 'regions', 'ideaApproval', 'compliance', 'maxBuildAttempts', 'review', 'claudeModel', 'claudeEffort', 'maxBudgetUsd'];
 
 /** Change calendar settings (owner only: the caller checks). A null value removes a setting. Also accepts timezone. */
 export function setSettings(projectDir, patch) {

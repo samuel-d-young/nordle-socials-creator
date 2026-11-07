@@ -5,9 +5,20 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { closeBrowser } from './helpers.mjs';
+import { mutateCalendar } from '../src/calendar/service.mjs';
 import { TODAY, studioPage, studio, overview, firstWhere, verifiedBuilt } from './studio-helpers.mjs';
 
 after(closeBrowser);
+
+/** A signed-off post made outside Nordle (no document: its words live in the calendar record), like an imported reel. */
+async function addImported(work, project) {
+  const id = 'imported-words';
+  await mutateCalendar(join(work, 'projects', project), (cal) => {
+    cal.items.push({ id, date: '2026-10-20', time: '18:00', format: 'post', title: 'Imported words', status: 'signed-off', origin: 'owner', hook: 'Old first line', updated: new Date().toISOString(),
+      external: { source: 'made elsewhere', caption: 'Old first line\n\nThe rest, unchanged.', hashtags: ['#one', '#two'] } });
+  });
+  return { id, uid: `${project}:${id}` };
+}
 
 test('POST /studio/caption changes a built post\'s caption as one undoable step, and an approval taken before it goes stale', async () => {
   await studio(async ({ call, work, calendarOf }) => {
@@ -62,6 +73,47 @@ test('the post sheet: Edit turns the caption into a box, Cancel leaves it alone,
     assert.equal(await page.locator('.detail.open').count(), 1, 'the sheet stays open');
     const doc = (await call(`/studio/post?uid=${encodeURIComponent(a.uid)}`)).body;
     assert.equal(doc.copy.caption, 'A warmer opening line.\n\nThe rest, as written.');
+  });
+});
+
+test('a post made outside Nordle: its caption changes in the calendar record, the hook follows the new first line, and it stays approved', async () => {
+  await studio(async ({ call, work, calendarOf }) => {
+    const { posts } = await overview(call);
+    const a = firstWhere(posts, (p) => p.docId);
+    const imp = await addImported(work, a.project);
+    const r = await call('/studio/caption', 'POST', { uid: imp.uid, text: 'New first line\n\nThe rest, unchanged.' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.changed, true);
+    const it = calendarOf(a.project).items.find((i) => i.id === imp.id);
+    assert.equal(it.external.caption, 'New first line\n\nThe rest, unchanged.');
+    assert.deepEqual(it.external.hashtags, ['#one', '#two'], 'the hashtags are not touched');
+    assert.equal(it.hook, 'New first line', 'the hook was the first line, so it follows');
+    assert.equal(it.status, 'signed-off');
+    const after = firstWhere((await overview(call)).posts, (p) => p.uid === imp.uid);
+    assert.equal(after.staleSignoff, false, 'there is no document, so nothing goes stale');
+    assert.equal(after.external, true);
+  });
+});
+
+test('the post sheet of a post made outside Nordle offers Edit, and clicking the caption itself opens the box; saving does not say it needs approving again', async () => {
+  await studioPage(async ({ page, open, call, work }) => {
+    const { posts } = await overview(call);
+    const a = firstWhere(posts, (p) => p.docId);
+    const imp = await addImported(work, a.project);
+    await open(`#/s/month?today=${TODAY}&post=${encodeURIComponent(imp.uid)}&month=2026-10`);
+    await page.waitForSelector('.detail.open [data-act="edit-caption"]');
+    // the words themselves are the way in
+    await page.click('.detail .cap-text.cap-click');
+    await page.waitForSelector('.detail [data-field="caption-edit"]');
+    assert.equal(await page.locator('.detail [data-field="caption-edit"]').inputValue(), 'Old first line\n\nThe rest, unchanged.');
+    assert.equal(await page.locator('.detail .cap-warn.hidden').count(), 1, 'no "approve it again" warning: this post has no document to go stale');
+    await page.fill('.detail [data-field="caption-edit"]', 'Typed straight onto the post.\n\nThe rest, unchanged.');
+    await page.keyboard.press('Control+Enter');
+    await page.waitForFunction(() => /Typed straight onto the post\./.test(document.querySelector('.detail .cap-text')?.textContent ?? ''));
+    const toast = await page.locator('.notice').last().innerText();
+    assert.match(toast, /Caption saved\./);
+    assert.doesNotMatch(toast, /approving again/);
+    assert.equal(JSON.parse(JSON.stringify((await call(`/studio/post?uid=${encodeURIComponent(imp.uid)}`)).body.copy.caption)), 'Typed straight onto the post.\n\nThe rest, unchanged.');
   });
 });
 
