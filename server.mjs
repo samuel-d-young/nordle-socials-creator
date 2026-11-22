@@ -12,6 +12,7 @@ import { createReviser } from './src/studio/revise.mjs';
 import { createAutoScheduler } from './src/publish/auto.mjs';
 import { createAutoSync } from './src/publish/auto-sync.mjs';
 import { createAutoPull } from './src/publish/auto-pull.mjs';
+import { feedFile } from './src/activity/feed.mjs';
 
 const args = process.argv.slice(2);
 const flagValue = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -39,7 +40,7 @@ const autoScheduler = createAutoScheduler();
 const autoSync = createAutoSync();
 // ...and Buffer's results and anything made by hand in Buffer are read every few hours, within Buffer's small request allowance (src/publish/auto-pull.mjs)
 const autoPull = createAutoPull();
-const app = createNordleServer({ roots, createIn: home, autoRender: true, reviser, autoScheduler, runtimeDir: process.env.NORDLE_RUNTIME_DIR ?? join(ROOT, '.nordle') });
+const app = createNordleServer({ roots, createIn: home, autoRender: true, reviser, autoScheduler, activityFeed: feedFile(), watchFiles: true, runtimeDir: process.env.NORDLE_RUNTIME_DIR ?? join(ROOT, '.nordle') });
 let port;
 for (let attempt = 0; attempt < (explicitPort === undefined ? 10 : 1); attempt++) {
   try { port = await app.listen(wantedPort === 0 ? 0 : wantedPort + attempt); break; } catch (e) {

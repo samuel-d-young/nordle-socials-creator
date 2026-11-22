@@ -1,9 +1,9 @@
 // What Claude is doing, in plain words, for the Studio's left bar ("Claude is changing the video ..." and then a tick when it is done).
-// Everything Claude does in Nordle goes through the server with Claude's own token (the MCP server, the headless build runs), so the server can say what
+// What Claude does through the server uses Claude's own token (the MCP server, the headless build runs), so the server can say what
 // it is doing without asking Claude anything: a request that changes something is described, grouped by the post it is about, and shown as "working" for
 // as long as requests keep coming (a short quiet gap ends a piece of work, because Claude works in bursts of small edits). A render started by Claude
-// is followed through the video job list, so a long render says how far it is. Only Claude's requests are noted: the owner's own clicks are not.
-// Nothing here is saved to disk. GET /api/activity returns the picture; reading it changes nothing.
+// is followed through the video job list, so a long render says how far it is. The owner's own clicks are not noted.
+// Work that does not come through the server is added by activity-sources.mjs (its feed file is the only part saved to disk). GET /api/activity returns the picture; reading it changes nothing.
 
 import { videoJobs } from '../video/jobs.mjs';
 
@@ -56,7 +56,7 @@ export function describeRequest(method, pathname, lookup = () => ({})) {
 /**
  * @param {{lookup?:(project:string, doc:string)=>{video?:boolean, title?:string}, nameOf?:(project:string)=>string, now?:()=>number, quietMs?:number}} o
  */
-export function createActivity({ lookup = () => ({}), nameOf = (p) => p, now = Date.now, quietMs = QUIET_MS } = {}) {
+export function createActivity({ lookup = () => ({}), nameOf = (p) => p, now = Date.now, quietMs = QUIET_MS, extra = null } = {}) {
   let seq = 0;
   let n = 0;
   const items = new Map();       // key -> a piece of work that is going on
@@ -86,8 +86,8 @@ export function createActivity({ lookup = () => ({}), nameOf = (p) => p, now = D
     const info = it.doc ? safeLookup(it.project, it.doc) : {};
     const running = !it.finishedAt;
     return {
-      id: it.id, project: it.project, projectName: it.project ? safeName(it.project) : '', doc: it.doc ?? null, title: info.title ?? it.title ?? (it.project ? safeName(it.project) : ''),
-      kind: it.kind, verb: it.verb, past: it.past, what: it.what, startedAt: new Date(it.startedAt).toISOString(), steps: it.steps,
+      id: it.id, project: it.project, projectName: it.project ? safeName(it.project) : '', doc: it.doc ?? null, item: it.item ?? null, title: info.title ?? it.title ?? (it.project ? safeName(it.project) : ''),
+      kind: it.kind, verb: it.verb, past: it.past, what: it.what, startedAt: new Date(it.startedAt).toISOString(), steps: it.steps, source: it.source ?? 'claude',
       ...(running ? {} : { finishedAt: new Date(it.finishedAt).toISOString(), ok: it.ok }),
       ...(job && running ? { percent: job.percent, message: job.message } : {}),
     };
@@ -127,9 +127,35 @@ export function createActivity({ lookup = () => ({}), nameOf = (p) => p, now = D
         },
       };
     },
+    /**
+     * Something changed a post without a request to this server (its video file was replaced on disk, ...). Grouped and finished like requests are:
+     * repeated touches of the same post within the quiet gap are one piece of work. `info`: { project, doc?, item?, title?, kind, verb, past, what, source? }.
+     */
+    touch(info) {
+      const t = now();
+      settle(t);
+      const key = `${info.project}|touch:${info.item ?? info.doc ?? info.kind}`;
+      let it = items.get(key);
+      if (!it) {
+        it = { id: `a${++n}`, key, project: info.project, doc: info.doc ?? null, item: info.item ?? null, title: info.title || undefined, kind: info.kind, verb: info.verb, past: info.past, what: info.what,
+          source: info.source ?? 'outside', startedAt: t, lastAt: t, steps: 0, inflight: 0, lastStatus: 0, jobId: null };
+        items.set(key, it);
+      }
+      it.lastAt = t; it.steps = 1;       // one file write fires several events: they are not steps
+      seq++;
+      return it.id;
+    },
     snapshot() {
       settle();
-      return { seq, at: new Date(now()).toISOString(), working: [...items.values()].map(view), recent: recent.map(view) };
+      const own = { working: [...items.values()].map(view), recent: recent.map(view) };
+      let more = { working: [], recent: [] };
+      try { more = extra?.() ?? more; } catch { /* the other sources are a bonus: never break the box */ }
+      const name = (x) => ({ ...x, projectName: x.projectName ?? (x.project ? safeName(x.project) : '') });
+      const recentAll = [...own.recent, ...(more.recent ?? []).map(name)].sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))).slice(0, KEEP);
+      // seq changes whenever the picture does; the outside sources have no counter of their own, so their ids are folded in
+      let h = 0;
+      for (const x of [...(more.working ?? []), ...(more.recent ?? [])]) for (const ch of `${x.id}${x.finishedAt ?? ''}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return { seq: h ? seq + (h % 1000000) : seq, at: new Date(now()).toISOString(), working: [...own.working, ...(more.working ?? []).map(name)], recent: recentAll };
     },
   };
 }

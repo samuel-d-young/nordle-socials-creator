@@ -157,4 +157,11 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error(`nordle: ${e.message}`); process.exitCode = 1; });
+// The Studio's left bar shows what a command is doing to a post (src/activity/*); read-only commands say nothing. A failure to note it never stops the command.
+let work = null;
+try {
+  const { describeCli } = await import('./src/activity/cli.mjs');
+  const d = describeCli(cmd, args, { root: here });
+  if (d) work = (await import('./src/activity/feed.mjs')).startWork(d);
+} catch { /* no note, the command still runs */ }
+main().catch((e) => { console.error(`nordle: ${e.message}`); process.exitCode = 1; }).finally(() => work?.end(!process.exitCode));

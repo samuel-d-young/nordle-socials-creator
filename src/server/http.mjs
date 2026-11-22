@@ -21,6 +21,8 @@ import { createAutoRender } from './autorender.mjs';
 import { ROUTES } from './routes/index.mjs';
 import { isHiddenSegment, oddSegment } from './hidden-paths.mjs';
 import { createActivity } from './activity.mjs';
+import { createActivitySources } from './activity-sources.mjs';
+import { markServerProcess, requestScope } from '../activity/feed.mjs';
 
 const JSON_LIMIT = 1024 * 1024;
 const UPLOAD_LIMIT = 20 * 1024 * 1024;
@@ -143,11 +145,17 @@ export function createNordleServer(opts) {
   const agentToken = opts.agentToken ?? randomBytes(16).toString('hex');
   const store = new Store({ roots: opts.roots, createIn: opts.createIn });
   const pool = new BrowserPool();
+  let sources = null;
   const activity = createActivity({
     quietMs: opts.activityQuietMs,
     lookup: (p, d) => { const doc = store.project(p)?.doc(d)?.doc; return { video: doc?.kind === 'video', title: doc?.title }; },
     nameOf: (p) => store.project(p)?.brand?.name ?? p,
+    extra: () => sources?.extra() ?? { working: [], recent: [] },
   });
+  // what happens outside this server's requests (nordle commands, scripts, the Studio's Claude jobs, media replaced on disk): the real server passes
+  // activityFeed (the shared feed file) and watchFiles; tests pass them only when they test this
+  markServerProcess();
+  sources = createActivitySources({ store, activity, feedFile: opts.activityFeed ?? null, watch: !!opts.watchFiles });
   const autoRender = opts.autoRender ? createAutoRender(pool, typeof opts.autoRender === 'object' ? opts.autoRender : {}) : null;   // real server only: keeps out/ pictures in step with edits
   const appDir = opts.appDir ?? join(ROOT, 'app');
   const staticRoutes = [
@@ -427,9 +435,10 @@ export function createNordleServer(opts) {
         if (!role) throw new HttpError(401, 'Missing or wrong token. Open Nordle from its own address.');
         if (role === 'agent') {            // what Claude does is shown in the Studio's left bar (src/server/activity.mjs)
           const note = activity.begin(req.method, url.pathname);
-          try { return await api(req, res, url, role); } finally { note?.end(res.statusCode, req.nordleBody, { jobId: req.nordleJob }); }
+          try { return await requestScope.run({ role }, () => api(req, res, url, role)); } finally { note?.end(res.statusCode, req.nordleBody, { jobId: req.nordleJob }); }
         }
-        return await api(req, res, url, role);
+        if (req.method !== 'GET' && req.method !== 'HEAD') { const p = /^\/api\/projects\/([^/]+)\//.exec(url.pathname); if (p) sources.noteHuman(decodeURIComponent(p[1])); }
+        return await requestScope.run({ role }, () => api(req, res, url, role));
       }
       if (req.method === 'POST' || req.method === 'DELETE' || req.method === 'PATCH') throw new HttpError(404, 'Not found.');
 
@@ -485,6 +494,7 @@ export function createNordleServer(opts) {
       });
     },
     async close() {
+      sources.close();
       if (runtimeFile) { try { unlinkSync(runtimeFile); } catch { /* already gone */ } }
       await pool.close();
       server.closeAllConnections?.();

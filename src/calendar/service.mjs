@@ -14,6 +14,7 @@ import { DEFAULT_TIMEZONE, addMonths, diffDays, isDate, monthEnd, monthOf, month
 import { occasionsBetween } from './occasions.mjs';
 import { readRunLock, withFileLock } from './lock.mjs';
 import { cleanReel } from '../shared/reel-options.mjs';
+import { noteCalendarChange } from '../activity/feed.mjs';
 
 export class CalendarError extends Error {
   constructor(status, message, errors) { super(message); this.name = 'CalendarError'; this.status = status; this.errors = errors ?? [{ path: '/', message }]; }
@@ -96,6 +97,7 @@ export function mutateCalendar(projectDir, fn) {
     const result = await fn(cal, { brand, facts: readJsonIf(join(dir, 'facts.json')), timezone: cal.timezone ?? readJsonIf(join(dir, 'nordle.project.json'))?.timezone ?? DEFAULT_TIMEZONE });
     if (JSON.stringify(cal) !== before) {
       try { saveCalendar(dir, cal); } catch (e) { throw new CalendarError(422, String(e.message).split('\n').slice(0, 6).join('; ')); }
+      noteCalendarChange(dir, before, cal);      // the left bar's Claude box (src/activity/feed.mjs); never throws, skips the owner's own clicks
     }
     return result;
   }));

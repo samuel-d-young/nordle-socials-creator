@@ -1,6 +1,6 @@
 // "Claude" in the left bar: what Claude is doing right now ("Changing the video ..."), what it has just finished (a tick), and a soft chime when a piece of work
 // ends. The chime can be switched off with the speaker button (kept in this browser). Data: GET /api/activity every couple of seconds (src/server/activity.mjs),
-// built from Claude's own requests, so it is true whether Claude was started from the Studio or works from a terminal.
+// built from Claude's own requests plus work done outside them (commands, scripts, files replaced on disk), so it is true from the Studio or from a terminal.
 // Browsers keep a page silent until the person has clicked or pressed a key in it once: before that, a chime is skipped, never an error.
 
 import { api } from './api.js';
@@ -59,7 +59,11 @@ export function chime() {
 // ---- the picture --------------------------------------------------------------------------------------------------------------------------------
 
 const clip = (s, n = 34) => (s && s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s ?? '');
-const postOf = (it) => (it.doc ? S.posts.find((p) => p.project === it.project && p.docId === it.doc) : null);
+const postOf = (it) => (it.item ? S.posts.find((p) => p.project === it.project && p.itemId === it.item) : null)
+  ?? (it.doc ? S.posts.find((p) => p.project === it.project && p.docId === it.doc) : null);
+// who did it, when it was not Claude through the Studio's own connection: a script or session at a terminal, Nordle by itself, or a file changed on disk
+const SOURCE = { terminal: 'from a terminal', nordle: 'automatic', outside: 'file changed on disk' };
+const sourceOf = (it) => SOURCE[it.source] ?? null;
 const brandTick = (it) => { const pr = project(it.project); return pr ? h('i', { class: 'act-tick', style: { background: pr.color }, 'aria-hidden': 'true' }) : null; };
 
 function workingRow(it) {
@@ -70,7 +74,7 @@ function workingRow(it) {
     h('span', { class: 'act-main' },
       h('b', {}, `${it.verb} ${it.what}`),
       it.title ? h('span', { class: 'act-title' }, brandTick(it), h('span', { class: 'act-tt' }, `“${clip(it.title, 70)}”`)) : null,
-      h('small', { class: 'act-sub' }, [pct !== null ? `${pct} %` : null, it.steps > 1 ? `${it.steps} steps` : null, elapsed(it.startedAt)].filter(Boolean).join(' · ')),
+      h('small', { class: 'act-sub' }, [pct !== null ? `${pct} %` : null, it.steps > 1 ? `${it.steps} steps` : null, elapsed(it.startedAt), sourceOf(it)].filter(Boolean).join(' · ')),
       pct !== null ? h('span', { class: 'act-bar', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' }, h('i', { style: { width: `${pct}%` } })) : null),
     post ? h('button', { class: 'act-open', type: 'button', 'aria-label': `Open ${post.title}`, title: 'Open it', onclick: () => st.ctx?.open(post.uid) }, icon('chevR', 13)) : null);
 }
@@ -82,7 +86,7 @@ function recentRow(it) {
     h('span', { class: 'act-main' },
       h('b', {}, it.ok === false ? `Did not finish: ${it.verb.toLowerCase()} ${it.what}` : `${it.past} ${it.what}`),
       it.title ? h('span', { class: 'act-title' }, brandTick(it), h('span', { class: 'act-tt' }, `“${clip(it.title, 70)}”`)) : null,
-      h('small', { class: 'act-sub' }, `${elapsed(it.finishedAt)} ago${it.steps > 1 ? ` · ${it.steps} steps` : ''}`)),
+      h('small', { class: 'act-sub' }, `${elapsed(it.finishedAt)} ago${it.steps > 1 ? ` · ${it.steps} steps` : ''}${sourceOf(it) ? ` · ${sourceOf(it)}` : ''}`)),
   ];
   const cls = `act-row done${it.ok === false ? ' bad' : ''}${Date.now() - Date.parse(it.finishedAt) < 6000 ? ' just' : ''}`;
   return post
@@ -104,7 +108,7 @@ export function paintActivity() {
         onclick: () => { setSound(!soundOn()); if (soundOn()) chime(); paintActivity(); } }, icon(on ? 'sound' : 'soundOff', 14))),
     working.length || recent.length
       ? h('ul', { class: 'act-list', 'aria-live': 'polite' }, working.slice(0, 3).map(workingRow), recent.map(recentRow))
-      : h('p', { class: 'act-idle muted' }, 'Nothing right now. When Claude starts on a post, it shows here.'));
+      : h('p', { class: 'act-idle muted' }, 'Nothing right now. When Claude or Nordle changes a post, it shows here.'));
 }
 
 async function tick() {

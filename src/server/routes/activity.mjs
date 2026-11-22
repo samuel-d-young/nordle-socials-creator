@@ -2,7 +2,7 @@
 //   GET /api/activity -> { seq, at, working:[{ id, project, projectName, doc, title, kind, verb, past, what, startedAt, steps, percent?, message? }],
 //                          recent:[{ ...the same, finishedAt, ok }] }
 // `working` is what Claude is changing, rendering, checking and so on this moment (a piece of work ends when it has been quiet for a few seconds, or when its
-// render job ends); `recent` is what it finished lately, newest first. It is built from Claude's own requests (src/server/activity.mjs); nothing is saved.
+// render job ends); `recent` is what it finished lately, newest first. It is built from Claude's own requests (src/server/activity.mjs) and work done outside them (src/server/activity-sources.mjs).
 
 export default {
   scope: 'root',
