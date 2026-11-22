@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describeItemChange, noteCalendarChange, noteDone, readFeed, requestScope, startWork, trimFeed } from '../src/activity/feed.mjs';
 import { describeCli } from '../src/activity/cli.mjs';
-import { mediaChange } from '../src/activity/watch.mjs';
+import { mediaChange, watchMedia } from '../src/activity/watch.mjs';
 import { createActivity } from '../src/server/activity.mjs';
 import { createActivitySources } from '../src/server/activity-sources.mjs';
 
@@ -110,6 +110,31 @@ test('media changes: only a post\'s own finished files', () => {
   assert.equal(mediaChange('gannet/external/reel-1/reel.pre-wb.mp4'), null);
   assert.equal(mediaChange('gannet/assets/x/reel.mp4'), null);
   assert.equal(mediaChange('gannet/calendar.json'), null);
+});
+
+test('media changes: reading a file is not a change, writing one is', () => {
+  const now = 10_000_000;
+  let event = null;
+  let stat = null;
+  const seen = [];
+  const w = watchMedia(['root'], (c) => seen.push(c), {
+    now: () => now,
+    statFn: () => { if (!stat) throw new Error('ENOENT'); return stat; },
+    watchFn: (_root, _o, cb) => { event = () => cb('change', 'gannet/out/doc-1/cover.png'); return { on() {}, close() {} }; },
+  });
+  stat = { mtimeMs: now - 3600000, ctimeMs: now - 3600000, atimeMs: now };
+  event();
+  assert.equal(seen.length, 0, 'only read');
+  stat = null;
+  event();
+  assert.equal(seen.length, 0, 'already gone');
+  stat = { mtimeMs: now - 500, ctimeMs: now - 500, atimeMs: now };
+  event();
+  assert.equal(seen.length, 1, 'written');
+  stat = { mtimeMs: now - 3600000, ctimeMs: now - 500, atimeMs: now };
+  event();
+  assert.equal(seen.length, 2, 'an older file copied or renamed into place');
+  w.close();
 });
 
 test('sources: a media change on disk shows with the post\'s title; the owner\'s own upload does not', () => {
