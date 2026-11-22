@@ -42,6 +42,12 @@ test('feed: a start is working until its end, then recent; a dead process withou
   assert.equal(f.recent.find((x) => x.id === 'fdead').ok, false);
 }));
 
+test('feed: two things in the same millisecond are newest first', () => withFeed((file) => {
+  const line = (id) => `${JSON.stringify({ id, pid: 1, at: '2026-01-01T00:00:00.000Z', ev: 'once', what: id })}\n`;
+  writeFileSync(file, line('first') + line('second'));
+  assert.deepEqual(readFeed({ file }).recent.map((x) => x.id), ['second', 'first']);
+}));
+
 test('feed: bad lines are skipped and ids that are not ids are dropped', () => withFeed((file) => {
   writeFileSync(file, 'not json\n{"nope":1}\n');
   noteDone({ project: '../etc', item: 'ok-item', verb: 'Changing', past: 'Changed', what: 'the post' });

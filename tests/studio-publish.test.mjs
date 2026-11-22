@@ -18,6 +18,14 @@ const pick = async (page, uid) => {
   await box.evaluate((el) => el.click());      // ticks it without depending on what sits over the box (a tile redrawing under a pointer click lost the tick on slow runners)
 };
 
+/**
+ * A real plan refuses a time that has passed, and it goes by the real clock, not TODAY. The fixture's posts have fixed dates (they went stale on
+ * 3 Nov 2026), so a test that makes a real plan first moves its post a month ahead of whenever it runs.
+ */
+const moveAhead = (work, post) => mutateCalendar(join(work, 'projects', post.project), (cal) => {
+  cal.items.find((i) => i.id === post.itemId).date = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+});
+
 const BUNDLE = { id: 'bundle', name: 'Export folder', configured: true, needs: [], channels: [], note: 'Writes the pictures, captions and a schedule file to a folder.', selected: {}, options: {} };
 const buffer = (over = {}) => ({ id: 'buffer', name: 'Buffer', configured: false, needs: ['an API key'], channels: [], note: 'Schedules in Buffer.', selected: {}, options: {}, ...over });
 
@@ -32,10 +40,11 @@ async function fakeAdapters(page, adapters, extra = async () => false) {
 }
 
 test('the Schedule button, a plan with what blocks each post, and the plain words when Buffer is not connected', async () => {
-  await studioPage(async ({ page, open, call }) => {
+  await studioPage(async ({ page, open, call, work }) => {
     await fakeAdapters(page, [buffer(), BUNDLE]);
     const { posts } = await overview(call);
     const good = firstWhere(posts, (p) => verifiedBuilt(p) && p.date >= '2026-11-01');
+    await moveAhead(work, good);
     await call('/studio/act', 'POST', { uid: good.uid, action: 'approve' });
     const built = firstWhere(posts, (p) => p.status === 'built' && p.uid !== good.uid && p.verified === false);
     await open(`#/s/wall?today=${TODAY}`);
@@ -354,6 +363,7 @@ test('the export folder really runs (it only writes files in the project) and th
     await fakeAdapters(page, [BUNDLE]);
     const { posts } = await overview(call);
     const good = firstWhere(posts, (p) => verifiedBuilt(p) && p.date >= '2026-11-01');
+    await moveAhead(work, good);
     await call('/studio/act', 'POST', { uid: good.uid, action: 'approve' });
     await open(`#/s/wall?today=${TODAY}`);
     await pick(page, good.uid);
@@ -395,6 +405,33 @@ test('Connect Buffer: the key goes to the settings call once and is never shown 
     await page.waitForFunction(() => document.querySelector('dialog .sch-msg')?.textContent === 'Saved.');
     assert.equal(Object.values(calls.at(-1).channels)[0][0].id, 'c1');
     assert.equal(calls.at(-1).token, undefined, 'the key is only sent when one is typed');
+  });
+});
+
+test('Connect Buffer: a redraw from a slow background reply keeps the open section, the cursor and what is being typed', async () => {
+  await studioPage(async ({ page, open }) => {
+    await fakeAdapters(page, [buffer(), BUNDLE]);
+    let reply, asked;
+    const held = new Promise((r) => { reply = r; });
+    const wasAsked = new Promise((r) => { asked = r; });
+    await page.route('**/api/publish/auto-schedule', async (route) => {      // the background read that redraws the window waits until the person is typing
+      asked();
+      await held;
+      await route.fulfill({ json: { enabled: false, daysAhead: 3, stories: true } });
+    });
+    await open(`#/s/month?today=${TODAY}`);
+    await page.click('.rail-foot .rf:has-text("Publishing")');
+    await wasAsked;
+    await page.click('dialog summary:has-text("host the export folders yourself")');
+    const box = page.locator('dialog input[data-field="pub-base"]');
+    await box.click();
+    await page.keyboard.type('https://media.');
+    await page.evaluate(() => { window.beforeRedraw = document.querySelector('dialog details.host-manual'); });
+    reply();
+    await page.waitForFunction(() => !window.beforeRedraw.isConnected);
+    await page.keyboard.type('example.test');
+    assert.equal(await page.locator('dialog details.host-manual').evaluate((el) => el.open), true, 'the section stays open');
+    assert.equal(await box.inputValue(), 'https://media.example.test', 'typing carries on in the same box');
   });
 });
 
@@ -459,6 +496,39 @@ test('Insights has a "When to post" section: the best times coming up, days and 
     await page.click('.notice button:has-text("Pull anyway")');
     await page.waitForFunction(() => true);
     assert.deepEqual(calls[1], { project: brand.id, force: true });
+  });
+});
+
+test('Automatic scheduling: a redraw while a change is being saved does not fold the switches away', async () => {
+  await studioPage(async ({ page, open }) => {
+    const hold = () => { let release; const until = new Promise((r) => { release = r; }); return { release, until }; };
+    const platforms = hold(), save = hold(), saved = hold();
+    let auto = { ok: true, enabled: false, daysAhead: 7, stories: true, recent: [], problems: [], pausedUntil: null };
+    await fakeAdapters(page, [buffer({ configured: true, channels: [{ id: 'c1', name: 'The shop', service: 'instagram' }], options: { mediaBaseUrl: 'https://media.example.test/nordle' } }), BUNDLE], async (route, url) => {
+      if (url.pathname.endsWith('/platforms')) {          // the slow background read that redraws the window
+        await platforms.until;
+        await route.fulfill({ json: { platforms: [] } });
+        return true;
+      }
+      if (!url.pathname.endsWith('/auto-schedule')) return false;
+      if (route.request().method() === 'POST') {
+        auto = { ...auto, ...route.request().postDataJSON() };
+        saved.release();
+        await save.until;
+      }
+      await route.fulfill({ json: auto });
+      return true;
+    });
+    await open(`#/s/month?today=${TODAY}`);
+    await page.click('.rail-foot .rf:has-text("Publishing")');
+    await page.locator('dialog [data-field="auto-on"]').click();
+    await saved.until;
+    await page.evaluate(() => { window.beforeRedraw = document.querySelector('dialog [data-section="platforms"]'); });
+    platforms.release();
+    await page.waitForFunction(() => !window.beforeRedraw.isConnected);
+    assert.equal(await page.locator('dialog [data-field="auto-stories"]').count(), 1, 'the switches stay while the change is being saved');
+    save.release();
+    await page.waitForFunction(() => /Stories\s*also made/.test(document.querySelector('dialog.wide')?.innerText ?? ''));      // saved: folded into its card
   });
 });
 
