@@ -5,7 +5,7 @@
 import { api } from './api.js';
 import { h, icon } from './dom.js';
 import { S, load, update } from './studio-store.js';
-import { askConfirm, brandName, notify, plainWaits, plural } from './studio-ui.js';
+import { askConfirm, brandName, keepTyping, notify, plainWaits, plural } from './studio-ui.js';
 import { openCoverPicker } from './studio-cover.js';
 import { PUBLISH_GUIDES, guideBlock } from './platform-guides.js';
 import { loadSignInStatus, onSignInChange, resetSignIn, setSignInSink, signInBox, signInCardText, startSignIn } from './studio-buffer-signin.js';
@@ -873,7 +873,10 @@ export async function openConnect(adapterId = 'buffer') {
     fields.host = null; await refresh();
   }
 
-  function draw() {
+  // a background reply can redraw this window at any moment: whoever is typing keeps their box, cursor and open section
+  function draw() { keepTyping(m.body, paint); }
+  function paint() {
+    const manualOpen = !!m.body.querySelector('details.host-manual')?.open;
     fields.token = fields.token ?? h('input', { class: 'field', type: 'password', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Buffer API key', 'data-field': 'pub-token' });
     fields.token.placeholder = multi() ? 'Paste the API key' : a.configured ? 'A key is saved. Paste a new one to replace it' : 'Paste your Buffer API key';
     fields.label = fields.label ?? h('input', { class: 'field', autocomplete: 'off', 'aria-label': 'A name for this Buffer account', placeholder: 'A name, e.g. Agency login', 'data-field': 'pub-label', maxlength: 60 });
@@ -888,7 +891,7 @@ export async function openConnect(adapterId = 'buffer') {
       hostingSection(),
       mediaBase(a) && !unlocked.has('base')
         ? savedCard({ key: 'base', title: 'Media web address', warn: WARN.base, lines: [['Address', mediaBase(a)]] })
-        : h('details', { class: 'host-manual', open: unlocked.has('base') }, h('summary', {}, 'Or host the export folders yourself'),
+        : h('details', { class: 'host-manual', open: unlocked.has('base') || manualOpen }, h('summary', {}, 'Or host the export folders yourself'),
           mediaBase(a) ? editingNote('base') : null,
           h('label', { class: 'ask-label' }, 'Media web address'), fields.base,
           h('p', { class: 'sch-help' }, 'Host the contents of each project’s out/publish folder at this address (one folder per brand), and keep it up until the posts are out. Nordle checks every file answers before it asks Buffer. Not needed when media hosting above is set up.')),
@@ -931,9 +934,8 @@ export async function openConnect(adapterId = 'buffer') {
           waiting = null;
           try { auto = pub.auto = await api.get('/publish/auto-schedule'); } catch { /* keep what the page shows */ }
         }
-        if (!waiting) draw();
       }
-    } finally { saving = false; }
+    } finally { saving = false; draw(); }      // only now may the section fold into its saved card
   }
   async function lookNow() {
     try {
@@ -948,7 +950,7 @@ export async function openConnect(adapterId = 'buffer') {
   }
   function autoSection() {
     if (a.id !== 'buffer' || !auto) return null;
-    if (auto.enabled && !unlocked.has('auto')) {
+    if (auto.enabled && !unlocked.has('auto') && !saving) {      // while a change is being saved the switches stay, whatever redraws the window
       return savedCard({ key: 'auto', title: 'Automatic scheduling', status: 'On', warn: WARN.auto, extra: btn('Look now', { quiet: true, act: 'auto-now', onclick: lookNow }), lines: [
         ['Approved posts', `go to Buffer on their own, ${plural(auto.daysAhead, 'day')} before their time`], ['Stories', auto.stories ? 'also made' : 'not made'],
         ...((auto.problems ?? []).length ? [['Needs a look', plural(auto.problems.length, 'post')]] : [])] });

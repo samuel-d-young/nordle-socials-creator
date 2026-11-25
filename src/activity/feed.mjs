@@ -128,6 +128,7 @@ export function readFeed({ file = feedFile(), keep = 12, isAlive = alive, staleM
     if (isAlive(s.pid) && now - Date.parse(s.at) < staleMs) working.push(view(s));
     else done.push({ ...s, finishedAt: s.at, ok: false });          // its process went away without saying it had finished
   }
+  done.reverse();      // the file is oldest first and the sort below is stable, so of two in the same millisecond the later line stays newest
   done.sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt)));
   return { working: working.reverse(), recent: done.slice(0, keep).map(view) };
 }
