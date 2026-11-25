@@ -140,7 +140,12 @@ function chain(plan, seg, { frames, k0 = 0, srcStart }) {
       }
       if (Math.abs(motion.zoomFrom - motion.zoomTo) > 1e-6) {
         const e = easeExpr(motion.zoomEase, progress('on'));
-        parts.push(`zoompan=z='${n6(motion.zoomFrom)}+(${n6(motion.zoomTo - motion.zoomFrom)})*${e}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${F}`);
+        // zoom in on the focal point, not the middle of the window: a seated speaker's face sits in the top third, and a
+        // zoom about the centre pushed it out of the top of the frame. Without a pan, the focal point's place inside the
+        // window is fixed; the zoomed view is centred on it and kept inside the window.
+        const fx = panning ? 0.5 : clamp((motion.panFrom.x * sw - wa.x) / cw, 0, 1);
+        const fy = panning ? 0.5 : clamp((motion.panFrom.y * sh - wa.y) / ch, 0, 1);
+        parts.push(`zoompan=z='${n6(motion.zoomFrom)}+(${n6(motion.zoomTo - motion.zoomFrom)})*${e}':x='clip(iw*${n6(fx)}-iw/zoom/2,0,iw-iw/zoom)':y='clip(ih*${n6(fy)}-ih/zoom/2,0,ih-ih/zoom)':d=1:s=${W}x${H}:fps=${F}`);
       } else {
         parts.push(`scale=${W}:${H}:${SCALER}`);
       }
