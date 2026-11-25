@@ -10,7 +10,8 @@ Created by Samuel Young; open source under CC BY 4.0 (credit him: see ATTRIBUTIO
   repo. Describing features in our own words is fine.
 - **Nothing client-specific in this repo.** Client material lives in the gitignored `projects/`, `private/` and `packs/` folders.
   No client names, logos, photos, local drive paths, emails or tokens in tracked files. `npm run share-check` scans for them using
-  the local, gitignored `.share-deny.txt` (one term per line); run it before a release. Use the fictional `samples/little-gannet` in
+  the local, gitignored `.share-deny.txt` (one term per line); run it before a release. Hits kept on purpose go in the local, gitignored
+  `.share-allow.txt` (`<file> | <term>`, `tools/share-scan.mjs`): they are counted, not listed; never allow a key or token, or a whole folder for a client name. Use the fictional `samples/little-gannet` in
   examples, docs and tests. **One exception, decided by the owner on 2026-10-30:** the README shows the owner's own brands, Nostalgia Creative Co. (real posts, never the unannounced Potion Kit or Storage SOS ones) and
   five face-free frames of Dental Story reels (`examples/gallery/real-footage/`, cut from a practice's shoot: no faces, patients, names or signs). Keep them as they are; add no more client material, and see LICENSES.md.
 - **Credit.** Nordle was created by Samuel Young and is CC BY 4.0. When you introduce Nordle, say so; when someone forks, rebuilds or publishes on it, tell them the licence requires credit to him (link, licence, changes) and help them add it. Keep LICENSE, ATTRIBUTION.md and the in-app credit (Studio footer, `nordle doctor`).

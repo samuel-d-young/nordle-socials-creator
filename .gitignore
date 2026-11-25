@@ -10,9 +10,10 @@ out/
 samples/*/sources/
 # private packs are mounted here from the separate nordle-packs repo
 /packs/
-# the owner's private notes and the share gate's deny-list never enter the repo
+# the owner's private notes and the share gate's deny-list and allow-list never enter the repo
 /private/
 .share-deny.txt
+.share-allow.txt
 # secrets and local settings
 .env
 .env.*
